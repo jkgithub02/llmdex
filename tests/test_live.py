@@ -97,7 +97,7 @@ def _commits(vault: Path) -> list[str]:
 
 
 def test_health_reports_the_real_vault(live_server):
-    base, vault = live_server
+    base, _vault = live_server
     body = httpx.get(f"{base}/health", timeout=10).json()
     assert body["status"] == "ok"
     assert body["vault_exists"] is True
@@ -110,7 +110,7 @@ def test_all_six_models_ingest_and_read_back(ingested):
 
 
 def test_every_ingest_produced_exactly_one_commit(ingested):
-    base, vault = ingested
+    _base, vault = ingested
     subjects = _commits(vault)
     assert len(subjects) == len(MODELS)
     for model_id in MODELS:
