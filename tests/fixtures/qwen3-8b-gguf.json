@@ -1,0 +1,148 @@
+{
+  "config": null,
+  "info": {
+    "_id": "6815b8d70e2525074c399975",
+    "author": "Qwen",
+    "cardData": {
+      "base_model": "Qwen/Qwen3-8B",
+      "license": "apache-2.0",
+      "license_link": "https://huggingface.co/Qwen/Qwen3-8B-GGUF/blob/main/LICENSE",
+      "pipeline_tag": "text-generation"
+    },
+    "config": {},
+    "createdAt": "2025-05-03T06:33:59.000Z",
+    "disabled": false,
+    "downloads": 297180,
+    "gated": false,
+    "gguf": {
+      "architecture": "qwen3",
+      "bos_token": "<|endoftext|>",
+      "chat_template": "{%- if tools %}\n    {{- '<|im_start|>system\\n' }}\n    {%- if messages[0].role == 'system' %}\n        {{- messages[0].content + '\\n\\n' }}\n    {%- endif %}\n    {{- \"# Tools\\n\\nYou may call one or more functions to assist with the user query.\\n\\nYou are provided with function signatures within <tools></tools> XML tags:\\n<tools>\" }}\n    {%- for tool in tools %}\n        {{- \"\\n\" }}\n        {{- tool | tojson }}\n    {%- endfor %}\n    {{- \"\\n</tools>\\n\\nFor each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:\\n<tool_call>\\n{\\\"name\\\": <function-name>, \\\"arguments\\\": <args-json-object>}\\n</tool_call><|im_end|>\\n\" }}\n{%- else %}\n    {%- if messages[0].role == 'system' %}\n        {{- '<|im_start|>system\\n' + messages[0].content + '<|im_end|>\\n' }}\n    {%- endif %}\n{%- endif %}\n{%- set ns = namespace(multi_step_tool=true, last_query_index=messages|length - 1) %}\n{%- for index in range(ns.last_query_index, -1, -1) %}\n    {%- set message = messages[index] %}\n    {%- if ns.multi_step_tool and message.role == \"user\" and not('<tool_response>' in message.content and '</tool_response>' in message.content) %}\n        {%- set ns.multi_step_tool = false %}\n        {%- set ns.last_query_index = index %}\n    {%- endif %}\n{%- endfor %}\n{%- for message in messages %}\n    {%- if (message.role == \"user\") or (message.role == \"system\" and not loop.first) %}\n        {{- '<|im_start|>' + message.role + '\\n' + message.content + '<|im_end|>' + '\\n' }}\n    {%- elif message.role == \"assistant\" %}\n        {%- set content = message.content %}\n        {%- set reasoning_content = '' %}\n        {%- if message.reasoning_content is defined and message.reasoning_content is not none %}\n            {%- set reasoning_content = message.reasoning_content %}\n        {%- else %}\n            {%- if '</think>' in message.content %}\n                {%- set content = message.content.split('</think>')[-1].lstrip('\\n') %}\n                {%- set reasoning_content = message.content.split('</think>')[0].rstrip('\\n').split('<think>')[-1].lstrip('\\n') %}\n            {%- endif %}\n        {%- endif %}\n        {%- if loop.index0 > ns.last_query_index %}\n            {%- if loop.last or (not loop.last and reasoning_content) %}\n                {{- '<|im_start|>' + message.role + '\\n<think>\\n' + reasoning_content.strip('\\n') + '\\n</think>\\n\\n' + content.lstrip('\\n') }}\n            {%- else %}\n                {{- '<|im_start|>' + message.role + '\\n' + content }}\n            {%- endif %}\n        {%- else %}\n            {{- '<|im_start|>' + message.role + '\\n' + content }}\n        {%- endif %}\n        {%- if message.tool_calls %}\n            {%- for tool_call in message.tool_calls %}\n                {%- if (loop.first and content) or (not loop.first) %}\n                    {{- '\\n' }}\n                {%- endif %}\n                {%- if tool_call.function %}\n                    {%- set tool_call = tool_call.function %}\n                {%- endif %}\n                {{- '<tool_call>\\n{\"name\": \"' }}\n                {{- tool_call.name }}\n                {{- '\", \"arguments\": ' }}\n                {%- if tool_call.arguments is string %}\n                    {{- tool_call.arguments }}\n                {%- else %}\n                    {{- tool_call.arguments | tojson }}\n                {%- endif %}\n                {{- '}\\n</tool_call>' }}\n            {%- endfor %}\n        {%- endif %}\n        {{- '<|im_end|>\\n' }}\n    {%- elif message.role == \"tool\" %}\n        {%- if loop.first or (messages[loop.index0 - 1].role != \"tool\") %}\n            {{- '<|im_start|>user' }}\n        {%- endif %}\n        {{- '\\n<tool_response>\\n' }}\n        {{- message.content }}\n        {{- '\\n</tool_response>' }}\n        {%- if loop.last or (messages[loop.index0 + 1].role != \"tool\") %}\n            {{- '<|im_end|>\\n' }}\n        {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '<|im_start|>assistant\\n' }}\n    {%- if enable_thinking is defined and enable_thinking is false %}\n        {{- '<think>\\n\\n</think>\\n\\n' }}\n    {%- endif %}\n{%- endif %}",
+      "context_length": 40960,
+      "eos_token": "<|im_end|>",
+      "total": 8190735360,
+      "totalFileSize": 5027783488
+    },
+    "id": "Qwen/Qwen3-8B-GGUF",
+    "lastModified": "2025-05-21T06:31:50.000Z",
+    "likes": 244,
+    "model-index": null,
+    "modelId": "Qwen/Qwen3-8B-GGUF",
+    "pipeline_tag": "text-generation",
+    "private": false,
+    "sha": "7c41481f57cb95916b40956ab2f0b139b296d974",
+    "siblings": [
+      {
+        "blobId": "92b6af94db2a0d4f69ea557374186e4e63df7b01",
+        "rfilename": ".gitattributes",
+        "size": 1798
+      },
+      {
+        "blobId": "6f9739bb281a3d2ade8fb5f6dd6dde597a739c80",
+        "rfilename": "LICENSE",
+        "size": 11544
+      },
+      {
+        "blobId": "d4ee8ae7f4de3a5046b1a29776a3f011ba28017e",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785",
+          "size": 5027783488
+        },
+        "rfilename": "Qwen3-8B-Q4_K_M.gguf",
+        "size": 5027783488
+      },
+      {
+        "blobId": "30579e89cbc651608cbceb3cfe3214adad1cfead",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "c034cdfb0ad5b3edc5cf4ac07bff3b1b214aa541e633b37191c19c3a7b119727",
+          "size": 5720761152
+        },
+        "rfilename": "Qwen3-8B-Q5_0.gguf",
+        "size": 5720761152
+      },
+      {
+        "blobId": "d07d0f09f9be1d32eae9af8649341bf3daac7d0b",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "068bae163faa96ad48032daf4e071a6a28fe67d8dcc95367609c2ff165e52738",
+          "size": 5851112224
+        },
+        "rfilename": "Qwen3-8B-Q5_K_M.gguf",
+        "size": 5851112224
+      },
+      {
+        "blobId": "cc106e2fa13d91c507999ceacf0b4ea87fcc708b",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "cb042ccd76795a8830d6be6bd4165245847cc68e41797b13bd61aed4c2cfbce6",
+          "size": 6725899040
+        },
+        "rfilename": "Qwen3-8B-Q6_K.gguf",
+        "size": 6725899040
+      },
+      {
+        "blobId": "954c5db9f4cce8f400022addeb8d7baa1f5e30f6",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "408b955510e196121c1c375201744783b5c9a43c7956d73fc78df54c66e883d6",
+          "size": 8709518112
+        },
+        "rfilename": "Qwen3-8B-Q8_0.gguf",
+        "size": 8709518112
+      },
+      {
+        "blobId": "3b55dd0ba5cb12c559f87dea67edf8c48154ec62",
+        "rfilename": "README.md",
+        "size": 7577
+      },
+      {
+        "blobId": "b79a3bdde8373ca566bd404904abbd5270d7825d",
+        "rfilename": "params",
+        "size": 270
+      }
+    ],
+    "spaces": [
+      "build-small-hackathon/secret-student",
+      "build-small-hackathon/AI-agent-Evaluation-pipeline",
+      "jimstechai/jimsai-embedding-service",
+      "build-small-hackathon/Chan-Compass",
+      "build-small-hackathon/chorus",
+      "asanwari/secret-student",
+      "tejamallam/aczen_slm_space",
+      "indirapravianti/mandarin-coach",
+      "asanwari/secret-student-mock",
+      "defiedrt43/zen-pro-api"
+    ],
+    "tags": [
+      "gguf",
+      "text-generation",
+      "arxiv:2309.00071",
+      "arxiv:2505.09388",
+      "base_model:Qwen/Qwen3-8B",
+      "base_model:quantized:Qwen/Qwen3-8B",
+      "license:apache-2.0",
+      "endpoints_compatible",
+      "region:us",
+      "conversational"
+    ],
+    "usedStorage": 32035074016,
+    "widgetData": [
+      {
+        "text": "Hi, what can you help me with?"
+      },
+      {
+        "text": "What is 84 * 3 / 2?"
+      },
+      {
+        "text": "Tell me an interesting fact about the universe!"
+      },
+      {
+        "text": "Explain quantum computing in simple terms."
+      }
+    ]
+  },
+  "model_id": "Qwen/Qwen3-8B-GGUF",
+  "readme": "---\nlicense: apache-2.0\nlicense_link: https://huggingface.co/Qwen/Qwen3-8B-GGUF/blob/main/LICENSE\npipeline_tag: text-generation\nbase_model: Qwen/Qwen3-8B\n---\n\n# Qwen3-8B-GGUF\n<a href=\"https://chat.qwen.ai/\" target=\"_blank\" style=\"margin: 2px;\">\n    <img alt=\"Chat\" src=\"https://img.shields.io/badge/%F0%9F%92%9C%EF%B8%8F%20Qwen%20Chat%20-536af5\" style=\"display: inline-block; vertical-align: middle;\"/>\n</a>\n\n## Qwen3 Highlights\n\nQwen3 is the latest generation of large language models in Qwen series, offering a comprehensive suite of dense and mixture-of-experts (MoE) models. Built upon extensive training, Qwen3 delivers groundbreaking advancements in reasoning, instruction-following, agent capabilities, and multilingual support, with the following key features:\n\n- **Uniquely support of seamless switching between thinking mode** (for complex logical reasoning, math, and coding) and **non-thinking mode** (for efficient, general-purpose dialogue) **within single model**, ensuring optimal performance across various scenarios.\n- **Significantly enhancement in its reasoning capabilities**, surpassing previous QwQ (in thinking mode) and Qwen2.5 instruct models (in non-thinking mode) on mathematics, code generation, and commonsense logical reasoning.\n- **Superior human preference alignment**, excelling in creative writing, role-playing, multi-turn dialogues, and instruction following, to deliver a more natural, engaging, and immersive conversational experience.\n- **Expertise in agent capabilities**, enabling precise integration with external tools in both thinking and unthinking modes and achieving leading performance among open-source models in complex agent-based tasks.\n- **Support of 100+ languages and dialects** with strong capabilities for **multilingual instruction following** and **translation**.\n\n\n## Model Overview\n\n**Qwen3-8B** has the following features:\n- Type: Causal Language Models\n- Training Stage: Pretraining & Post-training\n- Number of Parameters: 8.2B\n- Number of Paramaters (Non-Embedding): 6.95B\n- Number of Layers: 36\n- Number of Attention Heads (GQA): 32 for Q and 8 for KV\n- Context Length: 32,768 natively and [131,072 tokens with YaRN](#processing-long-texts).\n\n- Quantization: q4_K_M, q5_0, q5_K_M, q6_K, q8_0\n\nFor more details, including benchmark evaluation, hardware requirements, and inference performance, please refer to our [blog](https://qwenlm.github.io/blog/qwen3/), [GitHub](https://github.com/QwenLM/Qwen3), and [Documentation](https://qwen.readthedocs.io/en/latest/).\n\n## Quickstart\n\n### llama.cpp\n\nCheck out our [llama.cpp documentation](https://qwen.readthedocs.io/en/latest/run_locally/llama.cpp.html) for more usage guide.\n\nWe advise you to clone [`llama.cpp`](https://github.com/ggerganov/llama.cpp) and install it following the official guide. We follow the latest version of llama.cpp. \nIn the following demonstration, we assume that you are running commands under the repository `llama.cpp`.\n\n```shell\n./llama-cli -hf Qwen/Qwen3-8B-GGUF:Q8_0 --jinja --color -ngl 99 -fa -sm row --temp 0.6 --top-k 20 --top-p 0.95 --min-p 0 --presence-penalty 1.5 -c 40960 -n 32768 --no-context-shift\n```\n\n### ollama\n\nCheck out our [ollama documentation](https://qwen.readthedocs.io/en/latest/run_locally/ollama.html) for more usage guide.\n\nYou can run Qwen3 with one command:\n\n```shell\nollama run hf.co/Qwen/Qwen3-8B-GGUF:Q8_0\n```\n\n## Switching Between Thinking and Non-Thinking Mode\n\nYou can add `/think` and `/no_think` to user prompts or system messages to switch the model's thinking mode from turn to turn. The model will follow the most recent instruction in multi-turn conversations.\n\nHere is an example of multi-turn conversation:\n\n```\n> Who are you /no_think\n\n<think>\n\n</think>\n\nI am Qwen, a large-scale language model developed by Alibaba Cloud. [...]\n\n> How many 'r's are in 'strawberries'? /think\n\n<think>\nOkay, let's see. The user is asking how many times the letter 'r' appears in the word \"strawberries\". [...]\n</think>\n\nThe word strawberries contains 3 instances of the letter r. [...]\n```\n\n\n## Processing Long Texts\n\nQwen3 natively supports context lengths of up to 32,768 tokens. For conversations where the total length (including both input and output) significantly exceeds this limit, we recommend using RoPE scaling techniques to handle long texts effectively. We have validated the model's performance on context lengths of up to 131,072 tokens using the [YaRN](https://arxiv.org/abs/2309.00071) method.\n\nTo enable YARN in ``llama.cpp``:\n\n```shell\n./llama-cli ... -c 131072 --rope-scaling yarn --rope-scale 4 --yarn-orig-ctx 32768\n```\n\n> [!NOTE]\n> All the notable open-source frameworks implement static YaRN, which means the scaling factor remains constant regardless of input length, **potentially impacting performance on shorter texts.**\n> We advise adding the `rope_scaling` configuration only when processing long contexts is required. \n> It is also recommended to modify the `factor` as needed. For example, if the typical context length for your application is 65,536 tokens, it would be better to set `factor` as 2.0. \n\n> [!TIP]\n> The endpoint provided by Alibaba Model Studio supports dynamic YaRN by default and no extra configuration is needed.\n\n\n## Best Practices\n\nTo achieve optimal performance, we recommend the following settings:\n\n1. **Sampling Parameters**:\n   - For thinking mode (`enable_thinking=True`), use `Temperature=0.6`, `TopP=0.95`, `TopK=20`, `MinP=0`, and `PresencePenalty=1.5`. **DO NOT use greedy decoding**, as it can lead to performance degradation and endless repetitions.\n   - For non-thinking mode (`enable_thinking=False`), we suggest using `Temperature=0.7`, `TopP=0.8`, `TopK=20`, `MinP=0`, and `PresencePenalty=1.5`.\n   - **We recommend setting `presence_penalty` to 1.5 for quantized models to suppress repetitive outputs.** You can adjust the `presence_penalty` parameter between 0 and 2. A higher value may occasionally lead to language mixing and a slight reduction in model performance. \n\n2. **Adequate Output Length**: We recommend using an output length of 32,768 tokens for most queries. For benchmarking on highly complex problems, such as those found in math and programming competitions, we suggest setting the max output length to 38,912 tokens. This provides the model with sufficient space to generate detailed and comprehensive responses, thereby enhancing its overall performance.\n\n3. **Standardize Output Format**: We recommend using prompts to standardize model outputs when benchmarking.\n   - **Math Problems**: Include \"Please reason step by step, and put your final answer within \\boxed{}.\" in the prompt.\n   - **Multiple-Choice Questions**: Add the following JSON structure to the prompt to standardize responses: \"Please show your choice in the `answer` field with only the choice letter, e.g., `\"answer\": \"C\"`.\"\n\n4. **No Thinking Content in History**: In multi-turn conversations, the historical model output should only include the final output part and does not need to include the thinking content. It is implemented in the provided chat template in Jinja2. However, for frameworks that do not directly use the Jinja2 chat template, it is up to the developers to ensure that the best practice is followed.\n\n### Citation\n\nIf you find our work helpful, feel free to give us a cite.\n\n```\n@misc{qwen3technicalreport,\n      title={Qwen3 Technical Report}, \n      author={Qwen Team},\n      year={2025},\n      eprint={2505.09388},\n      archivePrefix={arXiv},\n      primaryClass={cs.CL},\n      url={https://arxiv.org/abs/2505.09388}, \n}\n```"
+}

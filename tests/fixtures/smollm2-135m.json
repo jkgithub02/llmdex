@@ -1,0 +1,267 @@
+{
+  "config": {
+    "architectures": [
+      "LlamaForCausalLM"
+    ],
+    "attention_bias": false,
+    "attention_dropout": 0.0,
+    "bos_token_id": 0,
+    "eos_token_id": 0,
+    "hidden_act": "silu",
+    "hidden_size": 576,
+    "initializer_range": 0.041666666666666664,
+    "intermediate_size": 1536,
+    "is_llama_config": true,
+    "max_position_embeddings": 8192,
+    "model_type": "llama",
+    "num_attention_heads": 9,
+    "num_hidden_layers": 30,
+    "num_key_value_heads": 3,
+    "pretraining_tp": 1,
+    "rms_norm_eps": 1e-05,
+    "rope_interleaved": false,
+    "rope_scaling": null,
+    "rope_theta": 100000,
+    "tie_word_embeddings": true,
+    "torch_dtype": "bfloat16",
+    "transformers_version": "4.40.1",
+    "use_cache": true,
+    "vocab_size": 49152
+  },
+  "info": {
+    "_id": "6722d34c3189f1de8ad8ce22",
+    "author": "HuggingFaceTB",
+    "cardData": {
+      "language": [
+        "en"
+      ],
+      "library_name": "transformers",
+      "license": "apache-2.0"
+    },
+    "config": {
+      "architectures": [
+        "LlamaForCausalLM"
+      ],
+      "model_type": "llama",
+      "tokenizer_config": {
+        "bos_token": "<|endoftext|>",
+        "eos_token": "<|endoftext|>",
+        "unk_token": "<|endoftext|>"
+      }
+    },
+    "createdAt": "2024-10-31T00:46:04.000Z",
+    "disabled": false,
+    "downloads": 2076903,
+    "gated": false,
+    "id": "HuggingFaceTB/SmolLM2-135M",
+    "lastModified": "2025-02-06T10:34:41.000Z",
+    "library_name": "transformers",
+    "likes": 225,
+    "model-index": null,
+    "modelId": "HuggingFaceTB/SmolLM2-135M",
+    "pipeline_tag": "text-generation",
+    "private": false,
+    "safetensors": {
+      "parameters": {
+        "BF16": 134515008
+      },
+      "total": 134515008
+    },
+    "sha": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+    "siblings": [
+      {
+        "blobId": "a6344aac8c09253b3b630fb776ae94478aa0275b",
+        "rfilename": ".gitattributes",
+        "size": 1519
+      },
+      {
+        "blobId": "4049f762cb41ec6f526936c9af80ae216048bc74",
+        "rfilename": "README.md",
+        "size": 6340
+      },
+      {
+        "blobId": "ccf3dac2f33905d152adbdf3886b5e38a4eb7579",
+        "rfilename": "config.json",
+        "size": 704
+      },
+      {
+        "blobId": "0fce861c328ff24830f3037d91ce773254447bf7",
+        "rfilename": "generation_config.json",
+        "size": 111
+      },
+      {
+        "blobId": "69503b13f727ba3812b6803e97442a6de05ef5eb",
+        "rfilename": "merges.txt",
+        "size": 466391
+      },
+      {
+        "blobId": "ed736e4e5f39dd99c5d435bf84c0d8c222839b1b",
+        "lfs": {
+          "pointerSize": 134,
+          "sha256": "80521b40281d6ce74e35c9282c22539e75aa0ac8578892b2a59955ef78d55da1",
+          "size": 269060552
+        },
+        "rfilename": "model.safetensors",
+        "size": 269060552
+      },
+      {
+        "blobId": "f6652f246cb895ca1edfb16d10b57917b266e335",
+        "rfilename": "special_tokens_map.json",
+        "size": 831
+      },
+      {
+        "blobId": "f922b1797f0c88e71addc8393787831f2477a4bd",
+        "rfilename": "tokenizer.json",
+        "size": 2104556
+      },
+      {
+        "blobId": "d45192775d58298087a1fedf5967fe5b63b091ab",
+        "rfilename": "tokenizer_config.json",
+        "size": 3658
+      },
+      {
+        "blobId": "0ad5ecc2035b7031b88afb544ee95e2d49baa484",
+        "rfilename": "vocab.json",
+        "size": 800662
+      }
+    ],
+    "spaces": [
+      "pliny-the-prompter/obliteratus",
+      "fromziro/SLM_Regression_Line",
+      "StentorLabs/SLM_Arena",
+      "dumbordumber/obliteratus",
+      "RavichandranJ/obliteratus",
+      "KBaba7/Quant",
+      "FallnAI/Quantize-HF-Models",
+      "openfree/LLM_Quantization",
+      "bhaskartripathi/LLM_Quantization",
+      "ruslanmv/convert_to_gguf",
+      "EuroEval/euroeval_leaderboard",
+      "stanley-00/slm-testing",
+      "UniversalComputingResearch/clmi",
+      "ariG23498/nanovlm",
+      "seawolf2357/LLM_Quantization",
+      "totolook/Quant",
+      "lukasgarbas/transformer-ranker",
+      "K00B404/LLM_Quantization",
+      "robtacconelli/Nacrith-GPU",
+      "sthenno/llm-ppls",
+      "davanstrien/next-token",
+      "Kodacoda/obliteratus",
+      "anzizdaouda0/openaibox",
+      "AlexHung29629/hf-to-gguf",
+      "Oss11/Quantize-HF-Models",
+      "Xlnk/Quantize-HF-Models",
+      "exploitz3r0bbd/Quantize-HF-Models",
+      "FlameF0X/SLM-Playground",
+      "dromero14521/obliteratus",
+      "kicfk/obliteratus",
+      "aaahmet/obliteratus",
+      "rbinrs/obliteratus",
+      "Ngixdev/obliteratus",
+      "Deadmon/obliteratus",
+      "AsadIsmail/ternary-quant-demo",
+      "zpenct/llm-probability-inspector",
+      "xxbanditxx/slm-testing_with_Orbit_as_governor",
+      "S-Dreamer/obliteratus",
+      "AlanaSky/asgaard",
+      "marchkamal51/obliteratus",
+      "MaxBlumenfeld/5930_final_deployment_00",
+      "padmanabhbosamia/VerySmolTextGen",
+      "Adityak204/SmolLM2-135M-Text-Generator",
+      "hashvibe007/smollm2",
+      "pradeep6kumar2024/smollm2-spaces",
+      "sawandarekar/SmolLM2-135M-Model-Text-Generation",
+      "danielnashed/finetuning-llms",
+      "Ayush4441/Smoll_Talk",
+      "Harriissh/myGenAibot",
+      "riteshkokam/ResAI",
+      "K00B404/convert_to_gguf",
+      "llaa33219/BLOUplanet-Model-Playground",
+      "fexeak/my-space",
+      "ashish-26/assignment13",
+      "CrystalRaindropsFall/math-curriculum-learning-demo",
+      "justpradeep/smol135-app",
+      "dkamat/smolLM2-135M-from-stratch",
+      "Tejav3/smollm2",
+      "malarsaravanan/SmolLM2-135M-demo",
+      "santhoshv6/smollm2-135m-demo",
+      "one-cactus/lm-smollm2-135m",
+      "bikash9c/SmolLM2",
+      "sidharthg/SMOLLM2-135M-App",
+      "SUKUNA999/AIaia",
+      "AmolDuse/SmolLM2-135M-Disecting",
+      "saneshashank/retrain_SmolLM2-135M",
+      "abi96062/smolLM2-135-implementation",
+      "agileabhi/SmolLM2-135M-Model",
+      "mohantee/smolLM2-135M-from-stratch",
+      "mohantee/smolLM2-with-deepseek-135M",
+      "Sualeh77/smollm2-135m-trained-on-tinyShakespear-forfun",
+      "malarsaravanan/deepseek-mlha-moe",
+      "Rahul2020/SmolLM2-135M",
+      "Gzagarwal/SmolLM2-135M",
+      "tiltaf/vlm-demo",
+      "GTOMA83/Quantize-HF-Models",
+      "sub314xxl/obliteratus",
+      "cw4444/obliteratus",
+      "kalmuahlaunda/obliteratus",
+      "mastodonitis/obliteratus",
+      "GrozniMilitq/obliteratus",
+      "liminal4423/obliteratus",
+      "kirikir13/obliteratus",
+      "RaccoonStampede/obliteratus",
+      "cypher109/obliteratus",
+      "duarffodog/obliteratus",
+      "TOpNeT7/obliteratus",
+      "milkygingers/obliteratus",
+      "impresionist/OBLITERATUS",
+      "bresseporix22/obliteratus",
+      "gokamoda/logit-lens",
+      "Sendpns/obliteratus",
+      "Guilherme34/convert_to_gguf",
+      "epixdonkey/obliteratus",
+      "avakhov/smollm2-demo",
+      "jessy38472/obliteratus",
+      "ymonoce/obliteratus",
+      "d173173/my-test-model",
+      "Jjopajd1334/obliteratus",
+      "dryouviavant/obliteratus"
+    ],
+    "tags": [
+      "transformers",
+      "safetensors",
+      "llama",
+      "text-generation",
+      "en",
+      "arxiv:2502.02737",
+      "license:apache-2.0",
+      "eval-results",
+      "text-generation-inference",
+      "endpoints_compatible",
+      "deploy:azure",
+      "region:us"
+    ],
+    "transformersInfo": {
+      "auto_model": "AutoModelForCausalLM",
+      "pipeline_tag": "text-generation",
+      "processor": "AutoTokenizer"
+    },
+    "usedStorage": 921560654,
+    "widgetData": [
+      {
+        "text": "My name is Julien and I like to"
+      },
+      {
+        "text": "I like traveling by train because"
+      },
+      {
+        "text": "Paris is an amazing place to visit,"
+      },
+      {
+        "text": "Once upon a time,"
+      }
+    ]
+  },
+  "model_id": "HuggingFaceTB/SmolLM2-135M",
+  "readme": "---\nlibrary_name: transformers\nlicense: apache-2.0\nlanguage:\n- en\n---\n\n\n# SmolLM2\n\n![image/png](https://cdn-uploads.huggingface.co/production/uploads/61c141342aac764ce1654e43/XtSR4NkriicR6fGiWGowZ.png)\n\n##  Table of Contents\n\n1. [Model Summary](##model-summary)\n2. [Limitations](##limitations)\n3. [Training](##training)\n4. [License](##license)\n5. [Citation](##citation)\n\n## Model Summary\n\nSmolLM2 is a family of compact language models available in three size: 135M, 360M, and 1.7B parameters. They are capable of solving a wide range of tasks while being lightweight enough to run on-device. More details in our paper: https://arxiv.org/abs/2502.02737\n\nSmolLM2 demonstrates significant advances over its predecessor SmolLM1, particularly in instruction following, knowledge, reasoning. The 135M model was trained on 2 trillion tokens using a diverse dataset combination: FineWeb-Edu, DCLM, The Stack, along with new filtered datasets we curated and will release soon.  We developed the instruct version through supervised fine-tuning (SFT) using a combination of public datasets and our own curated datasets. We then applied Direct Preference Optimization (DPO) using [UltraFeedback](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized).\n\nThe instruct model additionally supports tasks such as text rewriting, summarization and function calling (for the 1.7B) thanks to datasets developed by [Argilla](https://huggingface.co/argilla) such as [Synth-APIGen-v0.1](https://huggingface.co/datasets/argilla/Synth-APIGen-v0.1).\nYou can find the SFT dataset here: https://huggingface.co/datasets/HuggingFaceTB/smol-smoltalk and finetuning code at https://github.com/huggingface/alignment-handbook/tree/main/recipes/smollm2\n\n### How to use\n\n```bash\npip install transformers\n```\n\n#### Running the model on CPU/GPU/multi GPU\n* _Using full precision_\n```python\n# pip install transformers\nfrom transformers import AutoModelForCausalLM, AutoTokenizer\ncheckpoint = \"HuggingFaceTB/SmolLM2-135M\"\ndevice = \"cuda\" # for GPU usage or \"cpu\" for CPU usage\ntokenizer = AutoTokenizer.from_pretrained(checkpoint)\n# for multiple GPUs install accelerate and do `model = AutoModelForCausalLM.from_pretrained(checkpoint, device_map=\"auto\")`\nmodel = AutoModelForCausalLM.from_pretrained(checkpoint).to(device)\ninputs = tokenizer.encode(\"Gravity is\", return_tensors=\"pt\").to(device)\noutputs = model.generate(inputs)\nprint(tokenizer.decode(outputs[0]))\n```\n\n* _Using `torch.bfloat16`_\n```python\n# pip install accelerate\nimport torch\nfrom transformers import AutoTokenizer, AutoModelForCausalLM\ncheckpoint = \"HuggingFaceTB/SmolLM2-135M\"\ntokenizer = AutoTokenizer.from_pretrained(checkpoint)\n# for fp16 use `torch_dtype=torch.float16` instead\nmodel = AutoModelForCausalLM.from_pretrained(checkpoint, device_map=\"auto\", torch_dtype=torch.bfloat16)\ninputs = tokenizer.encode(\"Gravity is\", return_tensors=\"pt\").to(\"cuda\")\noutputs = model.generate(inputs)\nprint(tokenizer.decode(outputs[0]))\n```\n```bash\n>>> print(f\"Memory footprint: {model.get_memory_footprint() / 1e6:.2f} MB\")\nMemory footprint: 723.56 MB\n```\n\n## Evaluation\n\nIn this section, we report the evaluation results of SmolLM2. All evaluations are zero-shot unless stated otherwise, and we use [lighteval](https://github.com/huggingface/lighteval) to run them.\n\n## Base pre-trained model\n\n| Metrics            | SmolLM2-135M-8k | SmolLM-135M  |\n|:-------------------|:----------------:|:------------:|\n| HellaSwag         | **42.1**         | 41.2         |\n| ARC (Average)     | **43.9**         | 42.4         |\n| PIQA              | 68.4             | 68.4         |\n| MMLU (cloze)      | **31.5**         | 30.2         |\n| CommonsenseQA     | **33.9**         | 32.7         |\n| TriviaQA          | 4.1              | **4.3**      |\n| Winogrande        | 51.3             | 51.3         |\n| OpenBookQA        | **34.6**         | 34.0         |\n| GSM8K (5-shot)    | **1.4**          | 1.0          |\n\n\n## Instruction model\n\n| Metric                       | SmolLM2-135M-Instruct | SmolLM-135M-Instruct |\n|:-----------------------------|:---------------------:|:--------------------:|\n| IFEval (Average prompt/inst) | **29.9**                 | 17.2                |\n| MT-Bench                     | **1.98**                 | 1.68                |\n| HellaSwag                    | **40.9**                 | 38.9                |\n| ARC (Average)                | **37.3**                 | 33.9                |\n| PIQA                         | **66.3**                 | 64.0                |\n| MMLU (cloze)                 | **29.3**                 | 28.3                |\n| BBH (3-shot)                 | **28.2**                 | 25.2                |\n| GSM8K (5-shot)               | 1.4                  | 1.4                 |\n\n\n\n## Limitations\n\nSmolLM2 models primarily understand and generate content in English. They can produce text on a variety of topics, but the generated content may not always be factually accurate, logically consistent, or free from biases present in the training data. These models should be used as assistive tools rather than definitive sources of information. Users should always verify important information and critically evaluate any generated content.\n\n## Training\n\n### Model\n\n- **Architecture:** Transformer decoder\n- **Pretraining tokens:** 2T\n- **Precision:** bfloat16\n\n### Hardware\n\n- **GPUs:** 64 H100\n\n### Software\n\n- **Training Framework:** [nanotron](https://github.com/huggingface/nanotron/tree/main)\n\n## License\n\n[Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)\n\n## Citation\n```bash\n@misc{allal2025smollm2smolgoesbig,\n      title={SmolLM2: When Smol Goes Big -- Data-Centric Training of a Small Language Model}, \n      author={Loubna Ben Allal and Anton Lozhkov and Elie Bakouch and Gabriel Mart\u00edn Bl\u00e1zquez and Guilherme Penedo and Lewis Tunstall and Andr\u00e9s Marafioti and Hynek Kydl\u00ed\u010dek and Agust\u00edn Piqueres Lajar\u00edn and Vaibhav Srivastav and Joshua Lochner and Caleb Fahlgren and Xuan-Son Nguyen and Cl\u00e9mentine Fourrier and Ben Burtenshaw and Hugo Larcher and Haojun Zhao and Cyril Zakka and Mathieu Morlon and Colin Raffel and Leandro von Werra and Thomas Wolf},\n      year={2025},\n      eprint={2502.02737},\n      archivePrefix={arXiv},\n      primaryClass={cs.CL},\n      url={https://arxiv.org/abs/2502.02737}, \n}\n```"
+}

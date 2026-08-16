@@ -1,0 +1,278 @@
+{
+  "config": {
+    "architectures": [
+      "DeepseekV2ForCausalLM"
+    ],
+    "attention_bias": false,
+    "attention_dropout": 0.0,
+    "auto_map": {
+      "AutoConfig": "configuration_deepseek.DeepseekV2Config",
+      "AutoModel": "modeling_deepseek.DeepseekV2Model",
+      "AutoModelForCausalLM": "modeling_deepseek.DeepseekV2ForCausalLM"
+    },
+    "aux_loss_alpha": 0.001,
+    "bos_token_id": 100000,
+    "eos_token_id": 100001,
+    "first_k_dense_replace": 1,
+    "hidden_act": "silu",
+    "hidden_size": 2048,
+    "initializer_range": 0.02,
+    "intermediate_size": 10944,
+    "kv_lora_rank": 512,
+    "max_position_embeddings": 163840,
+    "model_type": "deepseek_v2",
+    "moe_intermediate_size": 1408,
+    "moe_layer_freq": 1,
+    "n_group": 1,
+    "n_routed_experts": 64,
+    "n_shared_experts": 2,
+    "norm_topk_prob": false,
+    "num_attention_heads": 16,
+    "num_experts_per_tok": 6,
+    "num_hidden_layers": 27,
+    "num_key_value_heads": 16,
+    "pretraining_tp": 1,
+    "q_lora_rank": null,
+    "qk_nope_head_dim": 128,
+    "qk_rope_head_dim": 64,
+    "rms_norm_eps": 1e-06,
+    "rope_scaling": {
+      "beta_fast": 32,
+      "beta_slow": 1,
+      "factor": 40,
+      "mscale": 0.707,
+      "mscale_all_dim": 0.707,
+      "original_max_position_embeddings": 4096,
+      "type": "yarn"
+    },
+    "rope_theta": 10000,
+    "routed_scaling_factor": 1.0,
+    "scoring_func": "softmax",
+    "seq_aux": true,
+    "tie_word_embeddings": false,
+    "topk_group": 1,
+    "topk_method": "greedy",
+    "torch_dtype": "bfloat16",
+    "transformers_version": "4.33.1",
+    "use_cache": true,
+    "v_head_dim": 128,
+    "vocab_size": 102400
+  },
+  "info": {
+    "_id": "664448c9ba3c6c8d118eb0e7",
+    "author": "deepseek-ai",
+    "cardData": {
+      "license": "other",
+      "license_link": "https://github.com/deepseek-ai/DeepSeek-V2/blob/main/LICENSE-MODEL",
+      "license_name": "deepseek"
+    },
+    "config": {
+      "architectures": [
+        "DeepseekV2ForCausalLM"
+      ],
+      "auto_map": {
+        "AutoConfig": "configuration_deepseek.DeepseekV2Config",
+        "AutoModel": "modeling_deepseek.DeepseekV2Model",
+        "AutoModelForCausalLM": "modeling_deepseek.DeepseekV2ForCausalLM"
+      },
+      "model_type": "deepseek_v2",
+      "num_experts_per_tok": 6,
+      "tokenizer_config": {
+        "bos_token": {
+          "__type": "AddedToken",
+          "content": "<\uff5cbegin\u2581of\u2581sentence\uff5c>",
+          "lstrip": false,
+          "normalized": true,
+          "rstrip": false,
+          "single_word": false
+        },
+        "chat_template": "{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}{{ bos_token }}{% for message in messages %}{% if message['role'] == 'user' %}{{ 'User: ' + message['content'] + '\n\n' }}{% elif message['role'] == 'assistant' %}{{ 'Assistant: ' + message['content'] + eos_token }}{% elif message['role'] == 'system' %}{{ message['content'] + '\n\n' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'Assistant:' }}{% endif %}",
+        "eos_token": {
+          "__type": "AddedToken",
+          "content": "<\uff5cend\u2581of\u2581sentence\uff5c>",
+          "lstrip": false,
+          "normalized": true,
+          "rstrip": false,
+          "single_word": false
+        },
+        "pad_token": {
+          "__type": "AddedToken",
+          "content": "<\uff5cend\u2581of\u2581sentence\uff5c>",
+          "lstrip": false,
+          "normalized": true,
+          "rstrip": false,
+          "single_word": false
+        },
+        "unk_token": null
+      }
+    },
+    "createdAt": "2024-05-15T05:31:53.000Z",
+    "disabled": false,
+    "downloads": 413107,
+    "gated": false,
+    "id": "deepseek-ai/DeepSeek-V2-Lite",
+    "lastModified": "2024-06-25T08:37:17.000Z",
+    "library_name": "transformers",
+    "likes": 185,
+    "model-index": null,
+    "modelId": "deepseek-ai/DeepSeek-V2-Lite",
+    "pipeline_tag": "text-generation",
+    "private": false,
+    "safetensors": {
+      "parameters": {
+        "BF16": 15706484224
+      },
+      "total": 15706484224
+    },
+    "sha": "604d5664dddd88a0433dbae533b7fe9472482de0",
+    "siblings": [
+      {
+        "blobId": "a6344aac8c09253b3b630fb776ae94478aa0275b",
+        "rfilename": ".gitattributes",
+        "size": 1519
+      },
+      {
+        "blobId": "ac09290cb2947183ab7f19d7477511dad3600a7a",
+        "rfilename": "LICENSE",
+        "size": 13759
+      },
+      {
+        "blobId": "46b3016b70987d1ff15c2c1ae139b0f1a446bcb0",
+        "rfilename": "README.md",
+        "size": 15498
+      },
+      {
+        "blobId": "a1aa8126bbf462cbec8fcc79e8c98d8d87f5c7ed",
+        "rfilename": "config.json",
+        "size": 1522
+      },
+      {
+        "blobId": "82e0f5d9d33620a66e328fdeae0b8dc12e2cff7c",
+        "rfilename": "configuration_deepseek.py",
+        "size": 10338
+      },
+      {
+        "blobId": "458e1d985ba3fbaaf62a4d1a9dd6ff795a451f7e",
+        "rfilename": "generation_config.json",
+        "size": 181
+      },
+      {
+        "blobId": "8b3ffb3b54b0d78d03e2f392b13789c029385ccb",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "0d7e9f39bde40111a4c0f390b87497dce4565cf578d916395e6b2c7851f1e8da",
+          "size": 8594887408
+        },
+        "rfilename": "model-00001-of-000004.safetensors",
+        "size": 8594887408
+      },
+      {
+        "blobId": "a730e517df1cddde1df3c1306398b2bea6ae808b",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "e0656832b0d594b4a64cad40ff8465231de6ed44c854f74f6b217797660aa4bb",
+          "size": 8591757448
+        },
+        "rfilename": "model-00002-of-000004.safetensors",
+        "size": 8591757448
+      },
+      {
+        "blobId": "3d79a3960f5de89e4357739f762c0a5e621af972",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "843ec689624f3a520526e040f0326c4dc9865e8172942ca98a084fe136fdb21a",
+          "size": 8590718520
+        },
+        "rfilename": "model-00003-of-000004.safetensors",
+        "size": 8590718520
+      },
+      {
+        "blobId": "57c124c9ca29e71c3260a1021890082d45c97681",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "cfb51658f67cedfbbc4d62ad14187830ceec8ee82c788c5f718feea98905ef31",
+          "size": 5636263200
+        },
+        "rfilename": "model-00004-of-000004.safetensors",
+        "size": 5636263200
+      },
+      {
+        "blobId": "5a821356160292c668d01f8e7fdf9abba4a7b72d",
+        "rfilename": "model.safetensors.index.json",
+        "size": 479924
+      },
+      {
+        "blobId": "847a458bedcc8df352b1a89315b8e400b9bc6030",
+        "rfilename": "modeling_deepseek.py",
+        "size": 78672
+      },
+      {
+        "blobId": "d24377191dd00e80c44f22e31dc15272258a22de",
+        "rfilename": "tokenization_deepseek_fast.py",
+        "size": 1368
+      },
+      {
+        "blobId": "8b284e5afe1730e31c97ed5c3bdf240adbd15c86",
+        "rfilename": "tokenizer.json",
+        "size": 4607451
+      },
+      {
+        "blobId": "685b4b63ad1aedad8f98824ab21d2ff422d9e1b1",
+        "rfilename": "tokenizer_config.json",
+        "size": 1279
+      }
+    ],
+    "spaces": [
+      "Livengood/Instance-VRAM-Calculator",
+      "eduagarcia/open_pt_llm_leaderboard",
+      "ginigen-ai/Metacognition-Leaderboard-Space",
+      "Justinrune/LLaMA-Factory",
+      "dhlak/llm-vram-calc",
+      "luancy1208/CHIP",
+      "aekpic877/MathAI",
+      "msun415/Llamole",
+      "Hachiru/chigas",
+      "terr97us/my-deepseek-demo",
+      "MAS-AI-0000/Authentica",
+      "Unique023/Darshan_s_Pizza_House",
+      "MedusaDiaspora/Burger-Concierge",
+      "hplisiecki/pinocchio-inventory-explorer",
+      "zst50/MoE-Parameter-Calculator"
+    ],
+    "tags": [
+      "transformers",
+      "safetensors",
+      "deepseek_v2",
+      "text-generation",
+      "conversational",
+      "custom_code",
+      "arxiv:2405.04434",
+      "license:other",
+      "text-generation-inference",
+      "endpoints_compatible",
+      "region:us"
+    ],
+    "transformersInfo": {
+      "auto_model": "AutoModelForCausalLM",
+      "pipeline_tag": "text-generation",
+      "processor": "AutoTokenizer"
+    },
+    "usedStorage": 31413626576,
+    "widgetData": [
+      {
+        "text": "Hi, what can you help me with?"
+      },
+      {
+        "text": "What is 84 * 3 / 2?"
+      },
+      {
+        "text": "Tell me an interesting fact about the universe!"
+      },
+      {
+        "text": "Explain quantum computing in simple terms."
+      }
+    ]
+  },
+  "model_id": "deepseek-ai/DeepSeek-V2-Lite",
+  "readme": "---\nlicense: other\nlicense_name: deepseek\nlicense_link: https://github.com/deepseek-ai/DeepSeek-V2/blob/main/LICENSE-MODEL\n---\n\n<!-- markdownlint-disable first-line-h1 -->\n<!-- markdownlint-disable html -->\n<!-- markdownlint-disable no-duplicate-header -->\n\n<div align=\"center\">\n  <img src=\"https://github.com/deepseek-ai/DeepSeek-V2/blob/main/figures/logo.svg?raw=true\" width=\"60%\" alt=\"DeepSeek-V2\" />\n</div>\n<hr>\n<div align=\"center\" style=\"line-height: 1;\">\n  <a href=\"https://www.deepseek.com/\" target=\"_blank\" style=\"margin: 2px;\">\n    <img alt=\"Homepage\" src=\"https://github.com/deepseek-ai/DeepSeek-V2/blob/main/figures/badge.svg?raw=true\" style=\"display: inline-block; vertical-align: middle;\"/>\n  </a>\n  <a href=\"https://chat.deepseek.com/\" target=\"_blank\" style=\"margin: 2px;\">\n    <img alt=\"Chat\" src=\"https://img.shields.io/badge/\ud83e\udd16%20Chat-DeepSeek%20V2-536af5?color=536af5&logoColor=white\" style=\"display: inline-block; vertical-align: middle;\"/>\n  </a>\n  <a href=\"https://huggingface.co/deepseek-ai\" target=\"_blank\" style=\"margin: 2px;\">\n    <img alt=\"Hugging Face\" src=\"https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-DeepSeek%20AI-ffc107?color=ffc107&logoColor=white\" style=\"display: inline-block; vertical-align: middle;\"/>\n  </a>\n</div>\n\n<div align=\"center\" style=\"line-height: 1;\">\n  <a href=\"https://discord.gg/Tc7c45Zzu5\" target=\"_blank\" style=\"margin: 2px;\">\n    <img alt=\"Discord\" src=\"https://img.shields.io/badge/Discord-DeepSeek%20AI-7289da?logo=discord&logoColor=white&color=7289da\" style=\"display: inline-block; vertical-align: middle;\"/>\n  </a>\n  <a href=\"https://github.com/deepseek-ai/DeepSeek-V2/blob/main/figures/qr.jpeg?raw=true\" target=\"_blank\" style=\"margin: 2px;\">\n    <img alt=\"Wechat\" src=\"https://img.shields.io/badge/WeChat-DeepSeek%20AI-brightgreen?logo=wechat&logoColor=white\" style=\"display: inline-block; vertical-align: middle;\"/>\n  </a>\n  <a href=\"https://twitter.com/deepseek_ai\" target=\"_blank\" style=\"margin: 2px;\">\n    <img alt=\"Twitter Follow\" src=\"https://img.shields.io/badge/Twitter-deepseek_ai-white?logo=x&logoColor=white\" style=\"display: inline-block; vertical-align: middle;\"/>\n  </a>\n</div>\n\n<div align=\"center\" style=\"line-height: 1;\">\n  <a href=\"https://github.com/deepseek-ai/DeepSeek-V2/blob/main/LICENSE-CODE\" style=\"margin: 2px;\">\n    <img alt=\"Code License\" src=\"https://img.shields.io/badge/Code_License-MIT-f5de53?&color=f5de53\" style=\"display: inline-block; vertical-align: middle;\"/>\n  </a>\n  <a href=\"https://github.com/deepseek-ai/DeepSeek-V2/blob/main/LICENSE-MODEL\" style=\"margin: 2px;\">\n    <img alt=\"Model License\" src=\"https://img.shields.io/badge/Model_License-Model_Agreement-f5de53?&color=f5de53\" style=\"display: inline-block; vertical-align: middle;\"/>\n  </a>\n</div>\n\n<p align=\"center\">\n  <a href=\"#2-model-downloads\">Model Download</a> |\n  <a href=\"#3-evaluation-results\">Evaluation Results</a> |\n  <a href=\"#4-model-architecture\">Model Architecture</a> |\n  <a href=\"#6-api-platform\">API Platform</a> |\n  <a href=\"#8-license\">License</a> |\n  <a href=\"#9-citation\">Citation</a>\n</p>\n\n<p align=\"center\">\n  <a href=\"https://arxiv.org/abs/2405.04434\"><b>Paper Link</b>\ud83d\udc41\ufe0f</a>\n</p>\n\n# DeepSeek-V2:  A Strong, Economical, and Efficient Mixture-of-Experts Language Model\n\n## 1. Introduction\n\nLast week, the release and buzz around DeepSeek-V2 have ignited widespread interest in MLA (Multi-head Latent Attention)! Many in the community suggested open-sourcing a smaller MoE model for in-depth research. And now DeepSeek-V2-Lite comes out:\n\n- 16B total params, 2.4B active params, scratch training with 5.7T tokens\n- Outperforms 7B dense and 16B MoE on many English & Chinese benchmarks\n- Deployable on single 40G GPU, fine-tunable on 8x80G GPUs\n\nDeepSeek-V2, a strong Mixture-of-Experts (MoE) language model characterized by economical training and efficient inference. DeepSeek-V2 adopts innovative architectures including Multi-head Latent Attention (MLA) and DeepSeekMoE. MLA guarantees efficient inference through significantly compressing the Key-Value (KV) cache into a latent vector, while DeepSeekMoE enables training strong models at an economical cost through sparse computation. \n\n## 2. News\n\n- 2024.05.16: We released the DeepSeek-V2-Lite.\n- 2024.05.06: We released the DeepSeek-V2.\n\n## 3. Model Downloads\n\nWith DeepSeek-V2, we are open-sourcing base and chat models across two sizes:\n\n<div align=\"center\">\n\n| **Model** | **#Total Params** | **#Activated Params** | **Context Length** | **Download** |\n| :------------: | :------------: | :------------: | :------------: | :------------: |\n| DeepSeek-V2-Lite | 16B | 2.4B | 32k   | [\ud83e\udd17 HuggingFace](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite)   |\n| DeepSeek-V2-Lite-Chat (SFT)   | 16B | 2.4B | 32k   | [\ud83e\udd17 HuggingFace](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite-Chat)   |\n| DeepSeek-V2   | 236B | 21B |  128k   | [\ud83e\udd17 HuggingFace](https://huggingface.co/deepseek-ai/DeepSeek-V2)   |\n| DeepSeek-V2-Chat (RL)   | 236B | 21B |  128k   | [\ud83e\udd17 HuggingFace](https://huggingface.co/deepseek-ai/DeepSeek-V2-Chat)   |\n\n</div>\n\nDue to the constraints of HuggingFace, the open-source code currently experiences slower performance than our internal codebase when running on GPUs with Huggingface. To facilitate the efficient execution of our model, we offer a dedicated vllm solution that optimizes performance for running our model effectively.\n\n## 4. Evaluation Results\n### Base Model\n#### Standard Benchmark\n<div align=\"center\">\n\n| **Benchmark** | **Domain** | **DeepSeek 7B (Dense)** | **DeepSeekMoE 16B** | **DeepSeek-V2-Lite (MoE-16B)** |\n|:-------------:|:----------:|:--------------:|:-----------------:|:--------------------------:|\n| **Architecture**      | -    | MHA+Dense           | MHA+MoE              | MLA+MoE                       |\n| **MMLU**      | English    | 48.2           | 45.0              | 58.3                       |\n| **BBH**       | English    | 39.5           | 38.9              | 44.1                       |\n| **C-Eval**    | Chinese    | 45.0           | 40.6              | 60.3                       |\n| **CMMLU**     | Chinese    | 47.2           | 42.5              | 64.3                       |\n| **HumanEval** | Code       | 26.2           | 26.8              | 29.9                       |\n| **MBPP**      | Code       | 39.0           | 39.2              | 43.2                       |\n| **GSM8K**     | Math       | 17.4           | 18.8              | 41.1                       |\n| **Math**      | Math       | 3.3           | 4.3             | 17.1                       |\n\n</div>\nFor more evaluation details, such as few-shot settings and prompts, please check our paper. \n\n\n### Chat Model\n#### Standard Benchmark\n\n<div align=\"center\">\n\n| Benchmark | Domain         | DeepSeek 7B Chat (SFT) | DeepSeekMoE 16B Chat (SFT) | DeepSeek-V2-Lite 16B Chat (SFT) |\n|:-----------:|:----------------:|:------------------:|:---------------:|:---------------------:|\n| **MMLU**      | English        | 49.7             | 47.2          | 55.7                |\n| **BBH**       | English        | 43.1             | 42.2          | 48.1                |\n| **C-Eval**    | Chinese        | 44.7             | 40.0          | 60.1                |\n| **CMMLU**     | Chinese        | 51.2             | 49.3          | 62.5                |\n| **HumanEval** | Code           | 45.1             | 45.7          | 57.3                |\n| **MBPP**      | Code           | 39.0             | 46.2          | 45.8                |\n| **GSM8K**     | Math           | 62.6             | 62.2          | 72.0                |\n| **Math**      | Math           | 14.7             | 15.2          | 27.9                |\n\n</div>\n\n\n## 5. Model Architecture\nDeepSeek-V2 adopts innovative architectures to guarantee economical training and efficient inference\uff1a \n- For attention, we design MLA (Multi-head Latent Attention), which utilizes low-rank key-value union compression to eliminate the bottleneck of inference-time key-value cache, thus supporting efficient inference. \n- For Feed-Forward Networks (FFNs), we adopt DeepSeekMoE architecture, a high-performance MoE architecture that enables training stronger models at lower costs. \n\n<p align=\"center\">\n  <img width=\"90%\" src=\"https://github.com/deepseek-ai/DeepSeek-V2/blob/main/figures/architecture.png?raw=true\" />\n</p>\n\nDeepSeek-V2-Lite has 27 layers and a hidden dimension of 2048. It also employs MLA and has 16 attention heads, where each head has a dimension of 128. Its KV compression dimension is 512, but slightly different from DeepSeek-V2, it does not compress the queries. For the decoupled queries and key, it has a per-head dimension of 64. DeepSeek-V2-Lite also employs DeepSeekMoE, and all FFNs except for the first layer are replaced with MoE layers. Each MoE layer consists of 2 shared experts and 64 routed experts, where the intermediate hidden dimension of each expert is 1408. Among the routed experts, 6 experts will be activated for each token. Under this configuration, DeepSeek-V2-Lite comprises 15.7B total parameters, of which 2.4B are activated for each token.\n\n\n## 6. Training Details\nDeepSeek-V2-Lite is also trained from scratch on the same pre-training corpus of DeepSeek-V2, which is not polluted by any SFT data. It uses the AdamW optimizer with hyper-parameters set to $\\beta_1=0.9$, $\\beta_2=0.95$, and $\\mathrm{weight_decay}=0.1$. The learning rate is scheduled using a warmup-and-step-decay strategy. Initially, the learning rate linearly increases from 0 to the maximum value during the first 2K steps. Subsequently, the learning rate is multiplied by 0.316 after training about 80% of tokens, and again by 0.316 after training about 90% of tokens. The maximum learning rate is set to $4.2 \\times 10^{-4}$, and the gradient clipping norm is set to 1.0. We do not employ the batch size scheduling strategy for it, and it is trained with a constant batch size of 4608 sequences. During pre-training, we set the maximum sequence length to 4K, and train DeepSeek-V2-Lite on 5.7T tokens. We leverage pipeline parallelism to deploy different layers of it on different devices, but for each layer, all experts will be deployed on the same device. Therefore, we only employ a small expert-level balance loss with $\\alpha_{1}=0.001$, and do not employ device-level balance loss and communication balance loss for it. After pre-training, we also perform long-context extension, SFT for DeepSeek-V2-Lite and get a chat model called DeepSeek-V2-Lite Chat.\n\n## 7. How to run locally\n\n**To utilize DeepSeek-V2-Lite in BF16 format for inference, 40GB*1 GPU is required.**\n### Inference with Huggingface's Transformers\nYou can directly employ [Huggingface's Transformers](https://github.com/huggingface/transformers) for model inference.\n\n#### Text Completion\n```python\nimport torch\nfrom transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig\n\nmodel_name = \"deepseek-ai/DeepSeek-V2-Lite\"\ntokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)\nmodel = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True, torch_dtype=torch.bfloat16).cuda()\nmodel.generation_config = GenerationConfig.from_pretrained(model_name)\nmodel.generation_config.pad_token_id = model.generation_config.eos_token_id\n\ntext = \"An attention function can be described as mapping a query and a set of key-value pairs to an output, where the query, keys, values, and output are all vectors. The output is\"\ninputs = tokenizer(text, return_tensors=\"pt\")\noutputs = model.generate(**inputs.to(model.device), max_new_tokens=100)\n\nresult = tokenizer.decode(outputs[0], skip_special_tokens=True)\nprint(result)\n```\n\n#### Chat Completion\n```python\nimport torch\nfrom transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig\n\nmodel_name = \"deepseek-ai/DeepSeek-V2-Lite-Chat\"\ntokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)\nmodel = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True, torch_dtype=torch.bfloat16).cuda()\nmodel.generation_config = GenerationConfig.from_pretrained(model_name)\nmodel.generation_config.pad_token_id = model.generation_config.eos_token_id\n\nmessages = [\n    {\"role\": \"user\", \"content\": \"Write a piece of quicksort code in C++\"}\n]\ninput_tensor = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_tensors=\"pt\")\noutputs = model.generate(input_tensor.to(model.device), max_new_tokens=100)\n\nresult = tokenizer.decode(outputs[0][input_tensor.shape[1]:], skip_special_tokens=True)\nprint(result)\n```\n\nThe complete chat template can be found within `tokenizer_config.json` located in the huggingface model repository.\n\nAn example of chat template is as belows:\n\n```bash\n<\uff5cbegin\u2581of\u2581sentence\uff5c>User: {user_message_1}\n\nAssistant: {assistant_message_1}<\uff5cend\u2581of\u2581sentence\uff5c>User: {user_message_2}\n\nAssistant:\n```\n\nYou can also add an optional system message:\n\n```bash\n<\uff5cbegin\u2581of\u2581sentence\uff5c>{system_message}\n\nUser: {user_message_1}\n\nAssistant: {assistant_message_1}<\uff5cend\u2581of\u2581sentence\uff5c>User: {user_message_2}\n\nAssistant:\n```\n\n### Inference with vLLM (recommended)\nTo utilize [vLLM](https://github.com/vllm-project/vllm) for model inference, please merge this Pull Request into your vLLM codebase: https://github.com/vllm-project/vllm/pull/4650.\n\n```python\nfrom transformers import AutoTokenizer\nfrom vllm import LLM, SamplingParams\n\nmax_model_len, tp_size = 8192, 1\nmodel_name = \"deepseek-ai/DeepSeek-V2-Lite-Chat\"\ntokenizer = AutoTokenizer.from_pretrained(model_name)\nllm = LLM(model=model_name, tensor_parallel_size=tp_size, max_model_len=max_model_len, trust_remote_code=True, enforce_eager=True)\nsampling_params = SamplingParams(temperature=0.3, max_tokens=256, stop_token_ids=[tokenizer.eos_token_id])\n\nmessages_list = [\n    [{\"role\": \"user\", \"content\": \"Who are you?\"}],\n    [{\"role\": \"user\", \"content\": \"Translate the following content into Chinese directly: DeepSeek-V2 adopts innovative architectures to guarantee economical training and efficient inference.\"}],\n    [{\"role\": \"user\", \"content\": \"Write a piece of quicksort code in C++.\"}],\n]\n\nprompt_token_ids = [tokenizer.apply_chat_template(messages, add_generation_prompt=True) for messages in messages_list]\n\noutputs = llm.generate(prompt_token_ids=prompt_token_ids, sampling_params=sampling_params)\n\ngenerated_text = [output.outputs[0].text for output in outputs]\nprint(generated_text)\n```\n\n### LangChain Support\nSince our API is compatible with OpenAI, you can easily use it in [langchain](https://www.langchain.com/).\nHere is an example:\n\n```\nfrom langchain_openai import ChatOpenAI\nllm = ChatOpenAI(\n    model='deepseek-chat',\n    openai_api_key=<your-deepseek-api-key>,\n    openai_api_base='https://api.deepseek.com/v1',\n    temperature=0.85,\n    max_tokens=8000)\n``` \n## 8. License\nThis code repository is licensed under [the MIT License](LICENSE-CODE). The use of DeepSeek-V2 Base/Chat models is subject to [the Model License](LICENSE-MODEL). DeepSeek-V2 series (including Base and Chat) supports commercial use.\n\n## 9. Citation\n```\n@misc{deepseekv2,\n      title={DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model}, \n      author={DeepSeek-AI},\n      year={2024},\n      eprint={2405.04434},\n      archivePrefix={arXiv},\n      primaryClass={cs.CL}\n}\n```\n\n## 10. Contact\nIf you have any questions, please raise an issue or contact us at [service@deepseek.com](service@deepseek.com).\n"
+}

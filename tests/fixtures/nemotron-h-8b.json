@@ -1,0 +1,333 @@
+{
+  "config": {
+    "architectures": [
+      "NemotronHForCausalLM"
+    ],
+    "attention_bias": false,
+    "attention_dropout": 0.0,
+    "attention_head_dim": 128,
+    "auto_map": {
+      "AutoConfig": "configuration_nemotron_h.NemotronHConfig",
+      "AutoModelForCausalLM": "modeling_nemotron_h.NemotronHForCausalLM"
+    },
+    "bos_token_id": 1,
+    "chunk_size": 128,
+    "conv_kernel": 4,
+    "eos_token_id": 2,
+    "expand": 2,
+    "hidden_dropout": 0.0,
+    "hidden_size": 4096,
+    "hybrid_override_pattern": "M-M-M-M*-M-M-M-M-M*-M-M-M-M-M*-M-M-M-M-M*-M-M-M-M-M-",
+    "initializer_range": 0.02,
+    "intermediate_size": 21504,
+    "layer_norm_epsilon": 1e-05,
+    "mamba_head_dim": 64,
+    "mamba_hidden_act": "silu",
+    "mamba_num_heads": 128,
+    "mamba_proj_bias": false,
+    "max_position_embeddings": 8192,
+    "mlp_bias": false,
+    "mlp_hidden_act": "relu2",
+    "model_type": "nemotron_h",
+    "n_groups": 8,
+    "num_attention_heads": 32,
+    "num_hidden_layers": 52,
+    "num_key_value_heads": 8,
+    "num_logits_to_keep": 1,
+    "pad_token_id": 0,
+    "rescale_prenorm_residual": true,
+    "residual_in_fp32": false,
+    "rms_norm_eps": 1e-05,
+    "sliding_window": null,
+    "ssm_state_size": 128,
+    "tie_word_embeddings": false,
+    "time_step_floor": 0.0001,
+    "time_step_limit": [
+      0.0,
+      Infinity
+    ],
+    "time_step_max": 0.1,
+    "time_step_min": 0.001,
+    "time_step_rank": 256,
+    "torch_dtype": "bfloat16",
+    "transformers_version": "4.48.0.dev0",
+    "use_bias": false,
+    "use_cache": true,
+    "use_conv_bias": true,
+    "use_mamba_kernels": true,
+    "vocab_size": 131072
+  },
+  "info": {
+    "_id": "67db552c3340510c64afbe58",
+    "author": "nvidia",
+    "cardData": {
+      "language": [
+        "en",
+        "de",
+        "es",
+        "fr",
+        "it",
+        "ko",
+        "pt",
+        "ru",
+        "jp",
+        "zh"
+      ],
+      "library_name": "transformers",
+      "license": "other",
+      "license_link": "https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-internal-scientific-research-and-development-model-license/",
+      "license_name": "nvidia-internal-scientific-research-and-development-model-license",
+      "pipeline_tag": "text-generation",
+      "tags": [
+        "nvidia",
+        "pytorch",
+        "nemotron-h"
+      ]
+    },
+    "config": {
+      "tokenizer_config": {
+        "bos_token": "<s>",
+        "chat_template": "{{'<SPECIAL_10>System'}}{% for message in messages %}{% if message['role'] == 'system' %}{{'\n' + message['content'].strip()}}{% endif %}{% endfor %}{{'\n'}}{% for message in messages %}{% if message['role'] == 'user' %}{{ '\n<SPECIAL_11>User\n' + message['content'].strip() + '\n<SPECIAL_11>Assistant\n' }}{% elif message['role'] == 'assistant' %}{{ message['content'].strip() }}{% endif %}{% endfor %}",
+        "eos_token": "</s>",
+        "unk_token": "<unk>"
+      }
+    },
+    "createdAt": "2025-03-19T23:37:16.000Z",
+    "disabled": false,
+    "downloads": 78044,
+    "gated": false,
+    "id": "nvidia/Nemotron-H-8B-Base-8K",
+    "lastModified": "2025-08-21T15:45:04.000Z",
+    "library_name": "transformers",
+    "likes": 59,
+    "model-index": null,
+    "modelId": "nvidia/Nemotron-H-8B-Base-8K",
+    "pipeline_tag": "text-generation",
+    "private": false,
+    "safetensors": {
+      "parameters": {
+        "BF16": 8100852736
+      },
+      "total": 8100852736
+    },
+    "sha": "94ea861e008c2dfced3e8e1302094024077aa04e",
+    "siblings": [
+      {
+        "blobId": "ec0f7b605d402300d10e47e383142629b1501301",
+        "rfilename": ".gitattributes",
+        "size": 1753
+      },
+      {
+        "blobId": "e0f5cb27c60561cadc448954ecc48c374395c118",
+        "rfilename": "README.md",
+        "size": 10052
+      },
+      {
+        "blobId": "8ea7a74a514e764b8142e8aa8108bfd4524887a7",
+        "rfilename": "config.json",
+        "size": 1504
+      },
+      {
+        "blobId": "21098cbc3d437701f6e491a114beb2f6aa752aa6",
+        "rfilename": "configuration_nemotron_h.py",
+        "size": 12119
+      },
+      {
+        "blobId": "0aaa81bb528d15475a43ae81df95f2a974210628",
+        "rfilename": "generation_config.json",
+        "size": 143
+      },
+      {
+        "blobId": "2b8a4e806f7cb9f34227f01ce01b8db86dfb30a7",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "2abae50afd63ec78dce726165ea61abaf618c31eb909bbfd64f784e2e2c8a4f0",
+          "size": 4982754168
+        },
+        "rfilename": "model-00001-of-00004.safetensors",
+        "size": 4982754168
+      },
+      {
+        "blobId": "09adfe20ed30fbb38d892e53fb25d38e3ab1b0f2",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "6b13d716c48101156f3d081639a19b06f486471909d6bc2935e4f08a6fdbb4f2",
+          "size": 4916952064
+        },
+        "rfilename": "model-00002-of-00004.safetensors",
+        "size": 4916952064
+      },
+      {
+        "blobId": "ba55d4c86fd5b98959b115338ba8e3322a3faa82",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "e6b34aae9b9d531627826e64d47b9135bb216eec6f1a9a08170b0e098456e7f9",
+          "size": 4875961752
+        },
+        "rfilename": "model-00003-of-00004.safetensors",
+        "size": 4875961752
+      },
+      {
+        "blobId": "34cee3a32dc20b1cc8912e009dcea6400686898d",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "d499af9942ba7a12dff2c61da2c94ba045e79b7d1c0a03ccd83e7b2ae577e27e",
+          "size": 1426072008
+        },
+        "rfilename": "model-00004-of-00004.safetensors",
+        "size": 1426072008
+      },
+      {
+        "blobId": "852fe47320e884ea7cad0c031bfe5067059be6c6",
+        "rfilename": "model.safetensors.index.json",
+        "size": 24496
+      },
+      {
+        "blobId": "26a124d813eac9f1ab654673b069953c718fa652",
+        "rfilename": "modeling_nemotron_h.py",
+        "size": 78257
+      },
+      {
+        "blobId": "870f1ef9141075fafc2967d196345f8a1be29b69",
+        "rfilename": "nemo/context/io.json",
+        "size": 23526
+      },
+      {
+        "blobId": "6fd454a94c680349cbf7be7e2ce7fb89eb365316",
+        "rfilename": "nemo/context/model.yaml",
+        "size": 8139
+      },
+      {
+        "blobId": "451134b2ddc2e78555d1e857518c54b4bdc2e87d",
+        "rfilename": "nemo/context/nemo_tokenizer/special_tokens_map.json",
+        "size": 414
+      },
+      {
+        "blobId": "bf5d3b6bf7844880f226d50bab09ee9603a63370",
+        "lfs": {
+          "pointerSize": 133,
+          "sha256": "3277c00fe5fb3963b3cb7c07b7f183722d2af4d775a4aea7cfb3684d7cccbc2f",
+          "size": 17078330
+        },
+        "rfilename": "nemo/context/nemo_tokenizer/tokenizer.json",
+        "size": 17078330
+      },
+      {
+        "blobId": "f2b43c3d1e5b4ede3e3d4c19daa7a280850d2a19",
+        "rfilename": "nemo/context/nemo_tokenizer/tokenizer_config.json",
+        "size": 177623
+      },
+      {
+        "blobId": "08a61411ee3294df1f19992f75eddb1c1d2cf246",
+        "lfs": {
+          "pointerSize": 131,
+          "sha256": "105efb65675afec07e79216510b74e4f192acc5c379edb13879436f9a6b14f07",
+          "size": 227698
+        },
+        "rfilename": "nemo/weights/.metadata",
+        "size": 227698
+      },
+      {
+        "blobId": "c23935d3dbaf756b67a6e7fa006189c24e754222",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "c3cea0f72e0a380ef33f26e1d8a6963b6e3df4d324e8e250d30c5dc6c0ab10e4",
+          "size": 8101267213
+        },
+        "rfilename": "nemo/weights/__0_0.distcp",
+        "size": 8101267213
+      },
+      {
+        "blobId": "bfdc68fd8e5a3ec1a83ad581aa4c0c1a5bafcb96",
+        "lfs": {
+          "pointerSize": 135,
+          "sha256": "52fe5fc7d2a87f792432f0c16a87aca0f91ea57347eb8514c57bbf0b5df164ed",
+          "size": 8101271028
+        },
+        "rfilename": "nemo/weights/__0_1.distcp",
+        "size": 8101271028
+      },
+      {
+        "blobId": "09d828a159ee9ad4cc7b6ba3425509bf5233e917",
+        "lfs": {
+          "pointerSize": 129,
+          "sha256": "bf2d72b4f4fef17ea0a99868f378f27ac9989452f3ffdd0691821ae1a3b9f285",
+          "size": 3099
+        },
+        "rfilename": "nemo/weights/common.pt",
+        "size": 3099
+      },
+      {
+        "blobId": "c9dbde0bcf4d2d993122dcc7d6bcb1eef8b6fb77",
+        "rfilename": "nemo/weights/metadata.json",
+        "size": 119
+      },
+      {
+        "blobId": "451134b2ddc2e78555d1e857518c54b4bdc2e87d",
+        "rfilename": "special_tokens_map.json",
+        "size": 414
+      },
+      {
+        "blobId": "bf5d3b6bf7844880f226d50bab09ee9603a63370",
+        "lfs": {
+          "pointerSize": 133,
+          "sha256": "3277c00fe5fb3963b3cb7c07b7f183722d2af4d775a4aea7cfb3684d7cccbc2f",
+          "size": 17078330
+        },
+        "rfilename": "tokenizer.json",
+        "size": 17078330
+      },
+      {
+        "blobId": "f297b8ad79105a89c8a5f2db0060f6a812033727",
+        "rfilename": "tokenizer_config.json",
+        "size": 177596
+      }
+    ],
+    "spaces": [
+      "hplisiecki/pinocchio-inventory-explorer"
+    ],
+    "tags": [
+      "transformers",
+      "safetensors",
+      "nvidia",
+      "pytorch",
+      "nemotron-h",
+      "text-generation",
+      "conversational",
+      "en",
+      "de",
+      "es",
+      "fr",
+      "it",
+      "ko",
+      "pt",
+      "ru",
+      "jp",
+      "zh",
+      "arxiv:2504.03624",
+      "license:other",
+      "endpoints_compatible",
+      "region:us"
+    ],
+    "transformersInfo": {
+      "auto_model": "AutoModel"
+    },
+    "usedStorage": 32421587360,
+    "widgetData": [
+      {
+        "text": "Hi, what can you help me with?"
+      },
+      {
+        "text": "What is 84 * 3 / 2?"
+      },
+      {
+        "text": "Tell me an interesting fact about the universe!"
+      },
+      {
+        "text": "Explain quantum computing in simple terms."
+      }
+    ]
+  },
+  "model_id": "nvidia/Nemotron-H-8B-Base-8K",
+  "readme": "---\nlibrary_name: transformers\nlicense: other\nlicense_name: nvidia-internal-scientific-research-and-development-model-license\nlicense_link: >-\n  https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-internal-scientific-research-and-development-model-license/\npipeline_tag: text-generation\nlanguage:\n  - en\n  - de\n  - es\n  - fr\n  - it\n  - ko\n  - pt\n  - ru\n  - jp\n  - zh\ntags:\n  - nvidia\n  - pytorch\n  - nemotron-h\n---\n\n# Nemotron-H-8B-Base-8K\n\n## Model Overview \n\nNVIDIA Nemotron-H-8B-Base-8K is a large language model (LLM) developed by NVIDIA that is designed as a completion model for a given piece of text. It uses a hybrid model architecture that consists primarily of Mamba-2 and MLP layers combined with just four Attention layers. The model features a context length of 8K. The supported languages include: English, German, Spanish, French, Italian, Korean, Portuguese, Russian, Japanese, and Chinese. For more detailed information on the model architecture, training, and evaluation, please see the [project page](https://research.nvidia.com/labs/adlr/nemotronh/) and the [technical report](https://arxiv.org/abs/2504.03624).\n\nFor best performance on a given task, users are encouraged to customize the model using the [NeMo Framework](https://docs.nvidia.com/nemo-framework/index.html) suite of customization tools including Parameter-Efficient Fine-Tuning (P-tuning, Adapters, LoRA, and more), and Model Alignment (SFT, SteerLM, RLHF, and more) using [NeMo-Aligner](https://github.com/NVIDIA/NeMo-Aligner).\n\nThis model is for research and development only.\n\nThis model is part of the Nemotron-H Collection. You can find the models in this family here:\n- [Nemotron-H-56B-Base-8K](https://huggingface.co/nvidia/Nemotron-H-56B-Base-8K)\n- [Nemotron-H-47B-Base-8K](https://huggingface.co/nvidia/Nemotron-H-47B-Base-8K)\n- [Nemotron-H-8B-Base-8K](https://huggingface.co/nvidia/Nemotron-H-8B-Base-8K)\n\n## License/Terms of Use\n\nGOVERNING TERMS: Use of this model is governed by the [NVIDIA Internal Scientific Research and Development Model License](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-internal-scientific-research-and-development-model-license/).\n\n**Model Developer:** NVIDIA\n\n**Model Dates:**\n\nOctober 2024 - March 2025\n\n**Data Freshness:**\n\nSeptember 2024\n\nThe pretraining data has a cutoff date of September 2024. \n\n## Use Case: \n\nThis model is intended for developers and researchers building LLMs.\n\n## Release Date: \n\n4/14/2025\n\n## References\n\n- [\\[2504.03624\\] Nemotron-H: A Family of Accurate and Efficient Hybrid Mamba-Transformer Models](https://arxiv.org/abs/2504.03624)\n\n## Model Architecture\n- Architecture Type: Hybrid Mamba-Transformer\n- Network Architecture: Nemotron-H\n\nThis model has 8B model parameters.\n\n## Input\n- Input Type(s): Text \n- Input Format(s): String\n- Input Parameters: One-Dimensional (1D): Sequences\n- Other Properties Related to Input: Context length up to 8K. Supported languages include German, Spanish, French, Italian, Korean, Portuguese, Russian, Japanese, Chinese and English.\n\n## Output\n- Output Type(s): Text \n- Output Format: String\n- Output Parameters: One-Dimensional (1D): Sequences\n\nOur AI models are designed and/or optimized to run on NVIDIA GPU-accelerated systems. By leveraging NVIDIA\u2019s hardware (e.g. GPU cores) and software frameworks (e.g., CUDA libraries), the model achieves faster training and inference times compared to CPU-only solutions. \n\n## Software Integration\n- Runtime Engine(s): NeMo 24.12\n- Supported Hardware Microarchitecture Compatibility: NVIDIA H100-80GB, NVIDIA A100\n- Operating System(s): Linux\n\n## Model Version\n- v1.0\n\n## Prompt Format\n\nAs this is a base model, no explicit prompt format is recommended or required. \n\n### Example\n\n```python\nimport torch\nfrom transformers import AutoTokenizer, AutoModelForCausalLM\n\n# Load the tokenizer and model\ntokenizer  = AutoTokenizer.from_pretrained(\"nvidia/Nemotron-H-8B-Base-8K\", trust_remote_code=True)\nmodel = AutoModelForCausalLM.from_pretrained(\"nvidia/Nemotron-H-8B-Base-8K\", torch_dtype=torch.bfloat16, trust_remote_code=True).cuda()\n\nprompt = \"When was NVIDIA founded?\"\n\noutputs = model.generate(**tokenizer(prompt, return_tensors=\"pt\", add_special_tokens=False).to(model.device))\nprint(tokenizer.decode(outputs[0]))\n```\n\n## Training, Testing, and Evaluation Datasets\n\n### Training & Testing Datasets:\n\nThe training corpus for Nemotron-H-8B-Base-8K consists of English and multilingual text (German, Spanish, French, Italian, Korean, Portuguese, Russian, Japanese, Chinese and English), as well as code. Our sources cover a variety of document types such as: webpages, dialogue, articles, and other written materials. This model was also improved using synthetic data from Qwen (Built with Qwen). The corpus spans domains including legal, math, science, finance, and more. We also include a small portion of question-answering, and alignment style data to improve model accuracy.\n\n**Data Collection for Training & Testing Datasets:**\nHybrid: Automated, Human, Synthetic\n\n**Data Labeling for Training & Testing Datasets:**\nHybrid: Automated, Human, Synthetic\n\n### Evaluation Datasets \n\nWe used the datasets listed in the next section to evaluate Nemotron-H-8B-Base-8K. \n\n**Data Collection for Evaluation Datasets:**\nHybrid: Human, Synthetic\n\n**Data Labeling for Evaluation Datasets:**\nHybrid: Human, Synthetic, Automatic\n\n#### Commonsense Understanding Evaluations:\n\n| ARC Challenge 25-shot | Hellaswag 10-shot | Winogrande 5-shot | CommonsenseQA 7-shot |\n|-------------|--------------|-----------------|------------------|\n| 88.74 | 83.23| 80.51 | 78.71 |\n\n- ARC (Ai2 reasoning challenge)-Challenge - The challenge set of questions from a benchmark that contains grade-school level, multiple-choice science questions to assess question answering ability of language models. [Dataset](https://huggingface.co/datasets/allenai/ai2_arc)\n- Hellaswag - Tests the ability of a language model to correctly finish the provided context from a choice of possible options. [Dataset](https://huggingface.co/datasets/Rowan/hellaswag )\n- Winogrande - Tests the ability to choose the right option for a given sentence which requires commonsense reasoning. [Dataset](https://huggingface.co/datasets/allenai/winogrande )\n- CommonsenseQA - A multiple-choice question answering dataset that requires different type of commonsense knowledge to predict the correct answers. [Dataset](https://huggingface.co/datasets/tau/commonsense_qa  )\n\n#### Coding Evaluations:\n\n| MBPP (sanitized) 3-shot | MBPP+ 0-shot | HumanEval 0-shot | HumanEval+ 0-shot |\n|-------------|--------------|-----------------|------------------|\n| 65.37 | 59.52| 58.54 | 55.49 |\n\n- MBPP (Mostly Basic Python Programming Problems) - Evaluates ability to generate solutions for Python programming tasks. [Dataset](https://github.com/google-research/google-research/tree/master/mbpp)\n- MBPP+ - Extended version of MBPP with additional validation. [Dataset](https://huggingface.co/datasets/evalplus/mbppplus)\n- HumanEval - Tests code generation and completion abilities in Python. [Dataset](https://github.com/openai/human-eval)\n\n#### Math Evaluations:\n\n\n| GSM8K 8-shot CoT |  MATH 4-shot CoT |  MATH-Lvl 5 4-shot CoT  | MATH-500 4-shot CoT |\n|--------------|------------|------------|------------|\n| 87.11 | 46.52 | 22.93 | 44.43 |\n\n- GSM8K (Grade School Math 8K) - Evaluates grade school level mathematical word problem solving. [Dataset](https://github.com/openai/grade-school-math)\n- MATH - Tests mathematical ability across multiple difficulty levels and various subjects including: Prealgebra, Algebra, Number Theory, Counting and Probability, Geometry, Intermediate Algebra, and Precalculus. [Dataset](https://github.com/hendrycks/math)\n- MATH Lvl 5 - Only the most difficult questions from the MATH dataset. [Dataset](https://github.com/hendrycks/math)\n- MATH-500 - Tests advanced mathematical problem solving across algebra, geometry, and calculus. [Dataset](https://huggingface.co/datasets/HuggingFaceH4/MATH-500)\n\n\n#### General Evaluations:\n\n| MMLU-Pro 5-shot CoT | MMLU 5-shot|\n|-------------------|------------------|\n|44.01 |72.77 | \n\n- MMLU Pro - Evaluates language understanding models across a broad range of challenging, reasoning-focused questions across 14 diverse domains.\n[Dataset](https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro)\n- MMLU - Tests knowledge across 57 subjects including science, humanities, math and more. [Dataset](https://github.com/hendrycks/test)\n\n## Potential Known Risks for Usage\n\nThe model was trained on data that contains toxic language and societal biases originally crawled from the internet. Therefore, the model may amplify those biases and return toxic responses especially when prompted with toxic prompts. The model may generate answers that may be inaccurate, omit key information, or include irrelevant or redundant text producing socially unacceptable or undesirable text, even if the prompt itself does not include anything explicitly offensive.\n\nThe model demonstrates weakness to indirect prompt injection via some encodings, including Base16, Hex/ASCII, and Braille, though is more resilient than other similar models to injections using the more common Base64 vector.\n\n## Inference\n- Engine: NeMo\n- Test Hardware NVIDIA H100-80GB\n\n## Ethical Considerations\nNVIDIA believes Trustworthy AI is a shared responsibility and we have established policies and practices to enable development for a wide array of AI applications. When downloaded or used in accordance with our terms of service, developers should work with their internal model team to ensure this model meets requirements for the relevant industry and use case and addresses unforeseen product misuse. \n\nFor more detailed information on ethical considerations for this model, please see the Responsible Use Guide available at http://nvidia.com/nemotron-responsible-use.\n\nPlease report security vulnerabilities or NVIDIA AI Concerns [here](https://www.nvidia.com/en-us/support/submit-security-vulnerability/).\n\n\n"
+}

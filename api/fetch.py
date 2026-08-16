@@ -1,0 +1,174 @@
+"""The Hugging Face fetch layer (R1.2, R1.6).
+
+Everything that touches the network lives here, so every other module can be
+tested offline against a :class:`RepoSnapshot` built from a fixture.
+
+Failures are named rather than lumped together: "gated", "private" and "does not
+exist" call for three different actions from whoever ran the ingest, and telling
+them only that it "failed" wastes their time (R1.6).
+"""
+
+import json
+import os
+from typing import Any
+
+import httpx
+from pydantic import BaseModel, Field
+
+HF_BASE = "https://huggingface.co"
+TIMEOUT = 60.0
+
+
+class IngestError(RuntimeError):
+    """Base for every ingest failure that is the repository's fault, not ours."""
+
+
+class RepoNotFound(IngestError):
+    """No such repository on the Hub."""
+
+
+class GatedRepo(IngestError):
+    """The repository exists but requires accepting terms."""
+
+
+class PrivateRepo(IngestError):
+    """The repository exists but is not visible with these credentials."""
+
+
+class AccessUndetermined(IngestError):
+    """Hugging Face refused to say whether the repository exists.
+
+    Anonymous requests for an unknown repo get ``401 Invalid username or
+    password`` -- the same answer a private repo gives, deliberately, so that the
+    Hub does not leak which private repositories exist. R1.6 asks us to name the
+    failure; the honest name here is that we cannot tell yet, and the fix is a
+    token.
+    """
+
+
+class RepoSnapshot(BaseModel):
+    """Everything ingest needs, fetched once, so derivation stays pure."""
+
+    model_id: str
+    revision: str | None = None
+    siblings: list[dict[str, Any]] = Field(default_factory=list)
+    config: dict[str, Any] | None = None
+    generation_config: dict[str, Any] | None = None
+    readme: str | None = None
+    safetensors_total: int | None = None
+
+
+def _token() -> str | None:
+    return os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+
+
+def _headers() -> dict[str, str]:
+    token = _token()
+    return {"Authorization": f"Bearer {token}"} if token else {}
+
+
+def _is_gated_message(body: str) -> bool:
+    lowered = body.lower()
+    return "gated" in lowered or "is restricted" in lowered or "accept" in lowered
+
+
+def _raise_for_repo(model_id: str, status: int, body: str) -> None:
+    """R1.6 - name the failure, including when the honest name is "cannot tell"."""
+    if status == 404:
+        raise RepoNotFound(
+            f"{model_id} does not exist on Hugging Face. "
+            "Check the spelling, including the vendor prefix."
+        )
+
+    if status in (401, 403):
+        if _is_gated_message(body):
+            raise GatedRepo(
+                f"{model_id} is gated. Accept the terms at {HF_BASE}/{model_id} "
+                "and set HF_TOKEN to a token belonging to the account that accepted them."
+            )
+        if _token() is None:
+            # Anonymous callers get the same 401 for missing and for private, so
+            # claiming either one would be a guess dressed as a diagnosis.
+            raise AccessUndetermined(
+                f"Hugging Face refused access to {model_id} without saying why. "
+                "It either does not exist, or it is private or gated -- an anonymous "
+                "request cannot tell these apart. Set HF_TOKEN and retry to get a "
+                "definite answer."
+            )
+        raise PrivateRepo(
+            f"{model_id} is private, or your HF_TOKEN does not grant read access to it."
+        )
+
+    raise IngestError(f"Hugging Face returned HTTP {status} for {model_id}: {body[:200]}")
+
+
+def fetch_snapshot(model_id: str, client: httpx.Client | None = None) -> RepoSnapshot:
+    """Fetch model info, config, and the file listing with real byte sizes (R1.2)."""
+    owns_client = client is None
+    client = client or httpx.Client(timeout=TIMEOUT, follow_redirects=True)
+    try:
+        info = client.get(
+            f"{HF_BASE}/api/models/{model_id}", params={"blobs": "true"}, headers=_headers()
+        )
+        if info.status_code != 200:
+            _raise_for_repo(model_id, info.status_code, info.text)
+        payload = info.json()
+
+        snapshot = RepoSnapshot(
+            model_id=payload.get("id", model_id),
+            revision=payload.get("sha"),
+            siblings=payload.get("siblings", []),
+            safetensors_total=(payload.get("safetensors") or {}).get("total"),
+        )
+
+        snapshot.config = _optional_json(client, model_id, "config.json")
+        snapshot.generation_config = _optional_json(client, model_id, "generation_config.json")
+        snapshot.readme = _optional_text(client, model_id, "README.md")
+        return snapshot
+    finally:
+        if owns_client:
+            client.close()
+
+
+def _optional_text(client: httpx.Client, model_id: str, filename: str) -> str | None:
+    """Fetch a file that may legitimately be absent.
+
+    Only **404** means absent. A gated repository serves its metadata publicly but
+    answers 401 on the files themselves, and treating that denial as absence would
+    produce a document full of nulls that never records the real reason -- looking
+    exactly like an honest GGUF-only repo while being nothing of the kind.
+    Anything that is not a 200 or a 404 is raised (R1.6).
+    """
+    r = client.get(f"{HF_BASE}/{model_id}/raw/main/{filename}", headers=_headers())
+    if r.status_code == 200:
+        return r.text
+    if r.status_code == 404:
+        return None
+    _raise_for_repo(model_id, r.status_code, r.text)
+    return None  # unreachable; _raise_for_repo always raises
+
+
+def _optional_json(client: httpx.Client, model_id: str, filename: str) -> dict[str, Any] | None:
+    text = _optional_text(client, model_id, filename)
+    if text is None:
+        return None
+    try:
+        return json.loads(text)
+    except ValueError as exc:
+        # Present but unparseable is a different fact from absent, and silently
+        # returning None would erase the difference.
+        raise IngestError(f"{model_id}/{filename} is present but is not valid JSON") from exc
+
+
+def fetch_revision(model_id: str, client: httpx.Client | None = None) -> str | None:
+    """Just the current commit SHA, for drift detection (R6.6)."""
+    owns_client = client is None
+    client = client or httpx.Client(timeout=TIMEOUT, follow_redirects=True)
+    try:
+        r = client.get(f"{HF_BASE}/api/models/{model_id}", headers=_headers())
+        if r.status_code != 200:
+            _raise_for_repo(model_id, r.status_code, r.text)
+        return r.json().get("sha")
+    finally:
+        if owns_client:
+            client.close()
