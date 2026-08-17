@@ -120,7 +120,7 @@ beyond whitespace, and unit conversion are forbidden at this stage.
 `null`. Producing a plausible value for an absent field is the single most
 serious defect this system can have.
 
-**R3.3** Every extracted field MUST carry a `_src` pointer identifying the
+**R3.3** Every extracted field MUST carry a `src` pointer identifying the
 card section it came from.
 
 **R3.4** The system MUST extract, where stated: quantization format, method,

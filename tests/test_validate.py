@@ -20,9 +20,16 @@ def _vault(tmp_path, **documents: str):
     return tmp_path / "vault"
 
 
-def test_validate_exits_zero_on_a_healthy_vault(tmp_path, monkeypatch):
+def test_validate_exits_zero_and_says_nothing_on_a_healthy_vault(tmp_path, monkeypatch, capsys):
+    """Silence on success, so a CI job scraping stderr sees only real failures."""
     monkeypatch.setenv("LLMDEX_VAULT", str(_vault(tmp_path, good=GOOD)))
-    assert main() == 0
+
+    code = main()
+
+    captured = capsys.readouterr()
+    assert code == 0
+    assert captured.out == ""
+    assert captured.err == ""
 
 
 def test_validate_exits_non_zero_and_names_every_broken_document(tmp_path, monkeypatch, capsys):
