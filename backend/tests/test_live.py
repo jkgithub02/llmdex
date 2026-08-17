@@ -23,6 +23,10 @@ import pytest
 
 pytestmark = pytest.mark.live
 
+# backend/tests/test_live.py -> repo root, where pyproject.toml and the package live.
+# uvicorn is launched from here so `backend.main:app` resolves.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
 MODELS = {
     "Qwen/Qwen3-8B": "dense GQA with an explicit head_dim",
     "nvidia/Nemotron-H-8B-Base-8K": "hybrid Mamba2 + attention",
@@ -67,7 +71,7 @@ def live_server(tmp_path_factory):
             "--log-level",
             "warning",
         ],
-        cwd=Path(__file__).parent.parent,
+        cwd=REPO_ROOT,
         env=env,
     )
     base = f"http://127.0.0.1:{port}"

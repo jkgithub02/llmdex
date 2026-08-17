@@ -126,24 +126,25 @@ additional protocol.
 ## Repository layout
 
 ```
-/backend                FastAPI service
-  /ingest               fetch, derive, extract, write
-    fetch.py            huggingface_hub calls
-    derive.py           config.json → fields; VRAM math (ported from llm-calc)
-    extract.py          prose → fields, copy-only rule
-    write.py            document render + git commit
-  /store                read/query the markdown store
-  /schemas              Pydantic models — single source of truth
-  main.py
-/frontend               Angular application
+/backend                FastAPI service — the package is flat, one file per concern
+  fetch.py              huggingface_hub calls
+  derive.py             config.json → fields; VRAM math (ported from llm-calc)
+  extract.py            prose → fields, copy-only rule (not built yet)
+  llm.py                OpenAI-compatible client, configured by env (not built yet)
+  ingest.py             snapshot → document
+  store.py              read/query/write the markdown store, and git commit
+  schemas.py            Pydantic models — single source of truth
+  validate.py           `python -m backend.validate`, schema check over the vault
+  main.py               the HTTP API
+  /tests
+    /fixtures           saved HF API responses for offline tests
+/frontend               Angular application — not scaffolded yet
   /src/app/models       Models tab
   /src/app/benchmarks   Benchmarks tab
   /src/app/api          GENERATED — do not edit by hand
-/vault                  the store (separate git repo, submodule or sibling)
+/vault                  the store (separate git repo, sibling)
   /models
   /benchmarks
-/tests
-  /fixtures             saved HF API responses for offline tests
 ```
 
 ## Document shape
