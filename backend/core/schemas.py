@@ -11,7 +11,7 @@ Two conventions run through this file and are not negotiable:
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
 KV_DTYPE_BYTES: dict[str, int] = {"fp32": 4, "fp16": 2, "bf16": 2, "fp8": 1, "int8": 1}
 
@@ -303,6 +303,19 @@ class Checkpoint(BaseModel):
     derived: Derived | None = None
     extracted: Extracted | None = None
     """The extractor owns this. None means nobody has run it (R3.2)."""
+
+    @field_validator("extracted", mode="before")
+    @classmethod
+    def _empty_block_means_never_extracted(cls, value: object) -> object:
+        """Documents written before the extractor existed carry ``extracted: {}``.
+
+        That empty block says exactly what ``None`` says now -- nobody has run the
+        extractor -- so it loads rather than failing validation. Only an empty
+        mapping is forgiven: a populated block missing required fields is a real
+        error and still raises.
+        """
+        return None if value == {} else value
+
     manual: Manual = Field(default_factory=Manual)
     """R6.5 - hand-entered prose and corrections. Ingest must never write here."""
     benchmarks: list[BenchmarkScore] = Field(default_factory=list)

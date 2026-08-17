@@ -436,3 +436,39 @@ def test_merge_extraction_on_an_unknown_checkpoint_raises(store):
             quantization=None,
             extracted=_extraction(),
         )
+
+
+def test_a_document_written_before_the_extractor_still_loads(store):
+    """Documents ingested when `extracted` was a plain dict carry `extracted: {}`.
+
+    That empty block means exactly what None means now - nobody has run the
+    extractor - so it must load, not fail validation. Missing this made every
+    previously-ingested document unreadable, which broke GET /models as well as
+    extraction.
+    """
+    path = store.path_for("a/one")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "---\nmodel_id: a/one\ncheckpoints:\n- repo: a/one\n  extracted: {}\n---\n\n# a/one\n",
+        encoding="utf-8",
+        newline="",
+    )
+
+    after = store.read("a/one")
+
+    assert after.checkpoints[0].extracted is None
+
+
+def test_a_populated_but_invalid_extracted_block_still_fails(store):
+    """Tolerating {} must not become tolerating anything."""
+    path = store.path_for("a/two")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "---\nmodel_id: a/two\ncheckpoints:\n- repo: a/two\n  extracted:\n"
+        "    model: some-model\n---\n\n# a/two\n",
+        encoding="utf-8",
+        newline="",
+    )
+
+    with pytest.raises(ValueError, match="card_revision"):
+        store.read("a/two")
