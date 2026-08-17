@@ -9,8 +9,8 @@ import subprocess
 
 import pytest
 
-from api.schemas import Checkpoint, Manual, Measured, ModelDoc, Quantization, Serving
-from api.store import DocumentConflict, Store, slug_for
+from backend.schemas import Checkpoint, Manual, Measured, ModelDoc, Quantization, Serving
+from backend.store import DocumentConflict, Store, slug_for
 
 
 @pytest.fixture

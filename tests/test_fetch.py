@@ -16,7 +16,7 @@ indistinguishable from an honest GGUF-only repo.
 import httpx
 import pytest
 
-from api.fetch import (
+from backend.fetch import (
     AccessUndetermined,
     GatedRepo,
     RepoNotFound,

@@ -59,7 +59,7 @@ def live_server(tmp_path_factory):
             sys.executable,
             "-m",
             "uvicorn",
-            "api.main:app",
+            "backend.main:app",
             "--host",
             "127.0.0.1",
             "--port",

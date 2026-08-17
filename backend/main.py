@@ -15,7 +15,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from api.fetch import (
+from backend.fetch import (
     AccessUndetermined,
     GatedRepo,
     IngestError,
@@ -25,9 +25,9 @@ from api.fetch import (
     fetch_revision,
     fetch_snapshot,
 )
-from api.ingest import DEFAULT_CONTEXT, ingest
-from api.schemas import Benchmark, ModelDoc
-from api.store import Store, store_from_env
+from backend.ingest import DEFAULT_CONTEXT, ingest
+from backend.schemas import Benchmark, ModelDoc
+from backend.store import Store, store_from_env
 
 app = FastAPI(
     title="llmdex",

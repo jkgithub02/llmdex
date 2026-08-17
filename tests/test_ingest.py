@@ -1,6 +1,6 @@
 """Ingest: snapshot -> document (R1.x, R4.1, R5.3).
 
-Runs entirely against saved fixtures. The network lives in ``api.fetch`` and is
+Runs entirely against saved fixtures. The network lives in ``backend.fetch`` and is
 exercised separately by the live tests, so nothing here depends on a vendor
 leaving a model card alone.
 """
@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from api.fetch import GatedRepo, RepoNotFound, RepoSnapshot
-from api.ingest import ingest
-from api.schemas import Manual, Quantization
-from api.store import Store
+from backend.fetch import GatedRepo, RepoNotFound, RepoSnapshot
+from backend.ingest import ingest
+from backend.schemas import Manual, Quantization
+from backend.store import Store
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

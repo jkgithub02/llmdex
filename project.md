@@ -126,7 +126,7 @@ additional protocol.
 ## Repository layout
 
 ```
-/api                    FastAPI service
+/backend                FastAPI service
   /ingest               fetch, derive, extract, write
     fetch.py            huggingface_hub calls
     derive.py           config.json → fields; VRAM math (ported from llm-calc)
@@ -135,7 +135,7 @@ additional protocol.
   /store                read/query the markdown store
   /schemas              Pydantic models — single source of truth
   main.py
-/web                    Angular application
+/frontend               Angular application
   /src/app/models       Models tab
   /src/app/benchmarks   Benchmarks tab
   /src/app/api          GENERATED — do not edit by hand

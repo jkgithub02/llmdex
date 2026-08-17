@@ -11,9 +11,9 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from api.fetch import GatedRepo, RepoNotFound, RepoSnapshot
-from api.main import app, get_fetcher, get_store
-from api.store import Store
+from backend.fetch import GatedRepo, RepoNotFound, RepoSnapshot
+from backend.main import app, get_fetcher, get_store
+from backend.store import Store
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

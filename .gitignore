@@ -10,3 +10,11 @@ __pycache__/
 
 # scratch
 /models.json
+
+# secrets - never committed
+.env
+
+# working notes and agent instructions - local only
+/docs/
+/.superpowers/
+/CLAUDE.md

@@ -21,7 +21,7 @@ from typing import Any
 
 import yaml
 
-from api.schemas import Benchmark, Checkpoint, ModelDoc
+from backend.schemas import Benchmark, Checkpoint, ModelDoc
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n(.*)\Z", re.DOTALL)
 
