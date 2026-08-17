@@ -9,11 +9,14 @@ everything.
 through ``app.dependency_overrides`` and that reads better against the app.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from backend.benchmarks.router import router as benchmarks_router
+from backend.core.config import LLMNotConfigured
 from backend.core.deps import StoreDep, get_store
+from backend.extraction.router import router as extraction_router
 from backend.models.router import get_fetcher
 from backend.models.router import router as models_router
 
@@ -24,6 +27,12 @@ app = FastAPI(
     version="0.1.0",
     summary="Turns a Hugging Face model ID into a reviewed specification sheet.",
 )
+
+
+@app.exception_handler(LLMNotConfigured)
+def _llm_not_configured(request: Request, exc: LLMNotConfigured) -> JSONResponse:
+    """503 rather than 500: the service is fine, it just has not been told where to look."""
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
 class Health(BaseModel):
@@ -39,3 +48,4 @@ def health(store: StoreDep) -> Health:
 
 app.include_router(models_router)
 app.include_router(benchmarks_router)
+app.include_router(extraction_router)
