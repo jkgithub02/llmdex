@@ -109,3 +109,38 @@ def test_a_client_failure_propagates(monkeypatch):
 
     with pytest.raises(LLMError):
         extract(CARD, card_revision="abc123", settings=SETTINGS, today="2026-08-17")
+
+
+def test_the_schema_closes_the_set_of_serving_engines():
+    """R3.4 asks for per-engine support, which is a closed set in practice.
+
+    Against a real card the model filled this block with `runtime_engine`,
+    `recommended_sampling` and `supported_operating_system` - all real quotes,
+    none of them a serving engine. A schema the model cannot violate is a
+    stronger guarantee than an instruction it can ignore.
+    """
+    from backend.extraction.extract import RESPONSE_SCHEMA
+
+    serving = RESPONSE_SCHEMA["properties"]["serving"]
+    assert serving["additionalProperties"] is False
+    assert {"vllm", "sglang", "tensorrt_llm", "transformers"} <= set(serving["properties"])
+
+
+def test_a_category_that_is_not_an_engine_is_not_recorded(monkeypatch):
+    """Belt and braces: not every OpenAI-compatible endpoint honours strict mode."""
+    card = "Requires vLLM 0.27.1 or newer. Recommended sampling: Temperature 1.0."
+    monkeypatch.setattr(
+        "backend.extraction.extract.complete",
+        _responder(
+            {
+                "serving": {
+                    "vllm": "Requires vLLM 0.27.1",
+                    "recommended_sampling": "Temperature 1.0",
+                }
+            }
+        ),
+    )
+
+    result = extract(card, card_revision="abc123", settings=SETTINGS, today="2026-08-17")
+
+    assert set(result.serving.engines) == {"vllm"}
