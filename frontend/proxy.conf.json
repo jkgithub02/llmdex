@@ -1,0 +1,6 @@
+{
+  "/models": { "target": "http://127.0.0.1:8001", "secure": false },
+  "/ingest": { "target": "http://127.0.0.1:8001", "secure": false },
+  "/benchmarks": { "target": "http://127.0.0.1:8001", "secure": false },
+  "/health": { "target": "http://127.0.0.1:8001", "secure": false }
+}
