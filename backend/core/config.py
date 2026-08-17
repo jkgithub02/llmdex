@@ -9,6 +9,8 @@ agree on where the vault is without importing each other.
 import os
 from pathlib import Path
 
+from pydantic import BaseModel
+
 from backend.core.store import Store
 
 # backend/core/config.py -> backend/ -> repo root. The vault is a sibling of the
@@ -19,3 +21,35 @@ DEFAULT_VAULT = Path(__file__).resolve().parents[2] / "vault"
 def store_from_env() -> Store:
     """The vault named by ``LLMDEX_VAULT``, or the sibling ``./vault`` directory."""
     return Store(os.environ.get("LLMDEX_VAULT", DEFAULT_VAULT))
+
+
+class LLMNotConfigured(RuntimeError):
+    """No extraction endpoint is configured.
+
+    There is no default and there must not be one: silently pointing at some
+    other model would produce spans nobody can account for (R7.4).
+    """
+
+
+class LLMSettings(BaseModel):
+    """R7.4 - any OpenAI-compatible endpoint, named by base URL and model."""
+
+    base_url: str
+    model: str
+    api_key: str | None = None
+    timeout: float = 120.0
+
+
+def llm_settings() -> LLMSettings:
+    base_url = os.environ.get("LLMDEX_LLM_BASE_URL", "").strip().rstrip("/")
+    model = os.environ.get("LLMDEX_LLM_MODEL", "").strip()
+    if not base_url or not model:
+        raise LLMNotConfigured(
+            "set LLMDEX_LLM_BASE_URL and LLMDEX_LLM_MODEL to use extraction "
+            "(for example https://host/v1 and vllm/Qwen/Qwen3.5-122B-A10B-GPTQ-Int4)"
+        )
+    return LLMSettings(
+        base_url=base_url,
+        model=model,
+        api_key=os.environ.get("LLMDEX_LLM_API_KEY") or None,
+    )
