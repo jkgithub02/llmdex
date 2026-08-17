@@ -126,7 +126,7 @@ import { sourceHost, summarySections } from './summary';
               <div class="field">
                 <span class="key">{{ field.label }}</span>
                 <span class="val mono" [class.null]="field.value === null">
-                  {{ field.value ?? 'null' }}
+                  {{ field.value ?? 'unavailable' }}
                 </span>
                 <app-state-badge [state]="field.state" />
                 @if (field.unreliable) {
@@ -147,7 +147,7 @@ import { sourceHost, summarySections } from './summary';
                 <div class="field">
                   <span class="key">{{ field.label }}</span>
                   <span class="val" [class.null]="field.value === null">
-                    {{ field.value ?? 'null' }}
+                    {{ field.value ?? 'unavailable' }}
                   </span>
                   <app-state-badge [state]="field.state" />
                   @if (field.source) {
@@ -182,7 +182,7 @@ import { sourceHost, summarySections } from './summary';
           } @else {
             <div class="field wide">
               <span class="key">latency, throughput, peak VRAM</span>
-              <span class="val null">null</span>
+              <span class="val null">unavailable</span>
               <app-state-badge state="unmeasured" />
               <p class="why">
                 Properties of your deployment, not the model. No vendor publishes them.
