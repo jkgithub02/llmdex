@@ -24,6 +24,17 @@ import { StateBadge } from '../state-badge';
   template: `
     <a routerLink="/models" class="back">← models</a>
 
+    <!-- Outside the @if below: an extraction that fails after the document has
+         loaded must still be seen. Rendering the message only in the "no
+         document" branch meant a failed extraction stopped its spinner and said
+         nothing at all. -->
+    @if (error(); as message) {
+      <p class="error" role="alert">
+        <strong>Extraction failed.</strong>
+        {{ message }}
+      </p>
+    }
+
     @if (doc(); as model) {
       <header class="head">
         <span class="vendor">{{ vendor() }}</span>
@@ -129,9 +140,7 @@ import { StateBadge } from '../state-badge';
           }
         </section>
       }
-    } @else if (error(); as message) {
-      <p class="error" role="alert">{{ message }}</p>
-    } @else {
+    } @else if (!error()) {
       <div class="bar"><span></span></div>
     }
   `,
@@ -350,6 +359,16 @@ import { StateBadge } from '../state-badge';
     }
     .error {
       color: var(--danger);
+      background: color-mix(in srgb, var(--danger) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+      border-radius: var(--radius);
+      padding: var(--space-3) var(--space-4);
+      margin: var(--space-4) 0;
+      font-size: 0.88rem;
+    }
+    .error strong {
+      color: var(--fg);
+      margin-right: 0.35rem;
     }
   `,
 })

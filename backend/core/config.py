@@ -37,7 +37,19 @@ class LLMSettings(BaseModel):
     base_url: str
     model: str
     api_key: str | None = None
-    timeout: float = 120.0
+    timeout: float = 300.0
+    """Extraction sends a whole model card and waits for a considered answer.
+    Cards over 80k characters have taken 90 seconds against a reasoning model."""
+    max_tokens: int = 32000
+    """Output budget for one extraction.
+
+    Generous on purpose. A reasoning model spends this budget on hidden
+    reasoning before it writes a single field, and running out mid-document is
+    a hard failure rather than a partial result -- the answer is thrown away
+    (see :func:`backend.extraction.llm.complete`). 8000 was not enough for a
+    135M model's card, which is a fact about how much the model thinks, not
+    about how much there is to extract.
+    """
 
 
 def llm_settings() -> LLMSettings:
@@ -52,4 +64,22 @@ def llm_settings() -> LLMSettings:
         base_url=base_url,
         model=model,
         api_key=os.environ.get("LLMDEX_LLM_API_KEY") or None,
+        **_optional_int("LLMDEX_LLM_MAX_TOKENS", "max_tokens"),
+        **_optional_int("LLMDEX_LLM_TIMEOUT", "timeout"),
     )
+
+
+def _optional_int(variable: str, field: str) -> dict[str, int]:
+    """Let a deployment override a budget without editing code (R7.4).
+
+    An unset variable leaves the model's own default in place; a malformed one
+    is an error rather than a silent fallback to the default, because a
+    deployment that meant to raise the budget should hear that it did not.
+    """
+    raw = os.environ.get(variable, "").strip()
+    if not raw:
+        return {}
+    try:
+        return {field: int(raw)}
+    except ValueError as exc:
+        raise LLMNotConfigured(f"{variable}={raw!r} is not an integer") from exc

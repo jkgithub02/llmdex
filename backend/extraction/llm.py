@@ -26,16 +26,17 @@ def complete(
     *,
     settings: LLMSettings,
     client: httpx.Client | None = None,
-    max_tokens: int = 8000,
+    max_tokens: int | None = None,
 ) -> dict:
     """Send one chat completion constrained by ``schema`` and return the parsed object.
 
-    ``max_tokens`` is generous because the endpoint may front a reasoning model,
-    whose hidden reasoning consumes the same budget as the answer. A response cut
-    short is rejected outright: half a JSON document repaired into something
-    parseable is exactly the kind of plausible-looking output this project exists
-    to not produce.
+    ``max_tokens`` defaults to the configured budget, which is generous because
+    the endpoint may front a reasoning model whose hidden reasoning consumes the
+    same budget as the answer. A response cut short is rejected outright: half a
+    JSON document repaired into something parseable is exactly the kind of
+    plausible-looking output this project exists to not produce.
     """
+    max_tokens = settings.max_tokens if max_tokens is None else max_tokens
     payload = {
         "model": settings.model,
         "messages": messages,
