@@ -11,7 +11,7 @@ Two conventions run through this file and are not negotiable:
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
 KV_DTYPE_BYTES: dict[str, int] = {"fp32": 4, "fp16": 2, "bf16": 2, "fp8": 1, "int8": 1}
 
@@ -110,6 +110,55 @@ class Derived(BaseModel):
 # ---------------------------------------------------------------------------
 # documents (R4.x)
 # ---------------------------------------------------------------------------
+
+
+class Quantization(BaseModel):
+    """R3.4 - the quantization recipe, copied from the card by hand.
+
+    ``src`` is required (R3.3). A recipe with no pointer at the section it came
+    from cannot be re-checked when the card changes underneath it, and an
+    unauditable value is the thing this project exists to not produce.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    format: str | None = None
+    method: str | None = None
+    scope: str | None = None
+    calibration: str | None = None
+    src: str = Field(min_length=1)
+
+
+class Serving(BaseModel):
+    """R3.4 - per-engine support with version pins, exactly as the card states them.
+
+    Values stay strings because a card pins a version (``"0.27.1"``) or states a
+    condition (``"dev container only"``). Both are facts worth keeping; parsing
+    would force the second into a shape it does not have.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    engines: dict[str, str] = Field(min_length=1)
+    src: str = Field(min_length=1)
+
+
+class Manual(BaseModel):
+    """R6.5 - hand-entered prose. Ingest never writes here.
+
+    ``reviewed`` separates two of R6.4's four states. Null means nobody has read
+    the card, so a null field below it is unknown. Set means a person read it, so
+    a null field below it is genuinely absent from the card.
+
+    ``extra="forbid"`` matters because this block is edited by hand: Pydantic's
+    default would drop a mistyped key silently and the next write would erase it.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    reviewed: str | None = None
+    quantization: Quantization | None = None
+    serving: Serving | None = None
 
 
 class Measured(BaseModel):
