@@ -116,6 +116,10 @@ export class LlmdexService {
 
 /**
  * Fetch, derive, and write a document. Atomic: it completes or it fails (R1.5).
+ *
+ * A model entering the vault for the first time is summarised on the way in, so
+ * nobody has to ask for the first one. That step cannot fail this endpoint: see
+ * :func:`~backend.summary.router.summarise_after_first_ingest`.
  * @summary Ingest Model
  */
  ingestModelIngestPost<TData = ModelDoc>(ingestRequest: IngestRequest, options?: HttpClientBodyOptions): Observable<TData>;
@@ -358,6 +362,48 @@ export class LlmdexService {
 
     return this.http.post<TData>(
       `/api/models/${modelId}/extract`,
+      undefined,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
+  }
+
+/**
+ * Read the card, search the web, write an account of the model.
+ *
+ * Unlike extraction this replaces what was there: regenerating is the point of
+ * the button, and ``generated_on`` records which run produced the text on
+ * screen.
+ * @summary Summarise Model
+ */
+ summariseModelModelsModelIdSummarizePost<TData = ModelDoc>(modelId: string, options?: HttpClientBodyOptions): Observable<TData>;
+ summariseModelModelsModelIdSummarizePost<TData = ModelDoc>(modelId: string, options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ summariseModelModelsModelIdSummarizePost<TData = ModelDoc>(modelId: string, options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
+  summariseModelModelsModelIdSummarizePost<TData = ModelDoc>(
+    modelId: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+    if (options?.observe === 'events') {
+      return this.http.post<TData>(
+      `/api/models/${modelId}/summarize`,
+      undefined,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'events',
+      }
+    );
+    }
+
+    if (options?.observe === 'response') {
+      return this.http.post<TData>(
+      `/api/models/${modelId}/summarize`,
+      undefined,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'response',
+      }
+    );
+    }
+
+    return this.http.post<TData>(
+      `/api/models/${modelId}/summarize`,
       undefined,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'body',

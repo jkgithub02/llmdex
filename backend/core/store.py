@@ -20,7 +20,7 @@ from typing import Any
 
 import yaml
 
-from backend.core.schemas import Benchmark, Checkpoint, Extracted, ModelDoc
+from backend.core.schemas import Benchmark, Checkpoint, Extracted, ModelDoc, Summary
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n(.*)\Z", re.DOTALL)
 
@@ -244,6 +244,31 @@ class Store:
         else:
             raise KeyError(f"{model_id} has no checkpoint {repo!r} ({quantization or 'default'})")
 
+        self.write(doc, operation=operation)
+        return doc
+
+    def merge_summary(
+        self,
+        model_id: str,
+        summary: Summary,
+        operation: str = "summarise",
+    ) -> ModelDoc:
+        """Replace the model's ``summary`` block and nothing else.
+
+        Like extraction, this never creates a document: a summary describes a
+        model somebody has already ingested. Unlike extraction it has no
+        checkpoint to find -- the block belongs to the model.
+
+        Replacing rather than appending is deliberate. Keeping every past
+        summary would make the page a changelog of an endpoint's opinions;
+        ``generated_on`` says when the current one was written, which is the
+        question a reader actually has.
+        """
+        doc = self.read(model_id)
+        if doc is None:
+            raise KeyError(f"{model_id} is not in the store")
+
+        doc.summary = summary
         self.write(doc, operation=operation)
         return doc
 

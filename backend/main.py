@@ -14,11 +14,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from backend.benchmarks.router import router as benchmarks_router
-from backend.core.config import LLMNotConfigured
+from backend.core.config import LLMNotConfigured, TavilyNotConfigured
 from backend.core.deps import StoreDep, get_store
 from backend.extraction.router import router as extraction_router
 from backend.models.router import get_fetcher
 from backend.models.router import router as models_router
+from backend.summary.router import router as summary_router
 
 __all__ = ["app", "get_fetcher", "get_store"]
 
@@ -32,6 +33,12 @@ app = FastAPI(
 @app.exception_handler(LLMNotConfigured)
 def _llm_not_configured(request: Request, exc: LLMNotConfigured) -> JSONResponse:
     """503 rather than 500: the service is fine, it just has not been told where to look."""
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(TavilyNotConfigured)
+def _tavily_not_configured(request: Request, exc: TavilyNotConfigured) -> JSONResponse:
+    """Same as above for the search half of summarisation."""
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
@@ -49,3 +56,4 @@ def health(store: StoreDep) -> Health:
 app.include_router(models_router)
 app.include_router(benchmarks_router)
 app.include_router(extraction_router)
+app.include_router(summary_router)

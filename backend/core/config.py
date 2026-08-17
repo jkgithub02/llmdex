@@ -52,6 +52,33 @@ class LLMSettings(BaseModel):
     """
 
 
+class TavilyNotConfigured(RuntimeError):
+    """No search key is configured.
+
+    No default, for the same reason :class:`LLMNotConfigured` has none:
+    summarising from the card alone is a different feature than the one asked
+    for, and silently degrading into it would hide that the search half never
+    ran.
+    """
+
+
+class TavilySettings(BaseModel):
+    """The web-search half of summarisation. A key is all Tavily needs."""
+
+    api_key: str
+    timeout: float = 30.0
+    max_results: int = 5
+    """Enough context for a paragraph about the model without paying for a
+    research session. One search per generation, not an agentic loop."""
+
+
+def tavily_settings() -> TavilySettings:
+    api_key = os.environ.get("LLMDEX_TAVILY_API_KEY", "").strip()
+    if not api_key:
+        raise TavilyNotConfigured("set LLMDEX_TAVILY_API_KEY to use summarisation")
+    return TavilySettings(api_key=api_key)
+
+
 def llm_settings() -> LLMSettings:
     base_url = os.environ.get("LLMDEX_LLM_BASE_URL", "").strip().rstrip("/")
     model = os.environ.get("LLMDEX_LLM_MODEL", "").strip()

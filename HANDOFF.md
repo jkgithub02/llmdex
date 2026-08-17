@@ -1,7 +1,6 @@
 # Handoff — 2026-08-17
 
-Working state at the end of the session. Nothing is committed; everything below is
-in the working tree on `dev`.
+Working state at the end of the session. Everything below is committed on `dev`.
 
 ## Direction change (read this first)
 
@@ -80,24 +79,39 @@ Checks: **174 backend tests, 12 frontend specs, ruff clean, `ng build` clean.**
    attributed to the wrong person. Ask before committing. **No co-author
    trailers** — the user asked for this explicitly.
 
-2. **Why LLM extractions get rejected.** Not diagnosed. Needs one ingest plus one
-   live extraction against the configured endpoint (`.env` is set, the user
-   confirmed it is fine to spend). Look at `backend/extraction/ground.py` — the
-   token-boundary and normalisation rules are the likely cause. This may become
-   moot if the prose block is replaced wholesale (item 3).
+2. **Why LLM extractions get rejected.** Still not diagnosed, and now lower
+   value: the rejected list is no longer rendered, and the questions it was
+   failing to answer are the summary's job. Worth doing only if the extracted
+   quantization/serving fields turn out to be worth keeping.
 
-3. **Step 2 — replace the prose block with a real explanation.** Agreed in
-   principle, not designed. One LLM-written summary per model: what it is, who made
-   it, what it is for. Written from the card *plus* the derived facts, stored with
-   the model and date that produced it, regenerable. Rejected values stop being
-   rendered. Leave the extraction code in place but unused rather than deleting it
-   in the same change. Open questions, in the order they need answering:
-   - per model or per checkpoint?
-   - card only, or tool calling / web search?
-   - what renders when the endpoint is down or has never been run?
+3. ~~**Step 2 — replace the prose block with a real explanation.**~~ **Done.**
+   Design in `docs/superpowers/specs/2026-08-17-model-summary-design.md` (docs/
+   is gitignored, so it is local only). One `Summary` per `ModelDoc`:
+   `overview` plus `unique_points` / `pros` / `cons` / `use_cases`, `sources`
+   from a Tavily web search, stamped with `generated_by` and `generated_on`.
+   Generated automatically on a model's **first** ingest and never again on
+   re-ingest; a "Regenerate" button replaces it on demand. Ingest cannot fail
+   because summarisation did (R1.5) — the doc simply comes back with
+   `summary: null` and the page shows its CTA. The rejected-values block is
+   gone from the detail page; the Prose section still shows extracted
+   quantization/serving.
 
-4. **Per-model-card chatbot with tool calling / web search.** Builds on item 3;
-   settle that first. Not started.
+   Answers to the questions that were open: **per model**, because the card and
+   derived facts do not vary by quantization. **Card + derived facts + web
+   search**, one Tavily call per generation, not an agentic loop. **CTA plus an
+   inline error** when it has never run or the endpoint is down.
+
+4. **Per-model-card chatbot with tool calling / web search.** Builds on item 3,
+   which is now done. Not started.
+
+7. **Sub-project B — LLM cross-check of the `Derived` block.** The user suspects
+   `derive.py` gets architecture wrong. No confirmed case yet, so this starts as
+   a spike, not a design: pull ≥20 architecturally diverse models from the Hub,
+   run each through `derive.py`, and check the classification by hand against
+   the real `config.json`. A confirmed bug gets fixed in `derive.py` directly.
+   Only a genuine blind spot justifies an LLM cross-check, and the agreed shape
+   for that is **flag a disagreement, never replace the number** — `derive.py`
+   stays the source of truth.
 
 5. **"Fully LLM parseable."** Never pinned down — ask what consumes it before
    designing anything. Possibly satisfied by the existing OpenAPI schema plus the
@@ -120,8 +134,12 @@ Checks: **174 backend tests, 12 frontend specs, ruff clean, `ng build` clean.**
   `./backend` and `./frontend` bind-mounted, so both hot-reload working-tree edits.
   The user asked that no additional servers be started. Ports 8002/4300/4400 were
   used for verification during this session and are all stopped.
-- **The live vault is empty** (`GET /api/models` returns `[]`). Nothing renders
-  until something is ingested, which needs network access to Hugging Face.
+- **The live vault holds one model** (`Qwen/Qwen3-8B`), ingested through the
+  running stack to verify summarisation end to end. It has a real generated
+  summary. Ingest took ~57s, most of it the summary.
+- **The backend container was recreated** (`docker compose up -d backend`) so it
+  would pick up `LLMDEX_TAVILY_API_KEY`; a container started before that key was
+  added answers 503 on summarise.
 - To get data without touching the user's vault: build `RepoSnapshot` objects from
   `backend/tests/fixtures/*.json` (see the `snapshot()` helper in
   `backend/tests/test_api.py`) and `ingest()` them into a scratch directory that
@@ -144,8 +162,13 @@ Checks: **174 backend tests, 12 frontend specs, ruff clean, `ng build` clean.**
 ## Commands
 
 ```
-uv run pytest backend/tests -q          # 174 pass, 17 live tests deselected
+uv run pytest backend/tests -q          # 204 pass, 20 live tests deselected
+set -a && . ./.env && set +a && uv run pytest -m live   # 20 pass, ~4 min, spends tokens
 uv run ruff check backend
-cd frontend && npx ng test --watch=false  # 12 specs
+cd frontend && npx ng test --watch=false  # 19 specs
 cd frontend && npx ng build
 ```
+
+Note that `-m live` now spends tokens on every ingest it does: a first ingest
+generates a summary, so the six-model live fixture makes six LLM calls and six
+searches.

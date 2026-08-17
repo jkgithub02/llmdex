@@ -35,6 +35,7 @@ export * from './rejectedValueReason';
 export * from './serving';
 export * from './servingEngines';
 export * from './span';
+export * from './summary';
 export * from './validationError';
 export * from './validationErrorCtx';
 export * from './vRAMAssumptions';

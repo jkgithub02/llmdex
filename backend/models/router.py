@@ -25,6 +25,11 @@ from backend.models.fetch import (
     fetch_snapshot,
 )
 from backend.models.ingest import DEFAULT_CONTEXT, ingest
+from backend.summary.router import (
+    OptionalLLMDep,
+    OptionalTavilyDep,
+    summarise_after_first_ingest,
+)
 
 router = APIRouter()
 
@@ -57,14 +62,26 @@ class DriftReport(BaseModel):
 
 
 @router.post("/ingest", response_model=ModelDoc, status_code=201, tags=["ingest"])
-def ingest_model(body: IngestRequest, store: StoreDep, fetcher: FetcherDep) -> ModelDoc:
-    """Fetch, derive, and write a document. Atomic: it completes or it fails (R1.5)."""
+def ingest_model(
+    body: IngestRequest,
+    store: StoreDep,
+    fetcher: FetcherDep,
+    llm: OptionalLLMDep,
+    tavily: OptionalTavilyDep,
+) -> ModelDoc:
+    """Fetch, derive, and write a document. Atomic: it completes or it fails (R1.5).
+
+    A model entering the vault for the first time is summarised on the way in, so
+    nobody has to ask for the first one. That step cannot fail this endpoint: see
+    :func:`~backend.summary.router.summarise_after_first_ingest`.
+    """
     model_id = normalise_model_id(body.model_id)
     try:
         snapshot = fetcher(model_id)
     except IngestError as exc:
         raise http_error(exc) from exc
-    return ingest(snapshot, store, context=body.context)
+    doc = ingest(snapshot, store, context=body.context)
+    return summarise_after_first_ingest(doc, store, snapshot.readme, llm=llm, tavily=tavily)
 
 
 @router.get("/models", response_model=list[ModelDoc], tags=["models"])

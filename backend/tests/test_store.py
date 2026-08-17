@@ -19,6 +19,7 @@ from backend.core.schemas import (
     Quantization,
     Serving,
     Span,
+    Summary,
 )
 from backend.core.store import DocumentConflict, Store, slug_for
 
@@ -472,3 +473,57 @@ def test_a_populated_but_invalid_extracted_block_still_fails(store):
 
     with pytest.raises(ValueError, match="card_revision"):
         store.read("a/two")
+
+
+# ---------------------------------------------------------------------------
+# the generated summary
+# ---------------------------------------------------------------------------
+
+
+def _summary(overview="A model.", **kw) -> Summary:
+    return Summary(
+        overview=overview,
+        generated_by=kw.get("generated_by", "vllm/some-model"),
+        generated_on=kw.get("generated_on", "2026-08-17"),
+        sources=kw.get("sources", []),
+    )
+
+
+def test_merge_summary_writes_the_block_and_nothing_else(store):
+    doc = make_doc()
+    store.write(doc, operation="ingest")
+
+    after = store.merge_summary(doc.model_id, _summary("Nemotron H 8B is NVIDIA's hybrid model."))
+
+    assert after.summary.overview == "Nemotron H 8B is NVIDIA's hybrid model."
+    assert store.read(doc.model_id).summary.generated_on == "2026-08-17"
+    assert after.checkpoints[0].card_revision == "4f9a2c1"
+
+
+def test_regenerating_replaces_rather_than_accumulates(store):
+    """No history: generated_on is the only record of when the current text was written."""
+    doc = make_doc()
+    store.write(doc, operation="ingest")
+    store.merge_summary(doc.model_id, _summary("First.", generated_on="2026-08-01"))
+
+    after = store.merge_summary(doc.model_id, _summary("Second.", generated_on="2026-08-17"))
+
+    assert after.summary.overview == "Second."
+    assert after.summary.generated_on == "2026-08-17"
+
+
+def test_summarising_an_unknown_model_is_an_error(store):
+    """Summarisation never creates a document, for the same reason extraction does not."""
+    with pytest.raises(KeyError):
+        store.merge_summary("nobody/nothing", _summary())
+
+
+def test_re_ingest_leaves_the_summary_alone(store):
+    """R1.4 - ingest merges. A summary costs tokens and a card refresh must not eat it."""
+    doc = make_doc()
+    store.write(doc, operation="ingest")
+    store.merge_summary(doc.model_id, _summary("Written once."))
+
+    store.merge_ingest(make_doc())
+
+    assert store.read(doc.model_id).summary.overview == "Written once."

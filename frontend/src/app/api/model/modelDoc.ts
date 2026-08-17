@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Checkpoint } from './checkpoint';
+import type { Summary } from './summary';
 
 /**
  * R4.1 - shared identity; everything that varies by artifact lives on checkpoints.
@@ -14,5 +15,6 @@ export interface ModelDoc {
   name?: string | null;
   vendor?: string | null;
   released?: string | null;
+  summary?: Summary | null;
   checkpoints?: Checkpoint[];
 }

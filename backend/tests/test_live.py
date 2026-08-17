@@ -21,9 +21,17 @@ from pathlib import Path
 import httpx
 import pytest
 
-from backend.core.config import LLMNotConfigured, llm_settings
+from backend.core.config import (
+    LLMNotConfigured,
+    TavilyNotConfigured,
+    llm_settings,
+    tavily_settings,
+)
 from backend.extraction.extract import SERVING_ENGINES, extract
+from backend.models.derive import derive
 from backend.models.fetch import fetch_snapshot
+from backend.search.tavily import search
+from backend.summary.generate import generate_summary
 
 pytestmark = pytest.mark.live
 
@@ -128,11 +136,14 @@ def test_all_six_models_ingest_and_read_back(ingested):
 
 
 def test_every_ingest_produced_exactly_one_commit(ingested):
+    """R1.5 - one ingest, one commit. Counting only ingest commits is the point:
+    a first ingest also generates a summary, and that lands as its own commit
+    under its own verb, so the two operations stay separable in the log."""
     _base, vault = ingested
-    subjects = _commits(vault)
+    subjects = [s for s in _commits(vault) if s.startswith("ingest:")]
     assert len(subjects) == len(MODELS)
     for model_id in MODELS:
-        assert any(model_id in s for s in subjects), f"no commit names {model_id}"
+        assert any(model_id in s for s in subjects), f"no ingest commit names {model_id}"
 
 
 def test_reingest_creates_no_new_commit(ingested):
@@ -327,3 +338,74 @@ def test_extraction_actually_finds_what_the_card_plainly_states():
 
     for engine in result.serving.engines if result.serving else {}:
         assert engine in SERVING_ENGINES, f"{engine!r} is not a serving engine"
+
+
+# ---------------------------------------------------------------------------
+# the generated summary
+# ---------------------------------------------------------------------------
+
+
+def _live_summary(model_id: str):
+    try:
+        llm = llm_settings()
+        tavily = tavily_settings()
+    except (LLMNotConfigured, TavilyNotConfigured) as exc:
+        pytest.skip(str(exc))
+    snapshot = fetch_snapshot(model_id)
+    assert snapshot.readme, f"{model_id} should have a card"
+    derived = derive(
+        snapshot.config or {},
+        snapshot.siblings,
+        safetensors_total=snapshot.safetensors_total,
+    )
+    return generate_summary(model_id, snapshot.readme, derived, llm=llm, tavily=tavily)
+
+
+def test_the_search_half_returns_real_pages():
+    """The offline suite drives this through a stub transport, so it can only
+    prove we parse the shape we assumed. This proves the shape."""
+    try:
+        tavily = tavily_settings()
+    except TavilyNotConfigured as exc:
+        pytest.skip(str(exc))
+
+    results = search("Qwen/Qwen3-8B language model", settings=tavily)
+
+    assert results, "the search returned nothing for a model with an obvious web presence"
+    assert all(r.url.startswith("http") for r in results)
+    assert any(r.content for r in results), "every result came back with empty content"
+    print(f"{len(results)} results: {[r.url for r in results]}")
+
+
+def test_a_summary_says_something_about_the_actual_model():
+    """The failure this catches is a summary that reads well and is about nothing.
+
+    A schema-valid response full of generic language would pass every offline
+    test in the suite, so the assertions here are about the model's identity
+    reaching the page: its own name, and a fact only its config states.
+    """
+    summary = _live_summary("Qwen/Qwen3-8B")
+
+    assert "Qwen" in summary.overview, f"the overview does not name the model: {summary.overview}"
+    assert summary.generated_by == llm_settings().model
+    assert summary.sources, "no sources recorded for a model with a web presence"
+    assert summary.use_cases, "no use cases for a general-purpose instruct model"
+    print(f"\noverview: {summary.overview}")
+    print(f"unique:   {summary.unique_points}")
+    print(f"pros:     {summary.pros}")
+    print(f"cons:     {summary.cons}")
+    print(f"use:      {summary.use_cases}")
+    print(f"sources:  {summary.sources}")
+
+
+def test_a_summary_reflects_the_derived_facts_over_the_card():
+    """Nemotron-H is a hybrid, and its card does not put it that way. The derived
+    block does, and the prompt says to prefer it -- so the words should appear."""
+    summary = _live_summary("nvidia/Nemotron-H-8B-Base-8K")
+
+    text = " ".join(
+        [summary.overview, *summary.unique_points, *summary.pros, *summary.cons]
+    ).lower()
+    assert "mamba" in text or "hybrid" in text, f"a hybrid summarised as if dense: {text[:400]}"
+    print(f"\noverview: {summary.overview}")
+    print(f"unique:   {summary.unique_points}")
