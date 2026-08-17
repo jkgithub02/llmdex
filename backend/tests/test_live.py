@@ -21,6 +21,10 @@ from pathlib import Path
 import httpx
 import pytest
 
+from backend.core.config import LLMNotConfigured, llm_settings
+from backend.extraction.extract import SERVING_ENGINES, extract
+from backend.models.fetch import fetch_snapshot
+
 pytestmark = pytest.mark.live
 
 # backend/tests/test_live.py -> repo root, where pyproject.toml and the package live.
@@ -251,3 +255,75 @@ def test_read_paths_need_no_network(ingested):
     start = time.monotonic()
     assert httpx.get(f"{base}/models", timeout=10).status_code == 200
     assert time.monotonic() - start < 5, "a read that took seconds probably hit the network"
+
+
+# ---------------------------------------------------------------------------
+# R3.1 / R3.2 - extraction against the real endpoint
+# ---------------------------------------------------------------------------
+
+NVFP4_REPO = "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"
+
+
+def _all_spans(extracted) -> list:
+    spans = []
+    if extracted.quantization:
+        quantization = extracted.quantization
+        spans += [
+            span
+            for span in (
+                quantization.format,
+                quantization.method,
+                quantization.scope,
+                quantization.calibration,
+            )
+            if span is not None
+        ]
+    if extracted.serving:
+        spans += list(extracted.serving.engines.values())
+    for row in extracted.benchmarks:
+        spans += [row.name, row.score] + ([row.unit] if row.unit else [])
+    return spans
+
+
+def _live_extraction(model_id: str):
+    try:
+        settings = llm_settings()
+    except LLMNotConfigured:
+        pytest.skip("no extraction endpoint configured")
+    snapshot = fetch_snapshot(model_id)
+    assert snapshot.readme, f"{model_id} should have a card"
+    return snapshot.readme, extract(snapshot.readme, card_revision="live", settings=settings)
+
+
+def test_every_stored_span_is_a_slice_of_the_real_card():
+    """R3.1 end to end. True by construction, kept as a regression on that construction."""
+    card, result = _live_extraction(NVFP4_REPO)
+
+    spans = _all_spans(result)
+    for span in spans:
+        assert card[span.start : span.end] == span.text, f"span does not match the card: {span}"
+    print(f"verified {len(spans)} spans, {len(result.rejected)} rejected")
+
+
+def test_extraction_actually_finds_what_the_card_plainly_states():
+    """The test the verbatim assertion cannot be a substitute for.
+
+    Copy-only stops invention. It does not stop a real quotation being filed
+    under the wrong field, and that is what this endpoint did on this card
+    before the prompt named each field: quantization came back empty while the
+    card says NVFP4 thirty-two times, and serving.engines was filled with
+    `runtime_engine` and `recommended_sampling`. Every span was verbatim, so a
+    verbatim-only test passed while the output was worthless.
+
+    This repository is named for its quantization format, so a run that cannot
+    find it has not earned the word extraction.
+    """
+    card, result = _live_extraction(NVFP4_REPO)
+
+    assert "NVFP4" in card, "the fixture assumption changed; pick another card"
+    assert result.quantization is not None, "no quantization block for an NVFP4 repository"
+    assert result.quantization.format is not None, "did not locate the quantization format"
+    assert result.quantization.format.text == "NVFP4"
+
+    for engine in result.serving.engines if result.serving else {}:
+        assert engine in SERVING_ENGINES, f"{engine!r} is not a serving engine"
