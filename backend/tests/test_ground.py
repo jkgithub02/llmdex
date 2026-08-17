@@ -155,3 +155,41 @@ def test_punctuation_is_a_real_boundary():
 
     assert isinstance(span, Span), span
     assert span.text == "NVFP4"
+
+
+def test_occurrences_counts_only_matches_that_would_be_accepted():
+    """The count must use the same rule as the match, or it misreports ambiguity.
+
+    Span.occurrences exists to warn that `section` may name the wrong place. A
+    count inflated by matches buried inside longer tokens - which find() itself
+    rejects - describes an ambiguity that does not exist.
+    """
+    card = GroundedCard("## A\n\nvLLM here\n\n## B\n\nvLLM again\n\n## C\n\nvLLMv2 nightly")
+
+    span = card.find("vLLM", field="serving.engines.vllm")
+
+    assert isinstance(span, Span)
+    assert span.occurrences == 2, "vLLMv2 is not an occurrence of vLLM"
+
+
+def test_parts_buried_in_longer_tokens_are_not_a_contiguity_failure():
+    """`not_contiguous` means the parts are really there but never adjacent.
+
+    If the parts only exist inside unrelated longer words, nothing was stitched
+    together - the quote simply is not in the card.
+    """
+    card = GroundedCard("Serving uses vLLMv2 nightly builds.")
+
+    result = card.find("vLLM nightly", field="serving.engines.vllm")
+
+    assert isinstance(result, RejectedValue)
+    assert result.reason == "no_match"
+
+
+def test_a_quote_of_only_zero_width_characters_is_empty_not_a_match():
+    card = GroundedCard("Quantized to NVFP4.")
+
+    result = card.find("\u200b\u2060", field="quantization.format")
+
+    assert isinstance(result, RejectedValue)
+    assert result.reason == "empty"

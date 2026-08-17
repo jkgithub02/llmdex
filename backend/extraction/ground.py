@@ -111,10 +111,11 @@ class GroundedCard:
         if not needle:
             return RejectedValue(field=field, proposed=quote, reason="empty")
 
-        position = self._find_at_boundary(needle)
-        if position < 0:
+        positions = self._occurrences_of(needle)
+        if not positions:
             return RejectedValue(field=field, proposed=quote, reason=self._why_not(needle))
 
+        position = positions[0]
         start = self._offsets[position][0]
         end = self._offsets[position + len(needle) - 1][1]
         return Span(
@@ -122,11 +123,11 @@ class GroundedCard:
             start=start,
             end=end,
             section=self.section_at(start),
-            occurrences=self.normalised.count(needle),
+            occurrences=len(positions),
         )
 
-    def _find_at_boundary(self, needle: str) -> int:
-        """First occurrence of ``needle`` that is not buried inside a longer token.
+    def _occurrences_of(self, needle: str) -> list[int]:
+        """Every position where ``needle`` appears as a whole token, in order.
 
         Plain substring matching accepts ``52.8`` against a card that says
         ``52.80``, and ``vLLM`` against ``vLLMv2``. Those are not quotations --
@@ -134,11 +135,15 @@ class GroundedCard:
         benchmark scores that is precisely how a hallucinated number slips
         through: ``9.5`` nests inside ``19.54``.
 
-        A match counts only when neither edge continues a word: an alphanumeric
-        character on the outside touching an alphanumeric character on the inside
-        means the token carries on. Punctuation is a real boundary, so ``NVFP4``
-        still matches inside ``NVFP4-A16``.
+        A position counts only when neither edge continues a word: an
+        alphanumeric character on the outside touching an alphanumeric character
+        on the inside means the token carries on. Punctuation is a real boundary,
+        so ``NVFP4`` still matches inside ``NVFP4-A16``.
+
+        Every use of "does this appear in the card" goes through here, so the
+        count and the diagnosis can never disagree with the match itself.
         """
+        found: list[int] = []
         position = self.normalised.find(needle)
         while position >= 0:
             before = self.normalised[position - 1] if position else ""
@@ -147,9 +152,9 @@ class GroundedCard:
             starts_clean = not (before.isalnum() and needle[0].isalnum())
             ends_clean = not (after.isalnum() and needle[-1].isalnum())
             if starts_clean and ends_clean:
-                return position
+                found.append(position)
             position = self.normalised.find(needle, position + 1)
-        return -1
+        return found
 
     def _why_not(self, needle: str) -> str:
         """Distinguish an invention from a quote stitched out of separate places.
@@ -160,6 +165,6 @@ class GroundedCard:
         that simply is not in the card.
         """
         parts = [part for part in needle.split(" ") if part]
-        if len(parts) > 1 and all(part in self.normalised for part in parts):
+        if len(parts) > 1 and all(self._occurrences_of(part) for part in parts):
             return "not_contiguous"
         return "no_match"
