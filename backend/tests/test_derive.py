@@ -759,3 +759,105 @@ def test_a_model_with_no_attention_layers_gets_no_transformer_kv_math():
     kv = kv_cache(MAMBA_130M, context=8192, batch=1, kv_dtype_bytes=2)
     assert kv.method != "gqa"
     assert kv.bytes is None or kv.attention_bytes in (None, 0)
+
+
+# --------------------------------------------------------------------------
+# multimodal configs, where the language model lives one level down
+# --------------------------------------------------------------------------
+
+# HuggingFaceTB/SmolVLM-Instruct, trimmed. The vision tower is the reason the
+# decoder's fields are nested; nothing about the decoder itself is unusual. Its
+# declared model_type really is `idefics3` -- the architecture it is built on.
+SMOLVLM = {
+    "model_type": "idefics3",
+    "torch_dtype": "bfloat16",
+    "vision_config": {"num_hidden_layers": 27, "hidden_size": 1152},
+    "text_config": {
+        "model_type": "llama",
+        "num_hidden_layers": 24,
+        "hidden_size": 2048,
+        "num_attention_heads": 32,
+        "num_key_value_heads": 32,
+        "vocab_size": 49280,
+        "max_position_embeddings": 16384,
+    },
+}
+
+# OpenGVLab/InternVL2-8B calls the same block `llm_config`.
+INTERNVL = {
+    "model_type": "internvl_chat",
+    "vision_config": {"num_hidden_layers": 45},
+    "llm_config": {
+        "model_type": "internlm2",
+        "num_hidden_layers": 32,
+        "hidden_size": 4096,
+        "num_attention_heads": 32,
+        "num_key_value_heads": 8,
+        "vocab_size": 92553,
+    },
+}
+
+# llava-hf/llava-1.5-7b-hf, trimmed and complete: its text_config really does
+# omit the layer count, leaning on the transformers LlamaConfig defaults.
+LLAVA_15 = {
+    "model_type": "llava",
+    "torch_dtype": "float16",
+    "vocab_size": 32064,
+    "vision_config": {"hidden_size": 1024},
+    "text_config": {"model_type": "llama", "vocab_size": 32064, "max_position_embeddings": 4096},
+}
+
+
+def test_a_nested_decoder_config_is_read():
+    d = derive(SMOLVLM, siblings=[], safetensors_total=None)
+
+    assert d.num_hidden_layers == 24
+    assert d.hidden_size == 2048
+    assert d.num_key_value_heads == 32
+    assert d.architecture_class == "dense transformer"
+
+
+def test_the_vision_towers_layers_are_not_the_models_layers():
+    """The trap in unwrapping: `vision_config` also has `num_hidden_layers`."""
+    d = derive(SMOLVLM, siblings=[], safetensors_total=None)
+
+    assert d.num_hidden_layers == 24, "read the vision tower's 27 layers"
+    assert d.layers.attention == 24
+
+
+def test_the_wrapper_keeps_its_own_model_type():
+    """`architecture` names the repository's declared type. The decoder's own
+    type is a fact about the tower it borrowed, not about this model."""
+    assert derive(SMOLVLM, [], None).architecture == "idefics3"
+
+
+def test_a_top_level_field_survives_the_unwrap():
+    """torch_dtype is published beside the nested block, not inside it."""
+    assert derive(SMOLVLM, [], None).torch_dtype == "bfloat16"
+
+
+def test_the_other_name_for_the_same_block_is_read_too():
+    d = derive(INTERNVL, siblings=[], safetensors_total=None)
+
+    assert d.num_hidden_layers == 32
+    assert d.num_key_value_heads == 8
+
+
+def test_a_nested_block_that_states_nothing_is_still_null():
+    """R2.1 - llava-1.5 omits the layer count and lets transformers default it.
+    Reading that default out of the library would be inventing a fact the
+    published config does not contain."""
+    d = derive(LLAVA_15, siblings=[], safetensors_total=None)
+
+    assert d.num_hidden_layers is None
+    assert d.architecture_class is None
+    assert "architecture_class" in d.underivable
+
+
+def test_a_top_level_decoder_config_is_left_alone():
+    """Qwen2-VL and Phi-3.5-vision publish the decoder's fields at the top level
+    already. Unwrapping must not reach past them."""
+    top_level = {**LLAMA_70B, "model_type": "qwen2_vl", "vision_config": {"num_hidden_layers": 32}}
+    d = derive(top_level, siblings=[], safetensors_total=None)
+
+    assert d.num_hidden_layers == 80
