@@ -13,6 +13,7 @@ Design constraints that shape everything here:
 """
 
 import hashlib
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -27,6 +28,8 @@ FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n(.*)\Z", re.DOTALL)
 # Blocks ingest is allowed to overwrite on an existing checkpoint. Anything not
 # listed here belongs to a human and survives re-ingest (R6.5, R4.2).
 INGEST_OWNED = ("card_revision", "ingested", "derived", "extracted")
+
+DEFAULT_VAULT = Path(__file__).resolve().parent.parent / "vault"
 
 
 class DocumentConflict(RuntimeError):
@@ -262,3 +265,8 @@ class Store:
 
 def new_checkpoint(repo: str, **kw: Any) -> Checkpoint:
     return Checkpoint(repo=repo, **kw)
+
+
+def store_from_env() -> Store:
+    """The vault named by ``LLMDEX_VAULT``, or the sibling ``./vault`` directory."""
+    return Store(os.environ.get("LLMDEX_VAULT", DEFAULT_VAULT))

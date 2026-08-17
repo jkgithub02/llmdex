@@ -9,9 +9,7 @@ Two properties this module exists to preserve:
   from it, so response models are declared rather than left to duck typing.
 """
 
-import os
 from collections.abc import Callable
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -29,9 +27,7 @@ from api.fetch import (
 )
 from api.ingest import DEFAULT_CONTEXT, ingest
 from api.schemas import Benchmark, ModelDoc
-from api.store import Store
-
-DEFAULT_VAULT = Path(__file__).resolve().parent.parent / "vault"
+from api.store import Store, store_from_env
 
 app = FastAPI(
     title="llmdex",
@@ -46,7 +42,7 @@ app = FastAPI(
 
 
 def get_store() -> Store:
-    return Store(os.environ.get("LLMDEX_VAULT", DEFAULT_VAULT))
+    return store_from_env()
 
 
 def get_fetcher() -> Callable[[str], RepoSnapshot]:
