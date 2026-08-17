@@ -104,14 +104,27 @@ Checks: **174 backend tests, 12 frontend specs, ruff clean, `ng build` clean.**
 4. **Per-model-card chatbot with tool calling / web search.** Builds on item 3,
    which is now done. Not started.
 
-7. **Sub-project B — LLM cross-check of the `Derived` block.** The user suspects
-   `derive.py` gets architecture wrong. No confirmed case yet, so this starts as
-   a spike, not a design: pull ≥20 architecturally diverse models from the Hub,
-   run each through `derive.py`, and check the classification by hand against
-   the real `config.json`. A confirmed bug gets fixed in `derive.py` directly.
-   Only a genuine blind spot justifies an LLM cross-check, and the agreed shape
-   for that is **flag a disagreement, never replace the number** — `derive.py`
-   stays the source of truth.
+7. ~~**Sub-project B — LLM cross-check of the `Derived` block.**~~ **Spike run,
+   bug fixed, cross-check dropped.** 24 real models checked by hand. Five were
+   classified confidently and wrongly (mamba-130m, falcon-mamba-7b and rwkv-6 as
+   "dense transformer"; Qwen3-Next and MiniMax-Text-01 as "MoE transformer" with
+   every layer counted as attention) and three more were null where the config
+   stated the answer plainly. Cause: `layer_composition()` treated the absence of
+   five known marker keys as proof of a pure attention stack.
+
+   Fixed deterministically — no LLM. Attention is now claimed only on positive
+   evidence, and `layer_types` / `layers_block_type` / `attn_type_list` /
+   `attn_layer_indices` / `full_attention_interval` are read. `LayerComposition`
+   gained `recurrent_kind` so a hybrid names its own mixture instead of being
+   assumed to be mamba.
+
+   **The LLM cross-check is not needed and should not be built.** Every model
+   that was wrong declares its composition in `config.json`; this was a parsing
+   gap, not a knowledge gap.
+
+   Still open from the spike, all safe nulls rather than wrong answers: nested
+   `text_config` (llava) and encoder-decoder configs (`t5`, which uses
+   `num_layers`/`num_decoder_layers`) derive nothing. Neither is urgent.
 
 5. **"Fully LLM parseable."** Never pinned down — ask what consumes it before
    designing anything. Possibly satisfied by the existing OpenAPI schema plus the
@@ -144,8 +157,10 @@ Checks: **174 backend tests, 12 frontend specs, ruff clean, `ng build` clean.**
   `backend/tests/fixtures/*.json` (see the `snapshot()` helper in
   `backend/tests/test_api.py`) and `ingest()` them into a scratch directory that
   has been `git init`-ed.
-- **Existing vault documents predate `architecture_class`** — it reads back as null
-  and displays as `absent` until re-ingested.
+- **Existing vault documents predate `architecture_class` and `recurrent_kind`** —
+  they read back as null and display as `absent` until re-ingested. Any document
+  ingested before the classification fix may also carry a wrong
+  `architecture_class`; re-ingest to correct it.
 - **Prettier is not enforced in this repo.** `model-detail.ts`, `models-page.ts`,
   `styles.scss`, `index.html`, `main.ts` and the generated API client all failed
   `--check` before any of this work. Format only files you create; a repo-wide
