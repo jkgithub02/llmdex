@@ -15,10 +15,12 @@ from api.store import store_from_env
 def main() -> int:
     store = store_from_env()
     failures = store.validate_all()
+    if not failures:
+        return 0  # silence on success, so stderr carries only real failures
     for path, error in failures:
         print(f"{path}: {error}", file=sys.stderr)
     print(f"{len(failures)} invalid document(s) in {store.root}", file=sys.stderr)
-    return 1 if failures else 0
+    return 1
 
 
 if __name__ == "__main__":
