@@ -2,11 +2,10 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { LlmdexService } from '../api/llmdex.service';
-import type { Checkpoint } from '../api/model/checkpoint';
 import type { ModelDoc } from '../api/model/modelDoc';
-import type { Span } from '../api/model/span';
-import { Field, formatBytes, formatCount } from '../field-state';
+import { errorMessage } from '../format';
 import { StateBadge } from '../state-badge';
+import { derivedFields, extractedFields } from './fields';
 
 /**
  * R6.3 / R6.4 - every field, including the null ones, each labelled with how we
@@ -21,6 +20,7 @@ import { StateBadge } from '../state-badge';
 @Component({
   selector: 'app-model-detail',
   imports: [RouterLink, StateBadge],
+  host: { class: 'page' },
   template: `
     <a routerLink="/models" class="back">← models</a>
 
@@ -145,12 +145,6 @@ import { StateBadge } from '../state-badge';
     }
   `,
   styles: `
-    :host {
-      display: block;
-      padding: var(--space-8) var(--space-6);
-      max-width: 64rem;
-      margin: 0 auto;
-    }
     .back {
       color: var(--fg-muted);
       font-size: 0.85rem;
@@ -160,12 +154,6 @@ import { StateBadge } from '../state-badge';
     }
     .head {
       margin: var(--space-4) 0 var(--space-6);
-    }
-    .vendor {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--fg-faint);
     }
     h1 {
       margin: 0.15rem 0 0;
@@ -311,65 +299,6 @@ import { StateBadge } from '../state-badge';
       border-radius: var(--radius-sm);
       color: var(--fg-muted);
     }
-    button {
-      background: var(--accent);
-      color: #04250f;
-      border: 0;
-      border-radius: var(--radius);
-      padding: 0 1.1rem;
-      min-height: 44px;
-      font: inherit;
-      font-weight: 600;
-      cursor: pointer;
-      transition:
-        background 180ms ease,
-        transform 120ms ease;
-    }
-    button:hover:not(:disabled) {
-      background: #2ee06c;
-    }
-    button:active:not(:disabled) {
-      transform: scale(0.98);
-    }
-    button:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-    .bar {
-      height: 2px;
-      background: var(--border);
-      overflow: hidden;
-      border-radius: 2px;
-      margin: var(--space-3) 0;
-    }
-    .bar span {
-      display: block;
-      height: 100%;
-      width: 35%;
-      background: var(--accent);
-      animation: slide 1.1s ease-in-out infinite;
-    }
-    @keyframes slide {
-      0% {
-        transform: translateX(-100%);
-      }
-      100% {
-        transform: translateX(320%);
-      }
-    }
-    .error {
-      color: var(--danger);
-      background: color-mix(in srgb, var(--danger) 10%, transparent);
-      border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
-      border-radius: var(--radius);
-      padding: var(--space-3) var(--space-4);
-      margin: var(--space-4) 0;
-      font-size: 0.88rem;
-    }
-    .error strong {
-      color: var(--fg);
-      margin-right: 0.35rem;
-    }
   `,
 })
 export class ModelDetail {
@@ -388,10 +317,14 @@ export class ModelDetail {
     queueMicrotask(() => this.load());
   }
 
+  /** The two field tables, as plain functions the template calls. */
+  protected readonly derivedFields = derivedFields;
+  protected readonly extractedFields = extractedFields;
+
   protected load(): void {
     this.api.getModelModelsModelIdGet(this.modelId()).subscribe({
       next: (doc) => this.doc.set(doc),
-      error: (err) => this.error.set(this.message(err)),
+      error: (err) => this.error.set(errorMessage(err)),
     });
   }
 
@@ -405,60 +338,8 @@ export class ModelDetail {
       },
       error: (err) => {
         this.extracting.set(false);
-        this.error.set(this.message(err));
+        this.error.set(errorMessage(err));
       },
     });
-  }
-
-  /** R2.7 - a field that could not be computed is shown as absent, not omitted. */
-  protected derivedFields(checkpoint: Checkpoint): Field[] {
-    const derived = checkpoint.derived;
-    const rows: Field[] = [
-      { label: 'architecture', value: derived?.architecture ?? null, state: 'derived' },
-      { label: 'parameters (total)', value: formatCount(derived?.params?.total), state: 'derived' },
-      {
-        label: 'parameters (active)',
-        value: formatCount(derived?.params?.active),
-        state: 'derived',
-      },
-      { label: 'context length', value: formatCount(derived?.context_length), state: 'derived' },
-      { label: 'KV heads', value: formatCount(derived?.num_key_value_heads), state: 'derived' },
-      { label: 'weights on disk', value: formatBytes(derived?.weights?.bytes), state: 'derived' },
-      {
-        label: 'VRAM estimate',
-        value: formatBytes(derived?.vram?.total_bytes),
-        state: 'derived',
-        unreliable: derived?.vram?.unreliable_reason ?? null,
-      },
-    ];
-    return rows.map((row) => (row.value === null ? { ...row, state: 'absent' } : row));
-  }
-
-  protected extractedFields(checkpoint: Checkpoint): Field[] {
-    const extracted = checkpoint.extracted;
-    const quantization = extracted?.quantization;
-    const rows: Field[] = [
-      this.fromSpan('quantization format', quantization?.format),
-      this.fromSpan('quantization method', quantization?.method),
-      this.fromSpan('quantization scope', quantization?.scope),
-      this.fromSpan('calibration', quantization?.calibration),
-    ];
-    for (const [engine, span] of Object.entries(extracted?.serving?.engines ?? {})) {
-      rows.push(this.fromSpan(`serving · ${engine}`, span));
-    }
-    for (const row of extracted?.benchmarks ?? []) {
-      rows.push(this.fromSpan(`benchmark · ${row.name.text}`, row.score));
-    }
-    return rows;
-  }
-
-  private fromSpan(label: string, span: Span | null | undefined): Field {
-    if (!span) return { label, value: null, state: 'absent' };
-    return { label, value: span.text, state: 'extracted', source: span.section || 'top of card' };
-  }
-
-  private message(err: unknown): string {
-    const detail = (err as { error?: { detail?: string }; message?: string })?.error?.detail;
-    return detail ?? (err as { message?: string })?.message ?? 'request failed';
   }
 }

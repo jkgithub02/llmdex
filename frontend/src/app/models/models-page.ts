@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 
 import { LlmdexService } from '../api/llmdex.service';
 import type { ModelDoc } from '../api/model/modelDoc';
-import { formatBytes, formatCount, routeFor } from '../field-state';
+import { errorMessage, formatBytes, formatCount, routeFor } from '../format';
 import { StateBadge } from '../state-badge';
 
 /**
@@ -17,6 +17,7 @@ import { StateBadge } from '../state-badge';
 @Component({
   selector: 'app-models-page',
   imports: [FormsModule, RouterLink, StateBadge],
+  host: { class: 'page' },
   template: `
     <header class="head">
       <div>
@@ -98,11 +99,9 @@ import { StateBadge } from '../state-badge';
     }
   `,
   styles: `
-    :host {
-      display: block;
-      padding: var(--space-8) var(--space-6);
+    /* Wider than the shared default: four fact columns and a badge per row. */
+    :host(.page) {
       max-width: 68rem;
-      margin: 0 auto;
     }
     .head {
       display: flex;
@@ -115,11 +114,6 @@ import { StateBadge } from '../state-badge';
       font-size: 1.5rem;
       font-weight: 600;
       letter-spacing: -0.01em;
-    }
-    .sub {
-      margin: 0.2rem 0 0;
-      color: var(--fg-muted);
-      font-size: 0.85rem;
     }
     .ingest {
       display: flex;
@@ -141,38 +135,6 @@ import { StateBadge } from '../state-badge';
     }
     input:hover:not(:disabled) {
       border-color: var(--border-strong);
-    }
-    button {
-      background: var(--accent);
-      color: #04250f;
-      border: 0;
-      border-radius: var(--radius);
-      padding: 0 1.1rem;
-      min-height: 44px;
-      font: inherit;
-      font-weight: 600;
-      cursor: pointer;
-      transition:
-        background 180ms ease,
-        transform 120ms ease;
-    }
-    button:hover:not(:disabled) {
-      background: #2ee06c;
-    }
-    button:active:not(:disabled) {
-      transform: scale(0.98);
-    }
-    button:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-    .rows {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
     }
     .row {
       display: grid;
@@ -199,12 +161,6 @@ import { StateBadge } from '../state-badge';
       display: flex;
       flex-direction: column;
       min-width: 0;
-    }
-    .vendor {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--fg-faint);
     }
     .name {
       font-size: 0.95rem;
@@ -233,51 +189,6 @@ import { StateBadge } from '../state-badge';
     .withheld {
       color: var(--state-absent);
       cursor: help;
-    }
-    .empty {
-      padding: var(--space-8);
-      text-align: center;
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
-      color: var(--fg-muted);
-    }
-    .error {
-      color: var(--danger);
-      background: color-mix(in srgb, var(--danger) 10%, transparent);
-      border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
-      border-radius: var(--radius);
-      padding: var(--space-3) var(--space-4);
-      margin: 0 0 var(--space-4);
-      font-size: 0.88rem;
-    }
-    .bar {
-      height: 2px;
-      background: var(--border);
-      overflow: hidden;
-      border-radius: 2px;
-      margin-bottom: var(--space-4);
-    }
-    .bar span {
-      display: block;
-      height: 100%;
-      width: 35%;
-      background: var(--accent);
-      animation: slide 1.1s ease-in-out infinite;
-    }
-    @keyframes slide {
-      0% {
-        transform: translateX(-100%);
-      }
-      100% {
-        transform: translateX(320%);
-      }
-    }
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip: rect(0 0 0 0);
     }
     @media (max-width: 760px) {
       .row {
@@ -317,7 +228,7 @@ export class ModelsPage {
   protected refresh(): void {
     this.api.listModelsModelsGet().subscribe({
       next: (rows) => this.models.set(rows),
-      error: (err) => this.error.set(this.message(err)),
+      error: (err) => this.error.set(errorMessage(err)),
     });
   }
 
@@ -335,7 +246,7 @@ export class ModelsPage {
       },
       error: (err) => {
         this.busy.set(false);
-        this.error.set(this.message(err));
+        this.error.set(errorMessage(err));
       },
     });
   }
@@ -362,10 +273,5 @@ export class ModelsPage {
     if (checkpoint?.extracted) return 'extracted';
     if (checkpoint?.manual?.quantization || checkpoint?.manual?.serving) return 'manual';
     return 'absent';
-  }
-
-  private message(err: unknown): string {
-    const detail = (err as { error?: { detail?: string }; message?: string })?.error?.detail;
-    return detail ?? (err as { message?: string })?.message ?? 'request failed';
   }
 }

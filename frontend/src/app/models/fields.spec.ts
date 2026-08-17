@@ -1,0 +1,207 @@
+import type { Checkpoint } from '../api/model/checkpoint';
+import type { Span } from '../api/model/span';
+import { derivedFields, extractedFields } from './fields';
+
+/**
+ * The rules these cover are the ones the product rests on: a value we could not
+ * compute is shown as `absent` rather than dropped (R2.7, R6.3), and a value we
+ * did compute is never relabelled as a quote.
+ */
+
+function span(text: string, section = 'Quantization'): Span {
+  return { text, start: 0, end: text.length, section };
+}
+
+function checkpoint(overrides: Partial<Checkpoint> = {}): Checkpoint {
+  return { repo: 'Qwen/Qwen3-8B', ...overrides };
+}
+
+describe('derivedFields', () => {
+  it('shows every field even when the checkpoint has nothing derived', () => {
+    const fields = derivedFields(checkpoint());
+
+    expect(fields.length).toBe(15);
+    expect(fields.every((f) => f.value === null)).toBe(true);
+    expect(fields.every((f) => f.state === 'absent')).toBe(true);
+  });
+
+  it('leads with what kind of model it is, and keeps model_type as its own row', () => {
+    const fields = derivedFields(
+      checkpoint({ derived: { architecture: 'qwen3_moe', architecture_class: 'MoE transformer' } }),
+    );
+
+    expect(fields[0]).toEqual(
+      jasmine.objectContaining({ label: 'architecture', value: 'MoE transformer' }),
+    );
+    expect(fields.find((f) => f.label === 'model type')!.value).toBe('qwen3_moe');
+  });
+
+  it('spells out a hybrid stack layer by layer', () => {
+    const fields = derivedFields(
+      checkpoint({
+        derived: {
+          num_hidden_layers: 52,
+          layers: { family: 'nemotron_h', attention: 4, recurrent: 24, mlp_only: 24 },
+        },
+      }),
+    );
+
+    expect(fields.find((f) => f.label === 'layer composition')!.value).toBe(
+      '4 attention · 24 recurrent · 24 MLP-only',
+    );
+  });
+
+  it('reports an all-attention stack without inventing recurrent layers', () => {
+    const fields = derivedFields(
+      checkpoint({ derived: { layers: { family: 'transformer', attention: 80 } } }),
+    );
+
+    expect(fields.find((f) => f.label === 'layer composition')!.value).toBe('80 attention');
+  });
+
+  it('carries the reason a layer composition could not be read (R2.6c)', () => {
+    const fields = derivedFields(
+      checkpoint({
+        derived: {
+          layers: {
+            family: 'unknown',
+            unreliable_reason: 'config carries a state-space marker but no parseable composition',
+          },
+        },
+      }),
+    );
+    const layers = fields.find((f) => f.label === 'layer composition')!;
+
+    expect(layers.value).toBeNull();
+    expect(layers.state).toBe('absent');
+    expect(layers.unreliable).toContain('state-space marker');
+  });
+
+  it('surfaces a head_dim the config contradicts (R2.4a)', () => {
+    const fields = derivedFields(
+      checkpoint({
+        derived: {
+          head_dim: { value: 128, source: 'explicit', mismatch: { explicit: 128, derived: 125 } },
+        },
+      }),
+    );
+    const headDim = fields.find((f) => f.label === 'head dim')!;
+
+    expect(headDim.value).toBe('128');
+    expect(headDim.state).toBe('derived');
+    expect(headDim.unreliable).toContain('125');
+  });
+
+  it('marks a computed value derived and an uncomputed one absent', () => {
+    const fields = derivedFields(
+      checkpoint({
+        derived: {
+          architecture_class: 'dense transformer',
+          params: { total: 8_190_735_360, active: null },
+          context_length: 32768,
+        },
+      }),
+    );
+    const by = (label: string) => fields.find((f) => f.label === label)!;
+
+    expect(by('architecture')).toEqual(
+      jasmine.objectContaining({ value: 'dense transformer', state: 'derived' }),
+    );
+    expect(by('parameters (total)')).toEqual(
+      jasmine.objectContaining({ value: '8.19B', state: 'derived' }),
+    );
+    // Present in the payload, but null: the model is dense, so there is no
+    // active count. That is absent, not a blank cell and not an omitted row.
+    expect(by('parameters (active)')).toEqual(
+      jasmine.objectContaining({ value: null, state: 'absent' }),
+    );
+  });
+
+  it('carries the reason a VRAM estimate was withheld (R2.6)', () => {
+    const fields = derivedFields(
+      checkpoint({
+        derived: {
+          vram: {
+            total_bytes: null,
+            unreliable_reason: 'hybrid attention/SSM stack: KV cache is not comparable',
+            assumptions: { context: 32768 },
+          },
+        },
+      }),
+    );
+    const vram = fields.find((f) => f.label === 'VRAM estimate')!;
+
+    expect(vram.value).toBeNull();
+    expect(vram.state).toBe('absent');
+    expect(vram.unreliable).toContain('hybrid');
+  });
+});
+
+describe('extractedFields', () => {
+  it('reports the four quantization fields as absent when nothing was extracted', () => {
+    const fields = extractedFields(checkpoint());
+
+    expect(fields.map((f) => f.label)).toEqual([
+      'quantization format',
+      'quantization method',
+      'quantization scope',
+      'calibration',
+    ]);
+    expect(fields.every((f) => f.state === 'absent')).toBe(true);
+  });
+
+  it('names the section a quote came from (R3.3)', () => {
+    const fields = extractedFields(
+      checkpoint({
+        extracted: {
+          card_revision: 'abc1234',
+          extracted_on: '2026-08-17',
+          model: 'vllm/Qwen3.5-122B',
+          quantization: { format: span('GPTQ', 'Quantization details') },
+        },
+      }),
+    );
+    const format = fields.find((f) => f.label === 'quantization format')!;
+
+    expect(format).toEqual(
+      jasmine.objectContaining({
+        value: 'GPTQ',
+        state: 'extracted',
+        source: 'Quantization details',
+      }),
+    );
+  });
+
+  it('says where a quote from before the first heading came from', () => {
+    const fields = extractedFields(
+      checkpoint({
+        extracted: {
+          card_revision: 'abc1234',
+          extracted_on: '2026-08-17',
+          model: 'vllm/Qwen3.5-122B',
+          quantization: { method: span('AWQ', '') },
+        },
+      }),
+    );
+
+    expect(fields.find((f) => f.label === 'quantization method')!.source).toBe('top of card');
+  });
+
+  it('adds a row per serving engine and per reported benchmark', () => {
+    const fields = extractedFields(
+      checkpoint({
+        extracted: {
+          card_revision: 'abc1234',
+          extracted_on: '2026-08-17',
+          model: 'vllm/Qwen3.5-122B',
+          serving: { engines: { vllm: span('vLLM >= 0.8', 'Deployment') } },
+          benchmarks: [{ name: span('MMLU', 'Evaluation'), score: span('52.80', 'Evaluation') }],
+        },
+      }),
+    );
+
+    expect(fields.find((f) => f.label === 'serving · vllm')!.value).toBe('vLLM >= 0.8');
+    // R3.4 - the score stays the string the card printed. "52.80" is not 52.8.
+    expect(fields.find((f) => f.label === 'benchmark · MMLU')!.value).toBe('52.80');
+  });
+});

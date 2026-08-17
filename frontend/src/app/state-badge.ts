@@ -1,6 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 
-import { FieldState, STATE } from './field-state';
+import { FieldState, STATE } from './provenance';
 
 /**
  * The provenance badge. It is the smallest component here and the one the whole

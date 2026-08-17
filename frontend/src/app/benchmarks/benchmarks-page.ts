@@ -13,6 +13,7 @@ import type { Benchmark } from '../api/model/benchmark';
  */
 @Component({
   selector: 'app-benchmarks-page',
+  host: { class: 'page' },
   template: `
     <header class="head">
       <h1>Benchmarks</h1>
@@ -56,12 +57,6 @@ import type { Benchmark } from '../api/model/benchmark';
     }
   `,
   styles: `
-    :host {
-      display: block;
-      padding: var(--space-8) var(--space-6);
-      max-width: 64rem;
-      margin: 0 auto;
-    }
     .head {
       margin-bottom: var(--space-4);
     }
@@ -71,11 +66,6 @@ import type { Benchmark } from '../api/model/benchmark';
       font-weight: 600;
       letter-spacing: -0.01em;
     }
-    .sub {
-      margin: 0.2rem 0 0;
-      color: var(--fg-muted);
-      font-size: 0.85rem;
-    }
     .caveat {
       border-left: 2px solid var(--state-absent);
       background: color-mix(in srgb, var(--state-absent) 8%, transparent);
@@ -84,14 +74,6 @@ import type { Benchmark } from '../api/model/benchmark';
       color: var(--fg-muted);
       font-size: 0.85rem;
       margin: 0 0 var(--space-6);
-    }
-    .rows {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
     }
     .row {
       display: flex;
@@ -133,34 +115,6 @@ import type { Benchmark } from '../api/model/benchmark';
       margin: var(--space-2) 0 0;
       color: var(--fg-muted);
       font-size: 0.88rem;
-    }
-    .empty {
-      padding: var(--space-8);
-      text-align: center;
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
-      color: var(--fg-muted);
-    }
-    .bar {
-      height: 2px;
-      background: var(--border);
-      overflow: hidden;
-      border-radius: 2px;
-    }
-    .bar span {
-      display: block;
-      height: 100%;
-      width: 35%;
-      background: var(--accent);
-      animation: slide 1.1s ease-in-out infinite;
-    }
-    @keyframes slide {
-      0% {
-        transform: translateX(-100%);
-      }
-      100% {
-        transform: translateX(320%);
-      }
     }
   `,
 })

@@ -55,21 +55,3 @@ export interface Field {
   /** Why a derived value could not be computed (R2.6, R2.7). */
   unreliable?: string | null;
 }
-
-export function formatBytes(bytes: number | null | undefined): string | null {
-  if (bytes === null || bytes === undefined) return null;
-  return `${(bytes / 1024 ** 3).toFixed(2)} GiB`;
-}
-
-export function formatCount(value: number | null | undefined): string | null {
-  if (value === null || value === undefined) return null;
-  if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
-  if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
-  return value.toLocaleString('en-US');
-}
-
-/** A Hugging Face ID is `vendor/name`, and the router holds it as two segments. */
-export function routeFor(modelId: string): string[] {
-  const [vendor, ...rest] = modelId.split('/');
-  return ['/models', vendor, rest.join('/')];
-}
