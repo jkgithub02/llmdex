@@ -571,3 +571,191 @@ def test_architecture_class_refuses_to_classify_an_unresolved_state_space_model(
     d = derive({**LLAMA_70B, "mamba_d_state": 16}, siblings=[], safetensors_total=None)
     assert d.layers.family == "unknown"
     assert d.architecture_class is None
+
+
+# --------------------------------------------------------------------------
+# R2.6a - the declarative forms other families use, and the non-transformers
+#
+# Every config below is trimmed from the real published file. The spike that
+# produced them found five models the old code called "dense transformer" or
+# "MoE transformer" on no evidence at all: it knew five hybrid marker keys and
+# treated the absence of those five as proof of a pure attention stack.
+# --------------------------------------------------------------------------
+
+# ibm-granite/granite-4.0-h-small. `layer_types` is the current transformers
+# convention and the one most new hybrids use.
+GRANITE_4_H = {
+    "model_type": "granitemoehybrid",
+    "num_hidden_layers": 40,
+    "num_attention_heads": 32,
+    "hidden_size": 4096,
+    "num_local_experts": 72,
+    "mamba_d_state": 128,
+    "layer_types": ["mamba"] * 36 + ["attention"] * 4,
+}
+
+# Zyphra/Zamba2-2.7B declares the same thing under another name. The real file
+# lists 45 mamba blocks and 9 hybrid ones across its 54 layers.
+ZAMBA2 = {
+    "model_type": "zamba2",
+    "num_hidden_layers": 54,
+    "num_attention_heads": 32,
+    "hidden_size": 2560,
+    "mamba_d_state": 64,
+    "layers_block_type": ["mamba"] * 45 + ["hybrid"] * 9,
+}
+
+# MiniMaxAI/MiniMax-Text-01: 1 is full attention, 0 is lightning attention. The
+# real file runs 80 layers with 10 ones; this is the first eight of that pattern,
+# shortened so the expected counts can be read off the literal.
+MINIMAX = {
+    "model_type": "minimax_text_01",
+    "num_hidden_layers": 8,
+    "num_attention_heads": 64,
+    "hidden_size": 6144,
+    "num_local_experts": 32,
+    "attn_type_list": [0, 0, 0, 1, 0, 0, 0, 1],
+}
+
+# Qwen/Qwen3-Next-80B-A3B-Instruct: one full-attention layer every four; the
+# rest are gated deltanet, which the config names only through its linear_* keys.
+QWEN3_NEXT = {
+    "model_type": "qwen3_next",
+    "num_hidden_layers": 48,
+    "num_attention_heads": 16,
+    "hidden_size": 2048,
+    "num_experts": 512,
+    "full_attention_interval": 4,
+    "linear_num_key_heads": 16,
+    "linear_num_value_heads": 32,
+    "linear_conv_kernel_dim": 4,
+}
+
+# ibm-ai-platform/Bamba-9B names the attention layers by index instead.
+BAMBA = {
+    "model_type": "bamba",
+    "num_hidden_layers": 32,
+    "num_attention_heads": 32,
+    "hidden_size": 4096,
+    "mamba_d_state": 128,
+    "attn_layer_indices": [9, 18, 27],
+}
+
+# state-spaces/mamba-130m-hf. No attention anywhere, and note the key is
+# `state_size` -- not the `ssm_state_size` the old marker list looked for.
+MAMBA_130M = {
+    "model_type": "mamba",
+    "num_hidden_layers": 24,
+    "hidden_size": 768,
+    "state_size": 16,
+    "conv_kernel": 4,
+    "expand": 2,
+}
+
+# RWKV/rwkv-6-world-1b6. An RNN. It carries `num_attention_heads`, which is a
+# misnomer for its head_size and the reason a marker-based check cannot catch it.
+RWKV6 = {
+    "model_type": "rwkv6",
+    "num_hidden_layers": 24,
+    "hidden_size": 2048,
+    "num_attention_heads": 32,
+    "head_size": 64,
+}
+
+
+def test_layer_types_is_read_as_the_composition_it_states():
+    comp = layer_composition(GRANITE_4_H)
+    assert comp.attention == 4
+    assert comp.recurrent == 36
+    assert comp.recurrent_kind == "mamba"
+    assert comp.attention + comp.recurrent + comp.mlp_only == 40
+
+
+def test_zamba_block_type_list_is_read_the_same_way():
+    """A `hybrid` block carries attention, so it counts as an attention layer."""
+    comp = layer_composition(ZAMBA2)
+    assert comp.attention == 9
+    assert comp.recurrent == 45
+    assert comp.recurrent_kind == "mamba"
+
+
+def test_minimax_attention_type_list_is_read_per_layer():
+    comp = layer_composition(MINIMAX)
+    assert comp.attention == 2
+    assert comp.recurrent == 6
+    assert comp.recurrent_kind == "lightning attention"
+
+
+def test_qwen3_next_interval_places_one_full_attention_layer_in_four():
+    """48 layers, interval 4 -> 12 full attention, 36 linear."""
+    comp = layer_composition(QWEN3_NEXT)
+    assert comp.attention == 12
+    assert comp.recurrent == 36
+    assert comp.recurrent_kind == "linear attention"
+
+
+def test_bamba_names_its_attention_layers_by_index():
+    comp = layer_composition(BAMBA)
+    assert comp.attention == 3
+    assert comp.recurrent == 29
+    assert comp.recurrent_kind == "mamba"
+
+
+def test_a_pure_state_space_model_has_no_attention_layers():
+    """The bug this closes: `state_size` is not `ssm_state_size`, so the old
+    marker list missed it and called a model with zero attention layers a
+    dense transformer."""
+    comp = layer_composition(MAMBA_130M)
+    assert comp.family == "recurrent"
+    assert comp.attention == 0
+    assert comp.recurrent == 24
+    assert comp.recurrent_kind == "mamba"
+
+
+def test_an_rnn_is_not_a_transformer_even_though_it_declares_attention_heads():
+    comp = layer_composition(RWKV6)
+    assert comp.family == "recurrent"
+    assert comp.attention == 0
+    assert comp.recurrent == 24
+    assert comp.recurrent_kind == "RWKV"
+
+
+def test_a_config_with_no_attention_heads_is_not_assumed_to_be_a_transformer():
+    """R2.6c, generalised. The old code claimed `transformer` whenever it did not
+    recognise a hybrid marker, which is an assertion from absence of evidence.
+    Nothing here says how these layers are built, so nothing is claimed."""
+    comp = layer_composition({"model_type": "something_new", "num_hidden_layers": 12})
+    assert comp.family == "unknown"
+    assert comp.unreliable_reason is not None
+
+
+def test_a_plain_transformer_still_reads_as_one():
+    """The inversion above must not cost us the common case."""
+    comp = layer_composition(LLAMA_70B)
+    assert comp.family == "transformer"
+    assert comp.attention == 80
+    assert comp.recurrent == 0
+    assert comp.recurrent_kind is None
+
+
+# --- the classes those compositions produce -------------------------------
+
+
+def test_architecture_class_names_the_mixture_a_hybrid_actually_uses():
+    """ "hybrid (mamba)" for a gated-deltanet model would be a new false claim."""
+    assert derive(QWEN3_NEXT, [], None).architecture_class == "MoE hybrid (linear attention)"
+    assert derive(MINIMAX, [], None).architecture_class == "MoE hybrid (lightning attention)"
+    assert derive(GRANITE_4_H, [], None).architecture_class == "MoE hybrid (mamba)"
+    assert derive(ZAMBA2, [], None).architecture_class == "dense hybrid (mamba)"
+
+
+def test_architecture_class_of_a_model_with_no_attention_names_the_mechanism():
+    assert derive(MAMBA_130M, [], None).architecture_class == "dense mamba"
+    assert derive(RWKV6, [], None).architecture_class == "dense RWKV"
+
+
+def test_a_model_with_no_attention_layers_gets_no_transformer_kv_math():
+    """R2.6 - the reason this matters beyond the label."""
+    kv = kv_cache(MAMBA_130M, context=8192, batch=1, kv_dtype_bytes=2)
+    assert kv.method != "gqa"
+    assert kv.bytes is None or kv.attention_bytes in (None, 0)

@@ -8,11 +8,16 @@ import type { LayerCompositionFamily } from './layerCompositionFamily';
 
 /**
  * How many layers of each kind. R2.6a - never assume a fixed ratio.
+ *
+ * ``family`` names the convention the config used to declare its layout, not
+ * the vendor. ``nemotron_h`` and ``jamba`` are kept as their own values because
+ * documents written before the others existed carry them.
  */
 export interface LayerComposition {
   family?: LayerCompositionFamily;
   attention?: number;
   recurrent?: number;
   mlp_only?: number;
+  recurrent_kind?: string | null;
   unreliable_reason?: string | null;
 }

@@ -58,9 +58,12 @@ export function derivedFields(checkpoint: Checkpoint): Field[] {
 
 /** R2.6a - the counts as published, never a ratio we assumed. */
 function layerRow(layers: LayerComposition | undefined): Field {
+  // The config often names the mechanism ("mamba", "linear attention"), and
+  // "36 recurrent" throws that away. Fall back to the generic word only when
+  // nothing said which it is.
   const parts = [
     [layers?.attention, 'attention'],
-    [layers?.recurrent, 'recurrent'],
+    [layers?.recurrent, layers?.recurrent_kind ?? 'recurrent'],
     [layers?.mlp_only, 'MLP-only'],
   ]
     .filter(([count]) => count)

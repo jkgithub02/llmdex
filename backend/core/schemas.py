@@ -36,12 +36,29 @@ class HeadDim(BaseModel):
 
 
 class LayerComposition(BaseModel):
-    """How many layers of each kind. R2.6a - never assume a fixed ratio."""
+    """How many layers of each kind. R2.6a - never assume a fixed ratio.
 
-    family: Literal["transformer", "nemotron_h", "jamba", "unknown"] = "transformer"
+    ``family`` names the convention the config used to declare its layout, not
+    the vendor. ``nemotron_h`` and ``jamba`` are kept as their own values because
+    documents written before the others existed carry them.
+    """
+
+    family: Literal["transformer", "nemotron_h", "jamba", "hybrid", "recurrent", "unknown"] = (
+        "transformer"
+    )
     attention: int = 0
     recurrent: int = 0
     mlp_only: int = 0
+    recurrent_kind: str | None = None
+    """What the non-attention layers are: ``mamba``, ``linear attention``,
+    ``lightning attention``, ``RWKV``.
+
+    A free string rather than an enum because the set is still growing and a new
+    architecture should not need a schema change to be described correctly. Null
+    when there are no such layers, or when the config does not say what they are
+    -- "hybrid" alone is then the honest answer, and naming a mechanism we did
+    not read would be the same error this field exists to fix.
+    """
     unreliable_reason: str | None = None
 
 

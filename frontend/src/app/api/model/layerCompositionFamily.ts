@@ -12,5 +12,7 @@ export const LayerCompositionFamily = {
   transformer: 'transformer',
   nemotron_h: 'nemotron_h',
   jamba: 'jamba',
+  hybrid: 'hybrid',
+  recurrent: 'recurrent',
   unknown: 'unknown',
 } as const;

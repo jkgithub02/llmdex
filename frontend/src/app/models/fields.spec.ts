@@ -205,3 +205,48 @@ describe('extractedFields', () => {
     expect(fields.find((f) => f.label === 'benchmark · MMLU')!.value).toBe('52.80');
   });
 });
+
+describe('layer composition row', () => {
+  it('names what the recurrent layers are when the config said', () => {
+    // "24 recurrent" tells a reader less than the config actually stated.
+    const fields = derivedFields(
+      checkpoint({
+        derived: {
+          layers: {
+            family: 'hybrid',
+            attention: 12,
+            recurrent: 36,
+            recurrent_kind: 'linear attention',
+          },
+        },
+      }),
+    );
+
+    expect(fields.find((f) => f.label === 'layer composition')!.value).toBe(
+      '12 attention · 36 linear attention',
+    );
+  });
+
+  it('falls back to "recurrent" when the kind was not stated', () => {
+    const fields = derivedFields(
+      checkpoint({ derived: { layers: { family: 'hybrid', attention: 4, recurrent: 28 } } }),
+    );
+
+    expect(fields.find((f) => f.label === 'layer composition')!.value).toBe(
+      '4 attention · 28 recurrent',
+    );
+  });
+
+  it('says so plainly when a model has no attention layers at all', () => {
+    const fields = derivedFields(
+      checkpoint({
+        derived: {
+          architecture_class: 'dense mamba',
+          layers: { family: 'recurrent', attention: 0, recurrent: 24, recurrent_kind: 'mamba' },
+        },
+      }),
+    );
+
+    expect(fields.find((f) => f.label === 'layer composition')!.value).toBe('24 mamba');
+  });
+});
