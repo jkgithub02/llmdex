@@ -16,13 +16,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.core.deps import StoreDep
+from backend.core.http import http_error, normalise_model_id
 from backend.core.schemas import ModelDoc
 from backend.models.fetch import (
-    AccessUndetermined,
-    GatedRepo,
     IngestError,
-    PrivateRepo,
-    RepoNotFound,
     RepoSnapshot,
     fetch_revision,
     fetch_snapshot,
@@ -57,25 +54,6 @@ class DriftReport(BaseModel):
     stored_revision: str | None
     upstream_revision: str | None
     drifted: bool
-
-
-def normalise_model_id(raw: str) -> str:
-    """R1.1 - accept a bare ID or a full URL without further user input."""
-    cleaned = raw.strip().rstrip("/")
-    for prefix in ("https://huggingface.co/", "http://huggingface.co/", "huggingface.co/"):
-        cleaned = cleaned.removeprefix(prefix)
-    return cleaned
-
-
-def http_error(exc: IngestError) -> HTTPException:
-    """R1.6 - the status code names the failure as precisely as the message does."""
-    if isinstance(exc, RepoNotFound):
-        return HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, (GatedRepo, PrivateRepo, AccessUndetermined)):
-        # 403 for all three: the Hub declined. The message carries the distinction,
-        # including the case where it declined to tell us which one it was.
-        return HTTPException(status_code=403, detail=str(exc))
-    return HTTPException(status_code=502, detail=str(exc))
 
 
 @router.post("/ingest", response_model=ModelDoc, status_code=201, tags=["ingest"])

@@ -12,11 +12,11 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.core.config import LLMSettings, llm_settings
 from backend.core.deps import StoreDep
+from backend.core.http import http_error, normalise_model_id
 from backend.core.schemas import ModelDoc
 from backend.extraction.extract import extract as extract_from_card
 from backend.extraction.llm import LLMError
 from backend.models.fetch import IngestError, fetch_snapshot
-from backend.models.router import http_error, normalise_model_id
 
 router = APIRouter(tags=["extraction"])
 
