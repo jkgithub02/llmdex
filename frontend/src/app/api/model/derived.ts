@@ -15,6 +15,7 @@ import type { WeightBytes } from './weightBytes';
  */
 export interface Derived {
   architecture?: string | null;
+  architecture_class?: string | null;
   hidden_size?: number | null;
   num_hidden_layers?: number | null;
   num_attention_heads?: number | null;

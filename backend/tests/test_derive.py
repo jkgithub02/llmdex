@@ -530,3 +530,44 @@ def test_derive_moe_reports_active_params():
     assert d.params.is_moe is True
     # 6 dormant experts * 3 * 4096 * 14336 * 32 layers = 33_822_867_456
     assert d.params.active == 46_702_792_704 - 33_822_867_456
+
+
+# ---------------------------------------------------------------------------
+# architecture class
+# ---------------------------------------------------------------------------
+
+
+def test_architecture_class_names_a_dense_transformer():
+    d = derive(LLAMA_70B, siblings=[], safetensors_total=None)
+    assert d.architecture == "llama", "model_type is still reported verbatim"
+    assert d.architecture_class == "dense transformer"
+
+
+def test_architecture_class_names_a_mixture_of_experts():
+    d = derive(MIXTRAL_MOE, siblings=[], safetensors_total=None)
+    assert d.architecture_class == "MoE transformer"
+
+
+def test_architecture_class_names_a_mamba_hybrid():
+    d = derive(NEMOTRON_H, siblings=[], safetensors_total=None)
+    assert d.architecture_class == "dense hybrid (mamba)"
+
+
+def test_architecture_class_crosses_both_axes():
+    """Jamba is a mixture of experts AND a mamba hybrid. Neither word alone is it."""
+    d = derive(JAMBA, siblings=[], safetensors_total=None)
+    assert d.architecture_class == "MoE hybrid (mamba)"
+
+
+def test_architecture_class_is_null_when_the_layers_are_unreadable():
+    """A GGUF-only repo has no config. Calling that "dense transformer" would be a guess."""
+    d = derive({}, siblings=[{"rfilename": "m-Q4_K_M.gguf", "size": 1}], safetensors_total=None)
+    assert d.architecture_class is None
+    assert "architecture_class" in d.underivable
+
+
+def test_architecture_class_refuses_to_classify_an_unresolved_state_space_model():
+    """R2.6c - a state-space marker we cannot resolve is unknown, not "probably attention"."""
+    d = derive({**LLAMA_70B, "mamba_d_state": 16}, siblings=[], safetensors_total=None)
+    assert d.layers.family == "unknown"
+    assert d.architecture_class is None

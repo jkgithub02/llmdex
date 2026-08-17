@@ -415,6 +415,32 @@ def vram_estimate(
 
 
 # ---------------------------------------------------------------------------
+# architecture class
+# ---------------------------------------------------------------------------
+
+_MAMBA_FAMILIES = ("nemotron_h", "jamba")
+
+
+def architecture_class(layers: LayerComposition, params: ParamCounts) -> str | None:
+    """The one-line answer to "what kind of model is this".
+
+    Two independent axes, so this is a cross product rather than a list: how the
+    FFN is routed (dense or mixture-of-experts) and what the layers are made of
+    (attention throughout, or attention mixed with mamba). Jamba is both at once,
+    which is why neither word alone can be the answer.
+
+    Null when the layer composition could not be resolved. "dense transformer"
+    is the overwhelmingly common case and therefore the tempting default, and
+    defaulting to it would state an architecture nothing was read from (R2.6c).
+    """
+    if layers.family == "unknown":
+        return None
+    sparsity = "MoE" if params.is_moe else "dense"
+    layout = "hybrid (mamba)" if layers.family in _MAMBA_FAMILIES else "transformer"
+    return f"{sparsity} {layout}"
+
+
+# ---------------------------------------------------------------------------
 # top level (R2.1, R2.7)
 # ---------------------------------------------------------------------------
 
@@ -454,10 +480,16 @@ def derive(
     underivable = sorted(name for name, v in values.items() if v is None)
 
     weights = weight_bytes(siblings)
+    layers = layer_composition(config)
+    params = param_counts(config, safetensors_total)
+    kind = architecture_class(layers, params)
+
     if safetensors_total is None:
         underivable.append("params_total")
     if weights.bytes is None:
         underivable.append("weights_bytes")
+    if kind is None:
+        underivable.append("architecture_class")
 
     # Cost the estimate at the requested context, but never above what the model
     # actually supports.
@@ -466,9 +498,10 @@ def derive(
 
     return Derived(
         **values,
+        architecture_class=kind,
         head_dim=head_dim(config),
-        layers=layer_composition(config),
-        params=param_counts(config, safetensors_total),
+        layers=layers,
+        params=params,
         weights=weights,
         vram=vram_estimate(
             config,

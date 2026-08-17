@@ -91,6 +91,14 @@ class Derived(BaseModel):
     """R2.1 - fields computed from structured files. Never a guess."""
 
     architecture: str | None = None
+    """``model_type`` verbatim: ``qwen3``, ``qwen3_moe``, ``nemotron_h``."""
+    architecture_class: str | None = None
+    """What kind of model that is -- ``dense transformer``, ``MoE hybrid (mamba)``.
+
+    Composed rather than read: no config field states it, and the two facts it
+    rests on live apart (``params.is_moe`` and ``layers.family``). It is here
+    rather than in the view because it is the same answer for every reader.
+    """
     hidden_size: int | None = None
     num_hidden_layers: int | None = None
     num_attention_heads: int | None = None
