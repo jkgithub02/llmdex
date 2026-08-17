@@ -214,8 +214,8 @@ class Checkpoint(BaseModel):
     derived: Derived | None = None
     extracted: dict[str, Any] = Field(default_factory=dict)
     """Ingest owns this. Copy-only, every value a span from the card (R3.1)."""
-    manual: dict[str, Any] = Field(default_factory=dict)
-    """R6.5 - hand corrections. Ingest must never write here."""
+    manual: Manual = Field(default_factory=Manual)
+    """R6.5 - hand-entered prose and corrections. Ingest must never write here."""
     benchmarks: list[BenchmarkScore] = Field(default_factory=list)
     measured: list[Measured] = Field(default_factory=list)
     """R4.2 - defaults empty, and ingest must never populate it."""

@@ -9,7 +9,7 @@ import subprocess
 
 import pytest
 
-from api.schemas import Checkpoint, Measured, ModelDoc
+from api.schemas import Checkpoint, Manual, Measured, ModelDoc, Quantization, Serving
 from api.store import DocumentConflict, Store, slug_for
 
 
@@ -105,6 +105,51 @@ def test_render_is_deterministic_across_calls(store):
     assert store.render(doc) == store.render(doc)
 
 
+def test_a_document_predating_typed_prose_still_loads(store):
+    """An existing `manual: {}` block parses into an empty Manual, not an error."""
+    path = store.path_for("a/one")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "---\nmodel_id: a/one\ncheckpoints:\n- repo: a/one\n  manual: {}\n---\n\n# a/one\n",
+        encoding="utf-8",
+        newline="",
+    )
+
+    after = store.read("a/one")
+    assert after.checkpoints[0].manual == Manual()
+
+
+def test_an_unknown_key_under_manual_is_rejected_on_read(store):
+    """The vault is hand-edited (R4.6), so a typo must not be silently swallowed.
+
+    This is what R7.5 validation in Task 3 leans on: an untyped block accepts
+    anything, so there is nothing for a validator to find.
+    """
+    path = store.path_for("a/one")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "---\nmodel_id: a/one\ncheckpoints:\n- repo: a/one\n  manual:\n"
+        "    bogus_key: 1\n---\n\n# a/one\n",
+        encoding="utf-8",
+        newline="",
+    )
+
+    with pytest.raises(ValueError, match="bogus_key"):
+        store.read("a/one")
+
+
+def test_render_parse_render_is_byte_identical_with_prose_entered(store):
+    """R1.4 - determinism has to hold through the nested manual models too."""
+    doc = make_doc()
+    doc.checkpoints[0].manual = Manual(
+        reviewed="2026-08-17",
+        quantization=Quantization(format="NVFP4", src="Model Card, Quantization"),
+        serving=Serving(engines={"vllm": "0.27.1"}, src="Quick Start Guide"),
+    )
+    once = store.render(doc)
+    assert store.render(store.parse(once)) == once
+
+
 # ---------------------------------------------------------------------------
 # R6.5 / R4.2 - what ingest must never touch
 # ---------------------------------------------------------------------------
@@ -115,7 +160,10 @@ def test_manual_edits_survive_reingest(store):
     store.write(doc, operation="ingest")
 
     edited = store.read("nvidia/Nemotron-H-8B-Base-8K")
-    edited.checkpoints[0].manual = {"quantization": {"format": "NVFP4"}}
+    edited.checkpoints[0].manual = Manual(
+        reviewed="2026-08-17",
+        quantization=Quantization(format="NVFP4", src="Model Card, Quantization"),
+    )
     store.write(edited, operation="manual edit")
 
     # ingest runs again knowing nothing about the manual block
@@ -124,7 +172,9 @@ def test_manual_edits_survive_reingest(store):
     store.merge_ingest(fresh, operation="re-ingest")
 
     after = store.read("nvidia/Nemotron-H-8B-Base-8K")
-    assert after.checkpoints[0].manual == {"quantization": {"format": "NVFP4"}}
+    assert after.checkpoints[0].manual.quantization.format == "NVFP4"
+    assert after.checkpoints[0].manual.quantization.src == "Model Card, Quantization"
+    assert after.checkpoints[0].manual.reviewed == "2026-08-17"
     assert after.checkpoints[0].ingested == "2026-09-01", "derived blocks still refresh"
 
 
@@ -169,7 +219,7 @@ def test_merge_adds_a_new_checkpoint_without_disturbing_existing_ones(store):
     store.write(doc, operation="ingest")
 
     edited = store.read("nvidia/Nemotron-H-8B-Base-8K")
-    edited.checkpoints[0].manual = {"note": "keep me"}
+    edited.checkpoints[0].manual = Manual(reviewed="2026-08-17")
     store.write(edited, operation="manual edit")
 
     incoming = make_doc()
@@ -183,7 +233,7 @@ def test_merge_adds_a_new_checkpoint_without_disturbing_existing_ones(store):
     after = store.read("nvidia/Nemotron-H-8B-Base-8K")
     assert len(after.checkpoints) == 2
     kept = next(c for c in after.checkpoints if c.repo == "nvidia/Nemotron-H-8B-Base-8K")
-    assert kept.manual == {"note": "keep me"}
+    assert kept.manual.reviewed == "2026-08-17"
 
 
 # ---------------------------------------------------------------------------

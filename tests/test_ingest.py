@@ -14,6 +14,7 @@ import pytest
 
 from api.fetch import GatedRepo, RepoNotFound, RepoSnapshot
 from api.ingest import ingest
+from api.schemas import Manual, Quantization
 from api.store import Store
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -101,12 +102,15 @@ def test_reingesting_unchanged_repo_changes_nothing_but_the_timestamp(store):
 def test_reingest_preserves_manual_and_measured(store):
     ingest(snapshot("smollm2-135m"), store)
     doc = store.read("HuggingFaceTB/SmolLM2-135M")
-    doc.checkpoints[0].manual = {"quantization": {"format": "hand entered"}}
+    doc.checkpoints[0].manual = Manual(
+        quantization=Quantization(format="hand entered", src="Model Card")
+    )
     store.write(doc, operation="manual edit")
 
     ingest(snapshot("smollm2-135m"), store)
     after = store.read("HuggingFaceTB/SmolLM2-135M")
-    assert after.checkpoints[0].manual == {"quantization": {"format": "hand entered"}}
+    assert after.checkpoints[0].manual.quantization.format == "hand entered"
+    assert after.checkpoints[0].manual.quantization.src == "Model Card"
 
 
 # ---------------------------------------------------------------------------
@@ -160,14 +164,14 @@ def test_manual_edit_on_one_gguf_variant_survives_and_stays_put(store):
     ingest(snapshot("qwen3-8b-gguf"), store)
     doc = store.read("Qwen/Qwen3-8B-GGUF")
     target = next(c for c in doc.checkpoints if c.quantization == "Q4_K_M")
-    target.manual = {"note": "verified on H100"}
+    target.manual = Manual(reviewed="2026-08-17")
     store.write(doc, operation="manual edit")
 
     ingest(snapshot("qwen3-8b-gguf"), store)
 
     after = {c.quantization: c for c in store.read("Qwen/Qwen3-8B-GGUF").checkpoints}
-    assert after["Q4_K_M"].manual == {"note": "verified on H100"}
-    assert after["Q8_0"].manual == {}
+    assert after["Q4_K_M"].manual.reviewed == "2026-08-17"
+    assert after["Q8_0"].manual == Manual()
 
 
 def test_gguf_repo_records_what_it_could_not_derive(store):

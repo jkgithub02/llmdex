@@ -173,17 +173,17 @@ checkpoints:
       weights_bytes: 17293012345
       vram_estimate_gb: 22.4
       vram_assumptions: { context: 32768, batch: 1, kv_dtype: fp8 }
-    extracted:
+    manual:
       quantization:
         format: NVFP4
         method: PTQ via NVIDIA ModelOpt
         scope: W4A16 routed and shared experts; FP8 on Mamba projections and KV
-        _src: Training Methodology, Stage 5
+        src: Training Methodology, Stage 5
       serving:
         vllm: "0.27.1"
         tensorrt_llm: "1.3.0rc24"
         sglang: dev container only
-        _src: Quick Start Guide
+        src: Quick Start Guide
     benchmarks:
       - slug: swe-bench-verified
         score: 52.80
