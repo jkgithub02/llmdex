@@ -233,7 +233,10 @@ def test_merge_adds_a_new_checkpoint_without_disturbing_existing_ones(store):
     after = store.read("nvidia/Nemotron-H-8B-Base-8K")
     assert len(after.checkpoints) == 2
     kept = next(c for c in after.checkpoints if c.repo == "nvidia/Nemotron-H-8B-Base-8K")
-    assert kept.manual.reviewed == "2026-08-17"
+    # full-object equality, not one field: this test exists to catch a merge that
+    # disturbs an existing checkpoint, and a spurious quantization block leaking in
+    # is exactly that.
+    assert kept.manual == Manual(reviewed="2026-08-17")
 
 
 # ---------------------------------------------------------------------------

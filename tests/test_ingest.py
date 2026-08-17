@@ -170,7 +170,7 @@ def test_manual_edit_on_one_gguf_variant_survives_and_stays_put(store):
     ingest(snapshot("qwen3-8b-gguf"), store)
 
     after = {c.quantization: c for c in store.read("Qwen/Qwen3-8B-GGUF").checkpoints}
-    assert after["Q4_K_M"].manual.reviewed == "2026-08-17"
+    assert after["Q4_K_M"].manual == Manual(reviewed="2026-08-17")
     assert after["Q8_0"].manual == Manual()
 
 

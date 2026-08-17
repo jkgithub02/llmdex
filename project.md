@@ -180,9 +180,10 @@ checkpoints:
         scope: W4A16 routed and shared experts; FP8 on Mamba projections and KV
         src: Training Methodology, Stage 5
       serving:
-        vllm: "0.27.1"
-        tensorrt_llm: "1.3.0rc24"
-        sglang: dev container only
+        engines:
+          vllm: "0.27.1"
+          tensorrt_llm: "1.3.0rc24"
+          sglang: dev container only
         src: Quick Start Guide
     benchmarks:
       - slug: swe-bench-verified
