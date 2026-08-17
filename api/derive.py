@@ -153,9 +153,7 @@ def layer_composition(config: dict[str, Any]) -> LayerComposition:
     if n_layers is None:
         # Nothing was read, so nothing is claimed. Reporting "transformer" here
         # would assert an architecture family we never saw evidence for.
-        return LayerComposition(
-            family="unknown", unreliable_reason="num_hidden_layers is absent"
-        )
+        return LayerComposition(family="unknown", unreliable_reason="num_hidden_layers is absent")
     return LayerComposition(family="transformer", attention=n_layers)
 
 

@@ -55,8 +55,18 @@ def live_server(tmp_path_factory):
     port = _free_port()
     env = {**dict(__import__("os").environ), "LLMDEX_VAULT": str(vault)}
     proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "api.main:app",
-         "--host", "127.0.0.1", "--port", str(port), "--log-level", "warning"],
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "api.main:app",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+            "--log-level",
+            "warning",
+        ],
         cwd=Path(__file__).parent.parent,
         env=env,
     )
@@ -122,7 +132,10 @@ def test_reingest_creates_no_new_commit(ingested):
     base, vault = ingested
     before = len(_commits(vault))
     for model_id in MODELS:
-        assert httpx.post(f"{base}/ingest", json={"model_id": model_id}, timeout=180).status_code == 201
+        assert (
+            httpx.post(f"{base}/ingest", json={"model_id": model_id}, timeout=180).status_code
+            == 201
+        )
     assert len(_commits(vault)) == before
 
 
@@ -194,7 +207,9 @@ def test_gated_repo_fails_loudly_and_writes_nothing(ingested):
 def test_unknown_repo_does_not_pretend_to_know_why(ingested):
     """R1.6 - anonymous callers cannot distinguish missing from private; say so."""
     base, _ = ingested
-    r = httpx.post(f"{base}/ingest", json={"model_id": "nobody/definitely-not-real-xyz"}, timeout=120)
+    r = httpx.post(
+        f"{base}/ingest", json={"model_id": "nobody/definitely-not-real-xyz"}, timeout=120
+    )
     assert r.status_code == 403
     assert "HF_TOKEN" in r.json()["detail"]
 
