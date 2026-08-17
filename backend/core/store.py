@@ -20,13 +20,16 @@ from typing import Any
 
 import yaml
 
-from backend.core.schemas import Benchmark, Checkpoint, ModelDoc
+from backend.core.schemas import Benchmark, Checkpoint, Extracted, ModelDoc
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n(.*)\Z", re.DOTALL)
 
 # Blocks ingest is allowed to overwrite on an existing checkpoint. Anything not
 # listed here belongs to a human and survives re-ingest (R6.5, R4.2).
-INGEST_OWNED = ("card_revision", "ingested", "derived", "extracted")
+INGEST_OWNED = ("card_revision", "ingested", "derived")
+"""Blocks ingest may overwrite. ``extracted`` is deliberately absent: it belongs
+to the extractor, which runs as its own operation, and listing it here meant every
+re-ingest reset it to empty."""
 
 
 class DocumentConflict(RuntimeError):
@@ -213,6 +216,36 @@ class Store:
         existing.checkpoints.sort(key=_checkpoint_key)
         self.write(existing, operation=operation)
         return existing
+
+    def merge_extraction(
+        self,
+        model_id: str,
+        repo: str,
+        quantization: str | None,
+        extracted: Extracted,
+        operation: str = "extract",
+    ) -> ModelDoc:
+        """Write one checkpoint's ``extracted`` block and nothing else (R3.x).
+
+        Extraction never creates a document or a checkpoint. If the target is not
+        already in the store that is an error, not an invitation to invent one: a
+        span is only meaningful against a card ingest has already read and
+        recorded a revision for.
+        """
+        doc = self.read(model_id)
+        if doc is None:
+            raise KeyError(f"{model_id} is not in the store")
+
+        wanted = (repo, quantization or "")
+        for checkpoint in doc.checkpoints:
+            if _checkpoint_key(checkpoint) == wanted:
+                checkpoint.extracted = extracted
+                break
+        else:
+            raise KeyError(f"{model_id} has no checkpoint {repo!r} ({quantization or 'default'})")
+
+        self.write(doc, operation=operation)
+        return doc
 
     def stub_benchmark(self, slug: str, referring_model: str) -> Benchmark:
         """R5.3 - a benchmark we have a score for but no document.

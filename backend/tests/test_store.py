@@ -9,7 +9,17 @@ import subprocess
 
 import pytest
 
-from backend.core.schemas import Checkpoint, Manual, Measured, ModelDoc, Quantization, Serving
+from backend.core.schemas import (
+    Checkpoint,
+    Extracted,
+    ExtractedQuantization,
+    Manual,
+    Measured,
+    ModelDoc,
+    Quantization,
+    Serving,
+    Span,
+)
 from backend.core.store import DocumentConflict, Store, slug_for
 
 
@@ -355,3 +365,74 @@ def test_validate_all_reports_every_broken_document_not_just_the_first(store):
     assert len(failures) == 2, "both broken documents must be reported"
     assert {path.name for path, _ in failures} == {"a--one.md", "b--two.md"}
     assert all("bogus_key" in message for _, message in failures)
+
+
+# ---------------------------------------------------------------------------
+# R3.x - the extractor owns `extracted`, and ingest no longer touches it
+# ---------------------------------------------------------------------------
+
+
+def _extraction(revision: str = "4f9a2c1") -> Extracted:
+    return Extracted(
+        card_revision=revision,
+        extracted_on="2026-08-17",
+        model="vllm/Qwen/Qwen3.5-122B-A10B-GPTQ-Int4",
+        quantization=ExtractedQuantization(
+            format=Span(text="NVFP4", start=10, end=15, section="Quantization")
+        ),
+    )
+
+
+def test_extraction_survives_reingest(store):
+    """The defect the manual-prose spec recorded: re-ingest used to wipe this."""
+    store.write(make_doc(), operation="ingest")
+    store.merge_extraction(
+        "nvidia/Nemotron-H-8B-Base-8K",
+        repo="nvidia/Nemotron-H-8B-Base-8K",
+        quantization=None,
+        extracted=_extraction(),
+    )
+
+    fresh = make_doc()
+    fresh.checkpoints[0].ingested = "2026-09-01"
+    store.merge_ingest(fresh, operation="re-ingest")
+
+    after = store.read("nvidia/Nemotron-H-8B-Base-8K")
+    assert after.checkpoints[0].extracted is not None
+    assert after.checkpoints[0].extracted.quantization.format.text == "NVFP4"
+    assert after.checkpoints[0].ingested == "2026-09-01", "derived blocks still refresh"
+
+
+def test_merge_extraction_touches_nothing_else(store):
+    """R6.5 / R4.2 - the extractor writes one block and no other."""
+    doc = make_doc()
+    doc.checkpoints[0].manual = Manual(reviewed="2026-08-17")
+    doc.checkpoints[0].measured = [
+        Measured(hardware="1x H100 80GB", serving="vllm 0.27.1", ttft_ms=180.0)
+    ]
+    store.write(doc, operation="ingest")
+
+    store.merge_extraction(
+        "nvidia/Nemotron-H-8B-Base-8K",
+        repo="nvidia/Nemotron-H-8B-Base-8K",
+        quantization=None,
+        extracted=_extraction(),
+    )
+
+    after = store.read("nvidia/Nemotron-H-8B-Base-8K")
+    assert after.checkpoints[0].manual == Manual(reviewed="2026-08-17")
+    assert len(after.checkpoints[0].measured) == 1
+    assert after.checkpoints[0].card_revision == "4f9a2c1"
+
+
+def test_merge_extraction_on_an_unknown_checkpoint_raises(store):
+    """Extraction never creates documents or checkpoints."""
+    store.write(make_doc(), operation="ingest")
+
+    with pytest.raises(KeyError, match="nvidia/nope"):
+        store.merge_extraction(
+            "nvidia/Nemotron-H-8B-Base-8K",
+            repo="nvidia/nope",
+            quantization=None,
+            extracted=_extraction(),
+        )
