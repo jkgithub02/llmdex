@@ -1,9 +1,15 @@
-<mat-toolbar color="primary">
-  <span class="brand">llmdex</span>
+<header class="topbar">
+  <a routerLink="/models" class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    llmdex
+  </a>
   <nav>
     <a routerLink="/models" routerLinkActive="active">Models</a>
     <a routerLink="/benchmarks" routerLinkActive="active">Benchmarks</a>
   </nav>
-</mat-toolbar>
+  <span class="tagline">derived · extracted · absent · unmeasured — kept apart</span>
+</header>
 
-<router-outlet />
+<main>
+  <router-outlet />
+</main>

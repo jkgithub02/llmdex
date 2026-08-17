@@ -90,7 +90,7 @@ export class LlmdexService {
      options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
       return this.http.get<TData>(
-      `/health`,{
+      `/api/health`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
       }
@@ -99,7 +99,7 @@ export class LlmdexService {
 
     if (options?.observe === 'response') {
       return this.http.get<TData>(
-      `/health`,{
+      `/api/health`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
       }
@@ -107,7 +107,7 @@ export class LlmdexService {
     }
 
     return this.http.get<TData>(
-      `/health`,{
+      `/api/health`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'body',
       }
@@ -125,7 +125,7 @@ export class LlmdexService {
     ingestRequest: IngestRequest, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
       return this.http.post<TData>(
-      `/ingest`,
+      `/api/ingest`,
       ingestRequest,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
@@ -135,7 +135,7 @@ export class LlmdexService {
 
     if (options?.observe === 'response') {
       return this.http.post<TData>(
-      `/ingest`,
+      `/api/ingest`,
       ingestRequest,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
@@ -144,7 +144,7 @@ export class LlmdexService {
     }
 
     return this.http.post<TData>(
-      `/ingest`,
+      `/api/ingest`,
       ingestRequest,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'body',
@@ -162,7 +162,7 @@ export class LlmdexService {
      options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
       return this.http.get<TData>(
-      `/models`,{
+      `/api/models`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
       }
@@ -171,7 +171,7 @@ export class LlmdexService {
 
     if (options?.observe === 'response') {
       return this.http.get<TData>(
-      `/models`,{
+      `/api/models`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
       }
@@ -179,7 +179,7 @@ export class LlmdexService {
     }
 
     return this.http.get<TData>(
-      `/models`,{
+      `/api/models`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'body',
       }
@@ -197,7 +197,7 @@ export class LlmdexService {
     modelId: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
       return this.http.get<TData>(
-      `/models/${modelId}/drift`,{
+      `/api/models/${modelId}/drift`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
       }
@@ -206,7 +206,7 @@ export class LlmdexService {
 
     if (options?.observe === 'response') {
       return this.http.get<TData>(
-      `/models/${modelId}/drift`,{
+      `/api/models/${modelId}/drift`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
       }
@@ -214,7 +214,7 @@ export class LlmdexService {
     }
 
     return this.http.get<TData>(
-      `/models/${modelId}/drift`,{
+      `/api/models/${modelId}/drift`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'body',
       }
@@ -232,7 +232,7 @@ export class LlmdexService {
     modelId: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
       return this.http.get<TData>(
-      `/models/${modelId}`,{
+      `/api/models/${modelId}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
       }
@@ -241,7 +241,7 @@ export class LlmdexService {
 
     if (options?.observe === 'response') {
       return this.http.get<TData>(
-      `/models/${modelId}`,{
+      `/api/models/${modelId}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
       }
@@ -249,7 +249,7 @@ export class LlmdexService {
     }
 
     return this.http.get<TData>(
-      `/models/${modelId}`,{
+      `/api/models/${modelId}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'body',
       }
@@ -266,7 +266,7 @@ export class LlmdexService {
      options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
       return this.http.get<TData>(
-      `/benchmarks`,{
+      `/api/benchmarks`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
       }
@@ -275,7 +275,7 @@ export class LlmdexService {
 
     if (options?.observe === 'response') {
       return this.http.get<TData>(
-      `/benchmarks`,{
+      `/api/benchmarks`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
       }
@@ -283,7 +283,7 @@ export class LlmdexService {
     }
 
     return this.http.get<TData>(
-      `/benchmarks`,{
+      `/api/benchmarks`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'body',
       }
@@ -300,7 +300,7 @@ export class LlmdexService {
     slug: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
       return this.http.get<TData>(
-      `/benchmarks/${slug}`,{
+      `/api/benchmarks/${slug}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
       }
@@ -309,7 +309,7 @@ export class LlmdexService {
 
     if (options?.observe === 'response') {
       return this.http.get<TData>(
-      `/benchmarks/${slug}`,{
+      `/api/benchmarks/${slug}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
       }
@@ -317,7 +317,7 @@ export class LlmdexService {
     }
 
     return this.http.get<TData>(
-      `/benchmarks/${slug}`,{
+      `/api/benchmarks/${slug}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'body',
       }
@@ -338,7 +338,7 @@ export class LlmdexService {
     modelId: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
       return this.http.post<TData>(
-      `/models/${modelId}/extract`,
+      `/api/models/${modelId}/extract`,
       undefined,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
@@ -348,7 +348,7 @@ export class LlmdexService {
 
     if (options?.observe === 'response') {
       return this.http.post<TData>(
-      `/models/${modelId}/extract`,
+      `/api/models/${modelId}/extract`,
       undefined,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
@@ -357,7 +357,7 @@ export class LlmdexService {
     }
 
     return this.http.post<TData>(
-      `/models/${modelId}/extract`,
+      `/api/models/${modelId}/extract`,
       undefined,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'body',

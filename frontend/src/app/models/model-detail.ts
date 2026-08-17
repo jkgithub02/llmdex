@@ -1,17 +1,12 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 
 import { LlmdexService } from '../api/llmdex.service';
 import type { Checkpoint } from '../api/model/checkpoint';
 import type { ModelDoc } from '../api/model/modelDoc';
 import type { Span } from '../api/model/span';
-import { Field, STATE_LABEL, formatBytes, formatCount } from '../field-state';
+import { Field, formatBytes, formatCount } from '../field-state';
+import { StateBadge } from '../state-badge';
 
 /**
  * R6.3 / R6.4 - every field, including the null ones, each labelled with how we
@@ -19,237 +14,349 @@ import { Field, STATE_LABEL, formatBytes, formatCount } from '../field-state';
  *
  * The four states are the product. A derived number came from `config.json`; an
  * extracted phrase was copied out of the card and names the section it came
- * from; "absent from card" means we looked and it was not stated; "awaiting
- * measurement" means no vendor publishes it and nobody has run it here yet.
+ * from; "absent" means we looked and it was not stated; "unmeasured" means no
+ * vendor publishes it and nobody has run it here yet. Flattening those into one
+ * blank cell is the failure this view exists to prevent.
  */
 @Component({
   selector: 'app-model-detail',
-  imports: [
-    RouterLink,
-    MatButtonModule,
-    MatCardModule,
-    MatChipsModule,
-    MatIconModule,
-    MatProgressBarModule,
-    MatTooltipModule,
-  ],
+  imports: [RouterLink, StateBadge],
   template: `
-    <a routerLink="/models" class="back"><mat-icon>arrow_back</mat-icon> All models</a>
+    <a routerLink="/models" class="back">← models</a>
 
     @if (doc(); as model) {
-      <h1>{{ model.model_id }}</h1>
-      @for (checkpoint of model.checkpoints ?? []; track checkpoint.repo + checkpoint.quantization) {
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>
-              {{ checkpoint.repo }}
-              @if (checkpoint.quantization) {
-                <span class="quant">{{ checkpoint.quantization }}</span>
-              }
-            </mat-card-title>
-            <mat-card-subtitle>
-              card {{ checkpoint.card_revision?.slice(0, 7) ?? 'unknown' }} · ingested
-              {{ checkpoint.ingested ?? '—' }}
-            </mat-card-subtitle>
-          </mat-card-header>
+      <header class="head">
+        <span class="vendor">{{ vendor() }}</span>
+        <h1 class="mono">{{ name() }}</h1>
+      </header>
 
-          <mat-card-content>
-            <h3>Derived <small>computed from config.json — never guessed</small></h3>
-            <dl>
-              @for (field of derivedFields(checkpoint); track field.label) {
-                <dt>{{ field.label }}</dt>
-                <dd>
-                  <span class="value" [class.null]="field.value === null">
+      @for (checkpoint of model.checkpoints ?? []; track checkpoint.repo + checkpoint.quantization) {
+        <section class="checkpoint">
+          <div class="ck-head">
+            <span class="mono repo">{{ checkpoint.repo }}</span>
+            @if (checkpoint.quantization) {
+              <span class="tag mono">{{ checkpoint.quantization }}</span>
+            }
+            <span class="rev mono" title="the card revision this was built from (R1.3)">
+              @{{ checkpoint.card_revision?.slice(0, 7) ?? 'unknown' }}
+            </span>
+          </div>
+
+          <h2>Derived <span class="note">computed from config.json — never guessed</span></h2>
+          <div class="grid">
+            @for (field of derivedFields(checkpoint); track field.label) {
+              <div class="field">
+                <span class="key">{{ field.label }}</span>
+                <span class="val mono" [class.null]="field.value === null">
+                  {{ field.value ?? 'null' }}
+                </span>
+                <app-state-badge [state]="field.state" />
+                @if (field.unreliable) {
+                  <p class="why">{{ field.unreliable }}</p>
+                }
+              </div>
+            }
+          </div>
+
+          <h2>Prose <span class="note">copied from the card — never generated</span></h2>
+          @if (checkpoint.extracted; as extracted) {
+            <p class="prov">
+              extracted by <code>{{ extracted.model }}</code> on {{ extracted.extracted_on }}
+              from card <code>{{ extracted.card_revision.slice(0, 7) }}</code>
+            </p>
+            <div class="grid">
+              @for (field of extractedFields(checkpoint); track field.label) {
+                <div class="field">
+                  <span class="key">{{ field.label }}</span>
+                  <span class="val" [class.null]="field.value === null">
                     {{ field.value ?? 'null' }}
                   </span>
-                  <span class="state {{ field.state }}">{{ label(field.state) }}</span>
-                  @if (field.unreliable) {
-                    <span class="reason">{{ field.unreliable }}</span>
-                  }
-                </dd>
-              }
-            </dl>
-
-            <h3>
-              Prose
-              <small>copied from the card, or entered by hand — never generated</small>
-            </h3>
-            @if (checkpoint.extracted; as extracted) {
-              <p class="provenance">
-                extracted by <code>{{ extracted.model }}</code> on {{ extracted.extracted_on }} from
-                card {{ extracted.card_revision.slice(0, 7) }}
-              </p>
-              <dl>
-                @for (field of extractedFields(checkpoint); track field.label) {
-                  <dt>{{ field.label }}</dt>
-                  <dd>
-                    <span class="value" [class.null]="field.value === null">
-                      {{ field.value ?? 'null' }}
-                    </span>
-                    <span class="state {{ field.state }}">{{ label(field.state) }}</span>
-                    @if (field.source) {
-                      <span class="source" matTooltip="R3.3 — the card section this was copied from">
-                        § {{ field.source }}
-                      </span>
-                    }
-                  </dd>
-                }
-              </dl>
-              @if (extracted.rejected?.length) {
-                <div class="rejected">
-                  <h4>
-                    Rejected <small>the model proposed these; none appear in the card (R3.2)</small>
-                  </h4>
-                  @for (item of extracted.rejected; track item.field + item.proposed) {
-                    <p>
-                      <code>{{ item.field }}</code> — {{ item.proposed }}
-                      <span class="reason">{{ item.reason }}</span>
-                    </p>
+                  <app-state-badge [state]="field.state" />
+                  @if (field.source) {
+                    <p class="why">§ {{ field.source }}</p>
                   }
                 </div>
               }
-            } @else {
-              <p class="empty">
-                Nobody has read this card yet.
-                <button
-                  mat-flat-button
-                  (click)="extract(model.model_id)"
-                  [disabled]="extracting()"
-                >
-                  Extract with the LLM
-                </button>
-              </p>
-              @if (extracting()) {
-                <mat-progress-bar mode="indeterminate" />
-                <p class="hint">Reading the whole card. This takes about a minute.</p>
-              }
+            </div>
+            @if (extracted.rejected?.length) {
+              <div class="rejected">
+                <h3>Rejected</h3>
+                <p class="note">
+                  The model proposed these. None of them appear in the card, so none were stored
+                  (R3.2).
+                </p>
+                @for (item of extracted.rejected; track item.field + item.proposed) {
+                  <p class="rej">
+                    <code>{{ item.field }}</code>
+                    <span class="proposed">{{ item.proposed }}</span>
+                    <span class="reason mono">{{ item.reason }}</span>
+                  </p>
+                }
+              </div>
             }
+          } @else {
+            <div class="cta">
+              <p>Nobody has read this card yet.</p>
+              <button (click)="extract(model.model_id)" [disabled]="extracting()">
+                {{ extracting() ? 'Reading the card…' : 'Extract with the LLM' }}
+              </button>
+            </div>
+            @if (extracting()) {
+              <div class="bar"><span></span></div>
+              <p class="note">
+                The whole card goes to the model, which returns quotes. Only quotes we can find in
+                the card are kept. About a minute.
+              </p>
+            }
+          }
 
-            <h3>Measured <small>nothing here comes from a vendor (R4.2)</small></h3>
-            @if (checkpoint.measured?.length) {
-              @for (entry of checkpoint.measured; track $index) {
-                <p>{{ entry.hardware }} · {{ entry.serving }} — TTFT {{ entry.ttft_ms ?? '—' }} ms</p>
-              }
-            } @else {
-              <p class="empty">
-                <span class="state unmeasured">{{ label('unmeasured') }}</span>
-                Latency, throughput and real peak VRAM are properties of your deployment. They stay
-                null until someone runs a benchmark.
+          <h2>Measured <span class="note">nothing here comes from a vendor</span></h2>
+          @if (checkpoint.measured?.length) {
+            @for (entry of checkpoint.measured; track $index) {
+              <p class="mono">
+                {{ entry.hardware }} · {{ entry.serving }} — TTFT {{ entry.ttft_ms ?? '—' }} ms
               </p>
             }
-          </mat-card-content>
-        </mat-card>
+          } @else {
+            <div class="field wide">
+              <span class="key">latency, throughput, peak VRAM</span>
+              <span class="val null">null</span>
+              <app-state-badge state="unmeasured" />
+              <p class="why">
+                Properties of your deployment, not the model. No vendor publishes them.
+              </p>
+            </div>
+          }
+        </section>
       }
     } @else if (error(); as message) {
-      <p class="error"><mat-icon>error_outline</mat-icon> {{ message }}</p>
+      <p class="error" role="alert">{{ message }}</p>
     } @else {
-      <mat-progress-bar mode="indeterminate" />
+      <div class="bar"><span></span></div>
     }
   `,
   styles: `
     :host {
       display: block;
-      padding: 1.5rem;
-      max-width: 60rem;
+      padding: var(--space-8) var(--space-6);
+      max-width: 64rem;
       margin: 0 auto;
     }
     .back {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      margin-bottom: 1rem;
+      color: var(--fg-muted);
+      font-size: 0.85rem;
+    }
+    .back:hover {
+      color: var(--fg);
+    }
+    .head {
+      margin: var(--space-4) 0 var(--space-6);
+    }
+    .vendor {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--fg-faint);
     }
     h1 {
-      font-size: 1.4rem;
-      word-break: break-all;
+      margin: 0.15rem 0 0;
+      font-size: 1.45rem;
+      font-weight: 600;
+      overflow-wrap: anywhere;
     }
-    h3 {
-      margin: 1.5rem 0 0.5rem;
-      font-size: 1rem;
+    .checkpoint {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-6);
+      margin-bottom: var(--space-4);
     }
-    h3 small,
-    h4 small {
-      font-weight: 400;
-      opacity: 0.6;
-      margin-left: 0.5rem;
-    }
-    dl {
-      display: grid;
-      grid-template-columns: 14rem 1fr;
-      gap: 0.35rem 1rem;
-      margin: 0;
-    }
-    dt {
-      opacity: 0.75;
-    }
-    dd {
-      margin: 0;
+    .ck-head {
       display: flex;
-      gap: 0.5rem;
-      align-items: baseline;
+      align-items: center;
+      gap: var(--space-3);
       flex-wrap: wrap;
+      padding-bottom: var(--space-4);
+      border-bottom: 1px solid var(--border);
     }
-    .value.null {
-      opacity: 0.45;
-      font-style: italic;
+    .repo {
+      font-size: 0.9rem;
+      overflow-wrap: anywhere;
     }
-    .state {
+    .tag {
+      font-size: 0.7rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: var(--radius-sm);
+      background: var(--bg-sunken);
+      border: 1px solid var(--border-strong);
+    }
+    .rev {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: var(--fg-faint);
+      cursor: help;
+    }
+    h2 {
+      margin: var(--space-6) 0 var(--space-3);
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--fg-muted);
+    }
+    .note {
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--fg-faint);
+      margin-left: var(--space-2);
+      font-size: 0.78rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+      gap: var(--space-2);
+    }
+    .field {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.15rem var(--space-2);
+      align-items: center;
+      padding: var(--space-3);
+      background: var(--bg-sunken);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .field.wide {
+      grid-column: 1 / -1;
+    }
+    .key {
+      grid-column: 1 / -1;
       font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      padding: 0.1rem 0.4rem;
-      border-radius: 0.6rem;
-      border: 1px solid currentColor;
-      opacity: 0.8;
+      letter-spacing: 0.05em;
+      color: var(--fg-faint);
     }
-    .state.derived {
-      color: #2e6f4e;
+    .val {
+      font-size: 0.92rem;
+      overflow-wrap: anywhere;
     }
-    .state.extracted {
-      color: #1e5aa8;
+    .val.null {
+      color: var(--fg-faint);
+      font-style: italic;
     }
-    .state.manual {
-      color: #7a4ba0;
+    .why {
+      grid-column: 1 / -1;
+      margin: 0.2rem 0 0;
+      font-size: 0.75rem;
+      color: var(--fg-muted);
     }
-    .state.absent {
-      color: #8a6d1f;
+    .prov {
+      margin: 0 0 var(--space-3);
+      font-size: 0.78rem;
+      color: var(--fg-muted);
     }
-    .state.unmeasured {
-      color: #9a3b3b;
-    }
-    .source,
-    .reason,
-    .provenance,
-    .hint {
-      font-size: 0.8rem;
-      opacity: 0.7;
-    }
-    .quant {
-      margin-left: 0.5rem;
-      font-size: 0.8rem;
-      opacity: 0.7;
+    code {
+      background: var(--bg-sunken);
+      padding: 0.05rem 0.3rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
     }
     .rejected {
-      margin-top: 1rem;
-      padding: 0.5rem 1rem;
-      border-left: 3px solid #9a3b3b;
+      margin-top: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      border-left: 2px solid var(--state-unmeasured);
+      background: color-mix(in srgb, var(--state-unmeasured) 7%, transparent);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     }
-    .empty {
-      opacity: 0.8;
+    .rejected h3 {
+      margin: 0;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--state-unmeasured);
+    }
+    .rej {
       display: flex;
-      gap: 0.5rem;
+      gap: var(--space-2);
+      align-items: baseline;
+      flex-wrap: wrap;
+      margin: var(--space-2) 0 0;
+      font-size: 0.85rem;
+    }
+    .proposed {
+      text-decoration: line-through;
+      color: var(--fg-muted);
+    }
+    .reason {
+      font-size: 0.7rem;
+      color: var(--state-unmeasured);
+    }
+    .cta {
+      display: flex;
+      gap: var(--space-4);
       align-items: center;
       flex-wrap: wrap;
+      padding: var(--space-4);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-sm);
+      color: var(--fg-muted);
+    }
+    button {
+      background: var(--accent);
+      color: #04250f;
+      border: 0;
+      border-radius: var(--radius);
+      padding: 0 1.1rem;
+      min-height: 44px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition:
+        background 180ms ease,
+        transform 120ms ease;
+    }
+    button:hover:not(:disabled) {
+      background: #2ee06c;
+    }
+    button:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .bar {
+      height: 2px;
+      background: var(--border);
+      overflow: hidden;
+      border-radius: 2px;
+      margin: var(--space-3) 0;
+    }
+    .bar span {
+      display: block;
+      height: 100%;
+      width: 35%;
+      background: var(--accent);
+      animation: slide 1.1s ease-in-out infinite;
+    }
+    @keyframes slide {
+      0% {
+        transform: translateX(-100%);
+      }
+      100% {
+        transform: translateX(320%);
+      }
     }
     .error {
-      color: var(--mat-sys-error);
+      color: var(--danger);
     }
   `,
 })
 export class ModelDetail {
   private readonly api = inject(LlmdexService);
 
-  /** Route params. A Hugging Face ID is `vendor/name`, so it arrives in two parts. */
+  /** A Hugging Face ID is `vendor/name`, so it arrives as two route segments. */
   readonly vendor = input.required<string>();
   readonly name = input.required<string>();
 
@@ -260,10 +367,6 @@ export class ModelDetail {
 
   constructor() {
     queueMicrotask(() => this.load());
-  }
-
-  protected label(state: keyof typeof STATE_LABEL): string {
-    return STATE_LABEL[state];
   }
 
   protected load(): void {

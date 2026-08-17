@@ -13,6 +13,7 @@ export default {
       target: './src/app/api/llmdex.ts',
       schemas: './src/app/api/model',
       client: 'angular',
+      baseUrl: '/api',
       clean: true,
     },
   },

@@ -1,39 +1,111 @@
-
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
 
-html {
-  @include mat.theme((
-    color: (
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Dark-first, because this is a tool people keep open next to an editor.
+   The palette is deliberately narrow: one accent, and the only other saturated
+   colours in the interface are the four field states, so provenance is the most
+   colourful thing on screen. */
+:root {
+  --bg: #0f172a;
+  --bg-raised: #151f38;
+  --bg-sunken: #0b1120;
+  --surface: #1a2540;
+  --border: #29344d;
+  --border-strong: #3a4767;
+
+  --fg: #f8fafc;
+  --fg-muted: #97a3bd;
+  --fg-faint: #6b7897;
+
+  --accent: #22c55e;
+  --accent-dim: #16a34a;
+  --danger: #ef4444;
+
+  /* The four states of R6.4. Each has a colour AND a shape cue, because colour
+     alone must never be the only carrier of meaning. */
+  --state-derived: #38bdf8;
+  --state-extracted: #a78bfa;
+  --state-manual: #f0abfc;
+  --state-absent: #eab308;
+  --state-unmeasured: #fb7185;
+
+  /* Dense scale: this is a dashboard, not a landing page. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+
+  color-scheme: dark;
+
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        theme-type: dark,
+      ),
+      typography: (
+        plain-family: 'Inter',
+        brand-family: 'Inter',
+      ),
+      density: -2,
+    )
+  );
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
-  margin: 0;
+  background:
+    radial-gradient(60rem 30rem at 15% -10%, #1b2b52 0%, transparent 60%),
+    radial-gradient(50rem 25rem at 100% 0%, #16304a 0%, transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--fg);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
-/* You can add global styles to this file, and also import other style files */
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+code,
+.mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.85em;
+  /* Tabular figures so numbers in a column do not jitter. */
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+/* Never remove the focus ring — it is how a keyboard user knows where they are (R6.7). */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

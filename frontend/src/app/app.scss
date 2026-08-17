@@ -1,32 +1,69 @@
-mat-toolbar {
-  gap: 2rem;
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: 0 var(--space-6);
+  height: 56px;
+  background: color-mix(in srgb, var(--bg-sunken) 82%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.01em;
+}
+
+/* A small solid mark rather than an icon font: one less thing to load, and it
+   cannot render as a missing glyph. */
+.mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 nav {
   display: flex;
-  gap: 1.25rem;
+  gap: var(--space-4);
 }
 
 nav a {
-  color: inherit;
-  text-decoration: none;
-  opacity: 0.75;
-  padding: 0.25rem 0;
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
   border-bottom: 2px solid transparent;
+  transition: color 180ms ease;
 }
 
-/* R6.7 - keyboard users must be able to see where they are. */
-nav a:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 3px;
+nav a:hover {
+  color: var(--fg);
 }
 
 nav a.active {
-  opacity: 1;
-  border-bottom-color: currentColor;
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+}
+
+.tagline {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--fg-faint);
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 760px) {
+  .tagline {
+    display: none;
+  }
+  .topbar {
+    gap: var(--space-4);
+  }
 }

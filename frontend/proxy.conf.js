@@ -1,13 +1,21 @@
 /**
- * Dev-server proxy. The generated API client calls relative paths, so nothing in
- * the app knows where the backend lives -- this is the only place that does.
+ * Dev-server proxy.
  *
- * Locally the backend is on the host; under Docker Compose it is another service
- * on the compose network, so the target comes from the environment.
+ * The API is namespaced under /api so it cannot collide with the application's
+ * own routes. It used to proxy /models directly, which meant the dev server
+ * handed every navigation to `/models/...` straight to the backend and the
+ * browser rendered JSON instead of the app.
+ *
+ * Locally the backend is on the host; under Docker Compose it is another
+ * service on the compose network, so the target comes from the environment.
  */
 const target = process.env['LLMDEX_API_TARGET'] || 'http://127.0.0.1:8001';
 
-module.exports = ['/models', '/ingest', '/benchmarks', '/health'].reduce((config, path) => {
-  config[path] = { target, secure: false, changeOrigin: true };
-  return config;
-}, {});
+module.exports = {
+  '/api': {
+    target,
+    secure: false,
+    changeOrigin: true,
+    pathRewrite: { '^/api': '' },
+  },
+};
