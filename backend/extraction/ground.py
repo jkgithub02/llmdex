@@ -111,7 +111,7 @@ class GroundedCard:
         if not needle:
             return RejectedValue(field=field, proposed=quote, reason="empty")
 
-        position = self.normalised.find(needle)
+        position = self._find_at_boundary(needle)
         if position < 0:
             return RejectedValue(field=field, proposed=quote, reason=self._why_not(needle))
 
@@ -124,6 +124,32 @@ class GroundedCard:
             section=self.section_at(start),
             occurrences=self.normalised.count(needle),
         )
+
+    def _find_at_boundary(self, needle: str) -> int:
+        """First occurrence of ``needle`` that is not buried inside a longer token.
+
+        Plain substring matching accepts ``52.8`` against a card that says
+        ``52.80``, and ``vLLM`` against ``vLLMv2``. Those are not quotations --
+        the model produced a string the card never contains as a unit, and for
+        benchmark scores that is precisely how a hallucinated number slips
+        through: ``9.5`` nests inside ``19.54``.
+
+        A match counts only when neither edge continues a word: an alphanumeric
+        character on the outside touching an alphanumeric character on the inside
+        means the token carries on. Punctuation is a real boundary, so ``NVFP4``
+        still matches inside ``NVFP4-A16``.
+        """
+        position = self.normalised.find(needle)
+        while position >= 0:
+            before = self.normalised[position - 1] if position else ""
+            after_index = position + len(needle)
+            after = self.normalised[after_index] if after_index < len(self.normalised) else ""
+            starts_clean = not (before.isalnum() and needle[0].isalnum())
+            ends_clean = not (after.isalnum() and needle[-1].isalnum())
+            if starts_clean and ends_clean:
+                return position
+            position = self.normalised.find(needle, position + 1)
+        return -1
 
     def _why_not(self, needle: str) -> str:
         """Distinguish an invention from a quote stitched out of separate places.

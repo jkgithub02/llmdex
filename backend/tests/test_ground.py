@@ -122,3 +122,36 @@ def test_normalise_maps_every_character_back_to_the_original():
     assert len(offsets) == len(normalised)
     # the '&' came from the whole entity, so its span covers all five characters
     assert text[offsets[1][0] : offsets[1][1]] == "&amp;"
+
+
+def test_a_number_that_only_appears_inside_a_longer_number_is_rejected():
+    """A model answering 52.8 for a card that says 52.80 has not quoted the card.
+
+    Numeric scores are the dangerous case for plain substring matching: a
+    hallucinated 9.5 nests inside 19.54. A match has to sit at a token boundary
+    to count as a quotation.
+    """
+    card = GroundedCard("| SWE-bench Verified | 52.80 |")
+
+    result = card.find("52.8", field="benchmarks.0.score")
+
+    assert isinstance(result, RejectedValue), f"expected rejection, got {result}"
+    assert result.reason == "no_match"
+
+
+def test_a_word_that_only_appears_inside_a_longer_word_is_rejected():
+    card = GroundedCard("Serving requires vLLMv2 nightly.")
+
+    result = card.find("vLLM", field="serving.engines.vllm")
+
+    assert isinstance(result, RejectedValue), f"expected rejection, got {result}"
+
+
+def test_punctuation_is_a_real_boundary():
+    """NVFP4 in `NVFP4-A16` is a genuine quotation; the hyphen ends the token."""
+    card = GroundedCard("Quantized to NVFP4-A16 weights.")
+
+    span = card.find("NVFP4", field="quantization.format")
+
+    assert isinstance(span, Span), span
+    assert span.text == "NVFP4"
