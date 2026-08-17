@@ -231,9 +231,9 @@ def test_ingest_never_populates_measured(store, name):
 
 @pytest.mark.parametrize("name", ["qwen3-8b", "nemotron-h-8b", "qwen3-8b-gguf"])
 def test_ingest_never_populates_extracted(store, name):
-    """Extraction is deferred; ingest must not quietly invent prose fields."""
+    """Ingest must not invent prose fields; only the extractor writes this block."""
     doc = ingest(snapshot(name), store)
-    assert all(cp.extracted == {} for cp in doc.checkpoints)
+    assert all(cp.extracted is None for cp in doc.checkpoints)
 
 
 # ---------------------------------------------------------------------------

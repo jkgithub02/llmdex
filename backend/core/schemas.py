@@ -9,7 +9,7 @@ Two conventions run through this file and are not negotiable:
   an unreliable estimate must not present a figure a reader could quote.
 """
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
@@ -161,6 +161,95 @@ class Manual(BaseModel):
     serving: Serving | None = None
 
 
+class Span(BaseModel):
+    """A verified quote and where it was found in the card.
+
+    Constructed only after :mod:`backend.extraction.ground` has matched the quote
+    against the source, which is why every field is required. ``text`` is sliced
+    out of the card rather than copied from the model's response -- the model
+    locates, it does not supply (R3.1).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+    start: int
+    end: int
+    section: str
+    """The enclosing markdown heading. This is the R3.3 src pointer, derived from
+    the offsets rather than asked of the model, so it cannot be got wrong."""
+    occurrences: int = 1
+    """How many times the quote appears in the card. Above one, ``section`` names
+    the first occurrence and may not be the one the model meant."""
+
+
+class RejectedValue(BaseModel):
+    """R3.2 - what the model claimed, and why it was not stored.
+
+    A bare null would lose the fact that the model produced something. This is
+    where invention becomes visible, and it is the main evidence for whether an
+    endpoint can be trusted with this job at all.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    field: str
+    proposed: str
+    reason: Literal["no_match", "empty", "not_contiguous"]
+
+
+class ExtractedQuantization(BaseModel):
+    """R3.4 - the same four fields as ``Quantization``, each as a verified span."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    format: Span | None = None
+    method: Span | None = None
+    scope: Span | None = None
+    calibration: Span | None = None
+
+
+class ExtractedServing(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    engines: dict[str, Span] = Field(default_factory=dict)
+
+
+class ExtractedBenchmark(BaseModel):
+    """R3.4 - a row of the vendor's reported table.
+
+    ``score`` stays a string. Turning ``"52.80"`` into ``52.8`` is a conversion,
+    and R3.1 forbids conversion at extraction time; that promotion happens with
+    the Benchmarks tab, where a human confirms the slug (R4.5b, R5.3).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: Span
+    score: Span
+    unit: Span | None = None
+
+
+class Extracted(BaseModel):
+    """R3.x - what a language model found in the card, after verification.
+
+    ``card_revision`` is carried here rather than borrowed from ingest because a
+    span is only meaningful against one specific text. If the card moves, these
+    offsets describe the revision this block names, not the current one.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    card_revision: str
+    extracted_on: str
+    model: str
+    """Which endpoint and model produced this (R7.4)."""
+    quantization: ExtractedQuantization | None = None
+    serving: ExtractedServing | None = None
+    benchmarks: list[ExtractedBenchmark] = Field(default_factory=list)
+    rejected: list[RejectedValue] = Field(default_factory=list)
+
+
 class Measured(BaseModel):
     """R4.2 / R4.3 - numbers the team produces. Ingest never writes these.
 
@@ -212,8 +301,8 @@ class Checkpoint(BaseModel):
     """R1.3 - the card commit SHA this document was built from."""
     ingested: str | None = None
     derived: Derived | None = None
-    extracted: dict[str, Any] = Field(default_factory=dict)
-    """Ingest owns this. Copy-only, every value a span from the card (R3.1)."""
+    extracted: Extracted | None = None
+    """The extractor owns this. None means nobody has run it (R3.2)."""
     manual: Manual = Field(default_factory=Manual)
     """R6.5 - hand-entered prose and corrections. Ingest must never write here."""
     benchmarks: list[BenchmarkScore] = Field(default_factory=list)
