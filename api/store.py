@@ -120,6 +120,29 @@ class Store:
         slugs = sorted(p.stem for p in self.benchmarks_dir.glob("*.md"))
         return [b for slug in slugs if (b := self.read_benchmark(slug)) is not None]
 
+    def validate_all(self) -> list[tuple[Path, str]]:
+        """Every document in the vault, parsed through the schema (R7.5).
+
+        This walks the files itself rather than calling :meth:`list_models`, which
+        raises on the first bad document. A validator that reports one failure out
+        of nine is not a validator.
+
+        ``Path.glob`` on a directory that does not exist yields nothing, so an
+        empty vault is a pass rather than an error.
+        """
+        failures: list[tuple[Path, str]] = []
+        for path in sorted(self.models_dir.glob("*.md")):
+            try:
+                self.parse(_read(path))
+            except (ValueError, yaml.YAMLError) as exc:
+                failures.append((path, str(exc)))
+        for path in sorted(self.benchmarks_dir.glob("*.md")):
+            try:
+                self.read_benchmark(path.stem)
+            except (ValueError, yaml.YAMLError) as exc:
+                failures.append((path, str(exc)))
+        return failures
+
     # -- write ------------------------------------------------------------
 
     def write(self, doc: ModelDoc, operation: str, expect_unchanged: bool = False) -> bool:

@@ -323,3 +323,35 @@ def test_writing_over_a_document_changed_underneath_raises(store):
 
     with pytest.raises(DocumentConflict):
         store.write(doc, operation="ingest", expect_unchanged=True)
+
+
+# ---------------------------------------------------------------------------
+# R7.5 - every document in the store validates against the schema
+# ---------------------------------------------------------------------------
+
+
+def test_validate_all_is_silent_on_a_healthy_vault(store):
+    store.write(make_doc("a/one"), operation="ingest")
+    assert store.validate_all() == []
+
+
+def test_validate_all_reports_every_broken_document_not_just_the_first(store):
+    """A validator that stops at the first failure hides the other eight."""
+    store.write(make_doc("a/one"), operation="ingest")
+    store.write(make_doc("b/two"), operation="ingest")
+
+    for model_id in ("a/one", "b/two"):
+        path = store.path_for(model_id)
+        text = path.read_text(encoding="utf-8")
+        # a hand-editor's typo inside the manual block. newline="" keeps Windows
+        # from turning \n into \r\n, which would break the frontmatter regex and
+        # report the wrong error.
+        path.write_text(
+            text.replace("reviewed: null", "bogus_key: 1"), encoding="utf-8", newline=""
+        )
+
+    failures = store.validate_all()
+
+    assert len(failures) == 2, "both broken documents must be reported"
+    assert {path.name for path, _ in failures} == {"a--one.md", "b--two.md"}
+    assert all("bogus_key" in message for _, message in failures)
