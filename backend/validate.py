@@ -9,7 +9,7 @@ first, because a person fixing a vault wants the whole list.
 
 import sys
 
-from backend.store import store_from_env
+from backend.core.config import store_from_env
 
 
 def main() -> int:

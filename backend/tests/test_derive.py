@@ -7,7 +7,7 @@ above it so a failure tells you which side is wrong.
 
 import pytest
 
-from backend.derive import (
+from backend.models.derive import (
     derive,
     gguf_variants,
     head_dim,

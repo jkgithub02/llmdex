@@ -17,7 +17,7 @@ reason this module is not fifty lines:
 import re
 from typing import Any
 
-from backend.schemas import (
+from backend.core.schemas import (
     DEFAULT_OVERHEAD_BYTES,
     KV_DTYPE_BYTES,
     Derived,

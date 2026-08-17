@@ -25,6 +25,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["backend"]
+# Tests live beside the code they cover but are not part of the shipped package.
+exclude = ["backend/tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]

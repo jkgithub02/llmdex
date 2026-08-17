@@ -126,17 +126,23 @@ additional protocol.
 ## Repository layout
 
 ```
-/backend                FastAPI service — the package is flat, one file per concern
-  fetch.py              huggingface_hub calls
-  derive.py             config.json → fields; VRAM math (ported from llm-calc)
-  extract.py            prose → fields, copy-only rule (not built yet)
-  llm.py                OpenAI-compatible client, configured by env (not built yet)
-  ingest.py             snapshot → document
-  store.py              read/query/write the markdown store, and git commit
-  schemas.py            Pydantic models — single source of truth
+/backend                FastAPI service — one folder per feature
+  main.py               app assembly + /health; each feature contributes a router
   validate.py           `python -m backend.validate`, schema check over the vault
-  main.py               the HTTP API
-  /tests
+  /core                 shared and feature-agnostic; never imports a feature
+    schemas.py          Pydantic models — single source of truth
+    store.py            read/query/write the markdown store, and git commit
+    config.py           vault resolution from the environment
+    deps.py             FastAPI dependencies every router shares
+  /models               the models feature
+    router.py           /ingest, /models, /models/{id}, /models/{id}/drift
+    fetch.py            huggingface_hub calls
+    derive.py           config.json → fields; VRAM math (ported from llm-calc)
+    ingest.py           snapshot → document
+  /benchmarks           the benchmarks feature
+    router.py           /benchmarks, /benchmarks/{slug}
+  /extraction           prose → fields, copy-only rule (not built yet)
+  /tests                excluded from the built wheel
     /fixtures           saved HF API responses for offline tests
 /frontend               Angular application — not scaffolded yet
   /src/app/models       Models tab

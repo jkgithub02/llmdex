@@ -11,10 +11,10 @@ there is no path here by which a language model can invent a value.
 
 from datetime import UTC, datetime
 
-from backend.derive import derive, group_gguf_files
-from backend.fetch import RepoSnapshot
-from backend.schemas import Checkpoint, ModelDoc
-from backend.store import Store
+from backend.core.schemas import Checkpoint, ModelDoc
+from backend.core.store import Store
+from backend.models.derive import derive, group_gguf_files
+from backend.models.fetch import RepoSnapshot
 
 DEFAULT_CONTEXT = 32768
 

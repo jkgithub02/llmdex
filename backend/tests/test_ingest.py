@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from backend.fetch import GatedRepo, RepoNotFound, RepoSnapshot
-from backend.ingest import ingest
-from backend.schemas import Manual, Quantization
-from backend.store import Store
+from backend.core.schemas import Manual, Quantization
+from backend.core.store import Store
+from backend.models.fetch import GatedRepo, RepoNotFound, RepoSnapshot
+from backend.models.ingest import ingest
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
