@@ -144,3 +144,73 @@ def test_a_category_that_is_not_an_engine_is_not_recorded(monkeypatch):
     result = extract(card, card_revision="abc123", settings=SETTINGS, today="2026-08-17")
 
     assert set(result.serving.engines) == {"vllm"}
+
+
+# --------------------------------------------------------------------------
+# an empty answer is retried once
+#
+# Measured against the real endpoint: eight identical calls for Qwen3-8B, one
+# of which returned `{}` while the other seven located both serving engines.
+# Grounding rejected nothing in any of them -- the model simply answered
+# nothing that once. Stored as-is, that flake is indistinguishable from a card
+# that genuinely states none of this, which is the one confusion this block
+# exists to prevent (R3.2).
+# --------------------------------------------------------------------------
+
+
+def _answers(*responses):
+    """A stand-in for the endpoint that returns each response in turn."""
+    calls = []
+
+    def complete(messages, schema, **kwargs):
+        calls.append(messages)
+        return responses[min(len(calls) - 1, len(responses) - 1)]
+
+    return complete, calls
+
+
+def test_an_empty_answer_is_asked_again(monkeypatch):
+    complete, calls = _answers({}, {"serving": {"vllm": "vLLM 0.27.1"}})
+    monkeypatch.setattr("backend.extraction.extract.complete", complete)
+
+    result = extract(CARD, card_revision="r1", settings=SETTINGS)
+
+    assert len(calls) == 2, "an empty answer should have been retried"
+    assert result.serving is not None
+    assert result.serving.engines["vllm"].text == "vLLM 0.27.1"
+
+
+def test_a_second_empty_answer_is_believed(monkeypatch):
+    """Two agreeing empties is the evidence that the card really says none of
+    this. Retrying past that would spend tokens to relearn the same answer."""
+    complete, calls = _answers({}, {})
+    monkeypatch.setattr("backend.extraction.extract.complete", complete)
+
+    result = extract(CARD, card_revision="r1", settings=SETTINGS)
+
+    assert len(calls) == 2
+    assert result.quantization is None
+    assert result.serving is None
+    assert result.benchmarks == []
+
+
+def test_an_answer_with_content_is_never_asked_twice(monkeypatch):
+    """The common path must still cost exactly one call."""
+    complete, calls = _answers({"quantization": {"format": "NVFP4"}})
+    monkeypatch.setattr("backend.extraction.extract.complete", complete)
+
+    extract(CARD, card_revision="r1", settings=SETTINGS)
+
+    assert len(calls) == 1
+
+
+def test_an_answer_whose_every_value_is_rejected_is_not_retried(monkeypatch):
+    """The model answered; it answered with something not in the card. That is a
+    finding worth keeping (R3.2), not an empty response to ask again about."""
+    complete, calls = _answers({"quantization": {"format": "invented"}})
+    monkeypatch.setattr("backend.extraction.extract.complete", complete)
+
+    result = extract(CARD, card_revision="r1", settings=SETTINGS)
+
+    assert len(calls) == 1
+    assert [r.proposed for r in result.rejected] == ["invented"]
