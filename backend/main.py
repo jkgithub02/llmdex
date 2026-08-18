@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from backend.agents.router import router as agents_router
 from backend.benchmarks.router import router as benchmarks_router
 from backend.core.config import LLMNotConfigured, TavilyNotConfigured
 from backend.core.deps import StoreDep, get_store
@@ -53,6 +54,10 @@ def health(store: StoreDep) -> Health:
     return Health(status="ok", vault=str(store.root), vault_exists=store.root.exists())
 
 
+# agents_router first: it registers a GET on /models/{model_id:path}/agents/stream,
+# and models_router's GET /models/{model_id:path} is a greedy catch-all that would
+# otherwise swallow that path first and 404 before the agents route is ever tried.
+app.include_router(agents_router)
 app.include_router(models_router)
 app.include_router(benchmarks_router)
 app.include_router(extraction_router)
