@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, Injector, computed, effect, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AgentStream } from '../agents/agent-stream';
@@ -536,6 +536,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
 export class ModelDetail {
   private readonly api = inject(LlmdexService);
   private readonly stream = inject(AgentStream);
+  private readonly injector = inject(Injector);
 
   /** A Hugging Face ID is `vendor/name`, so it arrives as two route segments. */
   readonly vendor = input.required<string>();
@@ -612,17 +613,23 @@ export class ModelDetail {
   }
 
   /**
-   * Re-run one tab's agent. Reloads the document afterwards, because the agent
-   * wrote to it while we were watching the trace.
+   * Re-run one tab's agent, then reload the document the agent just wrote to.
+   *
+   * The effect is given an explicit injector because this runs from a click
+   * handler, not a constructor -- effect() outside an injection context throws
+   * NG0203 at runtime, which neither the build nor the specs would catch.
    */
   protected rerun(agent: string): void {
     this.stream.start(this.modelId(), [agent]);
-    const finished = effect(() => {
-      if (!this.stream.running()) {
-        this.load();
-        finished.destroy();
-      }
-    });
+    const finished = effect(
+      () => {
+        if (!this.stream.running()) {
+          this.load();
+          finished.destroy();
+        }
+      },
+      { injector: this.injector },
+    );
   }
 
   protected extract(modelId: string): void {
