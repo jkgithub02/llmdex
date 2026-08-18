@@ -28,6 +28,7 @@ from backend.core.config import (
     tavily_settings,
 )
 from backend.extraction.extract import SERVING_ENGINES, extract
+from backend.extraction.llm import stream_json
 from backend.models.derive import derive
 from backend.models.fetch import fetch_snapshot
 from backend.search.tavily import search
@@ -409,3 +410,35 @@ def test_a_summary_reflects_the_derived_facts_over_the_card():
     assert "mamba" in text or "hybrid" in text, f"a hybrid summarised as if dense: {text[:400]}"
     print(f"\noverview: {summary.overview}")
     print(f"unique:   {summary.unique_points}")
+
+
+def test_the_endpoint_really_streams_reasoning():
+    """The offline suite drives streaming through a canned body, so it can only
+    prove we parse the shape we assumed. This proves the shape, and it is the
+    assumption the whole trace UI rests on: no reasoning deltas means every
+    trace panel renders a phase line and nothing else."""
+    try:
+        settings = llm_settings()
+    except LLMNotConfigured as exc:
+        pytest.skip(str(exc))
+
+    seen: list[str] = []
+    answer = stream_json(
+        [
+            {"role": "system", "content": "Answer with JSON."},
+            {"role": "user", "content": "Is 17.82B a plausible size for a model named 30B-A3B?"},
+        ],
+        {
+            "type": "object",
+            "properties": {"plausible": {"type": "boolean"}},
+            "required": ["plausible"],
+            "additionalProperties": False,
+        },
+        settings=settings,
+        on_reasoning=seen.append,
+    )
+
+    assert "plausible" in answer
+    assert seen, "no reasoning deltas arrived; the trace UI would show nothing"
+    print(f"\n{len(seen)} reasoning deltas, {sum(len(s) for s in seen)} chars")
+    print(f"first 200 chars: {''.join(seen)[:200]!r}")
