@@ -2,6 +2,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+import { AgentStream } from '../agents/agent-stream';
+import { AgentTrace } from '../agents/agent-trace';
 import { LlmdexService } from '../api/llmdex.service';
 import type { ModelDoc } from '../api/model/modelDoc';
 import { errorMessage, formatBytes, formatCount, routeFor } from '../format';
@@ -21,7 +23,7 @@ const VIEW_KEY = 'llmdex.models.view';
 
 @Component({
   selector: 'app-models-page',
-  imports: [FormsModule, RouterLink, StateBadge, LayerStrip],
+  imports: [FormsModule, RouterLink, StateBadge, LayerStrip, AgentTrace],
   host: { class: 'page' },
   template: `
     <header class="head">
@@ -59,6 +61,7 @@ const VIEW_KEY = 'llmdex.models.view';
     @if (busy()) {
       <div class="bar"><span></span></div>
     }
+    <app-agent-trace />
     @if (error(); as message) {
       <p class="error" role="alert">{{ message }}</p>
     }
@@ -521,6 +524,7 @@ const VIEW_KEY = 'llmdex.models.view';
 })
 export class ModelsPage {
   private readonly api = inject(LlmdexService);
+  private readonly stream = inject(AgentStream);
 
   protected modelId = '';
   protected readonly models = signal<ModelDoc[] | null>(null);
@@ -584,8 +588,11 @@ export class ModelsPage {
     this.api.ingestModelIngestPost({ model_id: id }).subscribe({
       next: () => {
         this.busy.set(false);
+        const ingested = id;
         this.modelId = '';
         this.refresh();
+        // The document exists now; the agents only ever add to it.
+        this.stream.start(ingested, ['about', 'prose']);
       },
       error: (err) => {
         this.busy.set(false);

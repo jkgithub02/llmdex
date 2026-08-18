@@ -1,6 +1,8 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { AgentStream } from '../agents/agent-stream';
+import { AgentTrace } from '../agents/agent-trace';
 import { LlmdexService } from '../api/llmdex.service';
 import type { Checkpoint } from '../api/model/checkpoint';
 import type { ModelDoc } from '../api/model/modelDoc';
@@ -30,7 +32,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
  */
 @Component({
   selector: 'app-model-detail',
-  imports: [RouterLink, StateBadge, LayerStrip],
+  imports: [RouterLink, StateBadge, LayerStrip, AgentTrace],
   host: { class: 'page' },
   template: `
     <!-- Outside the @if below: a call that fails after the document has loaded
@@ -67,6 +69,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
         </header>
 
         <div class="sheet">
+          <app-agent-trace />
           <nav class="tabs" role="tablist">
             @for (t of tabs; track t.id) {
               <button
@@ -120,7 +123,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
                     }
                   </p>
 
-                  <button class="ghost" (click)="summarise(model.model_id)" [disabled]="busy()">
+                  <button class="ghost" (click)="rerun('about')" [disabled]="busy()">
                     {{ summarising() ? 'Rewriting…' : 'Regenerate' }}
                   </button>
                 } @else if (!summarising()) {
@@ -201,7 +204,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
                   } @else {
                     <div class="cta">
                       <p>Nobody has read this card yet.</p>
-                      <button (click)="extract(model.model_id)" [disabled]="busy()">
+                      <button (click)="rerun('prose')" [disabled]="busy()">
                         {{ extracting() ? 'Reading the card…' : 'Extract with the LLM' }}
                       </button>
                     </div>
@@ -532,6 +535,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
 })
 export class ModelDetail {
   private readonly api = inject(LlmdexService);
+  private readonly stream = inject(AgentStream);
 
   /** A Hugging Face ID is `vendor/name`, so it arrives as two route segments. */
   readonly vendor = input.required<string>();
@@ -604,6 +608,20 @@ export class ModelDetail {
         this.summarising.set(false);
         this.error.set(errorMessage(err));
       },
+    });
+  }
+
+  /**
+   * Re-run one tab's agent. Reloads the document afterwards, because the agent
+   * wrote to it while we were watching the trace.
+   */
+  protected rerun(agent: string): void {
+    this.stream.start(this.modelId(), [agent]);
+    const finished = effect(() => {
+      if (!this.stream.running()) {
+        this.load();
+        finished.destroy();
+      }
     });
   }
 
