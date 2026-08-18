@@ -6,6 +6,7 @@ human's correction, and every write must land as a commit.
 """
 
 import subprocess
+import threading
 
 import pytest
 
@@ -585,3 +586,67 @@ def test_a_deleted_document_is_recoverable_from_git(store):
         ["git", "show", f"HEAD~1:{rel}"], cwd=store.root, capture_output=True, text=True, check=True
     ).stdout
     assert doc.model_id in restored
+
+
+# ---------------------------------------------------------------------------
+# Critical 2 - merge_summary and merge_extraction race on the same document
+# ---------------------------------------------------------------------------
+
+
+def test_concurrent_summary_and_extraction_writes_both_survive(store, monkeypatch):
+    """The about and prose agents call merge_summary / merge_extraction from two
+    threads on the same document (backend/agents/runner.py). A barrier forces
+    both threads to complete their read before either can write: without a lock
+    around the whole read-modify-write, both read the document before either's
+    block exists on disk, and whichever writes last silently discards the
+    other's block. With the lock, the second thread cannot even reach its read
+    until the first has read, written, and released -- so its read sees the
+    first thread's write and both blocks survive.
+    """
+    doc = make_doc()
+    store.write(doc, operation="ingest")
+
+    barrier = threading.Barrier(2, timeout=0.5)
+    original_read = store.read
+
+    def racing_read(model_id):
+        result = original_read(model_id)
+        try:
+            barrier.wait()
+        except threading.BrokenBarrierError:
+            pass  # the lock kept the other thread from ever reaching this read
+        return result
+
+    monkeypatch.setattr(store, "read", racing_read)
+
+    errors: list[BaseException] = []
+
+    def write_summary():
+        try:
+            store.merge_summary(doc.model_id, _summary("From the about agent."))
+        except Exception as exc:  # noqa: BLE001 - surfaced via errors, not swallowed
+            errors.append(exc)
+
+    def write_extraction():
+        try:
+            store.merge_extraction(
+                doc.model_id,
+                repo=doc.checkpoints[0].repo,
+                quantization=None,
+                extracted=_extraction(),
+            )
+        except Exception as exc:  # noqa: BLE001 - surfaced via errors, not swallowed
+            errors.append(exc)
+
+    t1 = threading.Thread(target=write_summary)
+    t2 = threading.Thread(target=write_extraction)
+    t1.start()
+    t2.start()
+    t1.join(timeout=5)
+    t2.join(timeout=5)
+
+    assert not errors, errors
+    after = original_read(doc.model_id)
+    assert after.summary is not None and after.summary.overview == "From the about agent."
+    assert after.checkpoints[0].extracted is not None
+    assert after.checkpoints[0].extracted.quantization.format.text == "NVFP4"

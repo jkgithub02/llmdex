@@ -15,6 +15,7 @@ Design constraints that shape everything here:
 import hashlib
 import re
 import subprocess
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,20 @@ import yaml
 from backend.core.schemas import Benchmark, Checkpoint, Extracted, ModelDoc, Summary
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n(.*)\Z", re.DOTALL)
+
+# Serialises the read-modify-write in merge_summary / merge_extraction /
+# merge_ingest. The about and prose agents now call these concurrently on the
+# same document (backend/agents/runner.py) -- without this, both threads can
+# read before either writes, and the later write silently discards the
+# earlier agent's block. A lock rather than the optimistic `expect_unchanged`
+# retry: this is one process, the critical section is short, and a lock
+# cannot livelock the way a retry loop under contention can.
+#
+# ponytail: one process-wide lock, so an unrelated model's write waits on this
+# one's too. Fine at single-user scale; move to per-document locks, or the
+# optimistic expect_unchanged retry already on Store.write, if this ever
+# serves multiple processes.
+_LOCK = threading.Lock()
 
 # Blocks ingest is allowed to overwrite on an existing checkpoint. Anything not
 # listed here belongs to a human and survives re-ingest (R6.5, R4.2).
@@ -192,30 +207,31 @@ class Store:
         measured entry is not its business, and re-ingesting must not quietly
         discard the work of the person who put it there (R6.5, R4.2).
         """
-        existing = self.read(incoming.model_id)
-        if existing is None:
-            self.write(incoming, operation=operation)
-            return incoming
+        with _LOCK:
+            existing = self.read(incoming.model_id)
+            if existing is None:
+                self.write(incoming, operation=operation)
+                return incoming
 
-        # Keyed on repo AND quantization: a GGUF repository publishes several
-        # checkpoints under one repo name, so keying on repo alone silently
-        # collapses them and leaves all but one holding a stale derived block.
-        by_key = {_checkpoint_key(c): c for c in existing.checkpoints}
-        for fresh in incoming.checkpoints:
-            kept = by_key.get(_checkpoint_key(fresh))
-            if kept is None:
-                existing.checkpoints.append(fresh)
-                continue
-            for field in INGEST_OWNED:
-                setattr(kept, field, getattr(fresh, field))
+            # Keyed on repo AND quantization: a GGUF repository publishes several
+            # checkpoints under one repo name, so keying on repo alone silently
+            # collapses them and leaves all but one holding a stale derived block.
+            by_key = {_checkpoint_key(c): c for c in existing.checkpoints}
+            for fresh in incoming.checkpoints:
+                kept = by_key.get(_checkpoint_key(fresh))
+                if kept is None:
+                    existing.checkpoints.append(fresh)
+                    continue
+                for field in INGEST_OWNED:
+                    setattr(kept, field, getattr(fresh, field))
 
-        for field in ("name", "vendor", "released"):
-            if (value := getattr(incoming, field)) is not None:
-                setattr(existing, field, value)
+            for field in ("name", "vendor", "released"):
+                if (value := getattr(incoming, field)) is not None:
+                    setattr(existing, field, value)
 
-        existing.checkpoints.sort(key=_checkpoint_key)
-        self.write(existing, operation=operation)
-        return existing
+            existing.checkpoints.sort(key=_checkpoint_key)
+            self.write(existing, operation=operation)
+            return existing
 
     def merge_extraction(
         self,
@@ -232,20 +248,23 @@ class Store:
         span is only meaningful against a card ingest has already read and
         recorded a revision for.
         """
-        doc = self.read(model_id)
-        if doc is None:
-            raise KeyError(f"{model_id} is not in the store")
+        with _LOCK:
+            doc = self.read(model_id)
+            if doc is None:
+                raise KeyError(f"{model_id} is not in the store")
 
-        wanted = (repo, quantization or "")
-        for checkpoint in doc.checkpoints:
-            if _checkpoint_key(checkpoint) == wanted:
-                checkpoint.extracted = extracted
-                break
-        else:
-            raise KeyError(f"{model_id} has no checkpoint {repo!r} ({quantization or 'default'})")
+            wanted = (repo, quantization or "")
+            for checkpoint in doc.checkpoints:
+                if _checkpoint_key(checkpoint) == wanted:
+                    checkpoint.extracted = extracted
+                    break
+            else:
+                raise KeyError(
+                    f"{model_id} has no checkpoint {repo!r} ({quantization or 'default'})"
+                )
 
-        self.write(doc, operation=operation)
-        return doc
+            self.write(doc, operation=operation)
+            return doc
 
     def merge_summary(
         self,
@@ -264,13 +283,14 @@ class Store:
         ``generated_on`` says when the current one was written, which is the
         question a reader actually has.
         """
-        doc = self.read(model_id)
-        if doc is None:
-            raise KeyError(f"{model_id} is not in the store")
+        with _LOCK:
+            doc = self.read(model_id)
+            if doc is None:
+                raise KeyError(f"{model_id} is not in the store")
 
-        doc.summary = summary
-        self.write(doc, operation=operation)
-        return doc
+            doc.summary = summary
+            self.write(doc, operation=operation)
+            return doc
 
     def delete(self, model_id: str, operation: str = "delete") -> bool:
         """Remove a model's document. Returns False if there was nothing to remove.
