@@ -69,7 +69,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
         </header>
 
         <div class="sheet">
-          <app-agent-trace />
+          <app-agent-trace [only]="modelId()" />
           <nav class="tabs" role="tablist">
             @for (t of tabs; track t.id) {
               <button
@@ -187,6 +187,9 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
                       {{ extracted.extracted_on }} from card
                       <code>{{ extracted.card_revision.slice(0, 7) }}</code>
                     </p>
+                    <button class="ghost" (click)="rerun('prose')" [disabled]="busy()">
+                      {{ extracting() ? 'Reading the card…' : 'Re-run' }}
+                    </button>
                     <div class="grid">
                       @for (field of extractedFields(checkpoint); track field.label) {
                         <div class="field">

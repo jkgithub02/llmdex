@@ -30,9 +30,12 @@ export class AgentStream {
 
   private readonly state = signal<AgentState[]>([]);
   private readonly active = signal(false);
+  private readonly subject = signal<string | null>(null);
 
   readonly agents = this.state.asReadonly();
   readonly running = this.active.asReadonly();
+  /** Which model this run belongs to, so a page can refuse to show another's. */
+  readonly modelId = this.subject.asReadonly();
 
   /**
    * Fold one event into the agent list, without mutating what it was given --
@@ -57,6 +60,7 @@ export class AgentStream {
   start(modelId: string, agents: string[]): void {
     this.stop();
     this.state.set([]);
+    this.subject.set(modelId);
     this.active.set(true);
 
     const url = `/api/models/${modelId}/agents/stream?agents=${agents.join(',')}`;

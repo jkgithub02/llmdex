@@ -540,6 +540,20 @@ export class ModelsPage {
   }
 
   protected route = routeFor;
+
+  /**
+   * Is this model already in the vault? Compared case-insensitively and against
+   * the normalised ID, because the box accepts a full Hub URL and the backend
+   * stores the bare `vendor/name`.
+   */
+  private knows(raw: string): boolean {
+    const wanted = raw
+      .trim()
+      .replace(/^https?:\/\/huggingface\.co\//i, '')
+      .replace(/\/+$/, '')
+      .toLowerCase();
+    return (this.models() ?? []).some((doc) => doc.model_id.toLowerCase() === wanted);
+  }
   protected tableRow = tableRow;
 
   /**
@@ -585,14 +599,22 @@ export class ModelsPage {
     if (!id) return;
     this.busy.set(true);
     this.error.set(null);
+    // Decided before the POST: refresh() below is async, so by the time the
+    // handler runs the list already contains the model either way.
+    const alreadyKnown = this.knows(id);
     this.api.ingestModelIngestPost({ model_id: id }).subscribe({
       next: () => {
         this.busy.set(false);
         const ingested = id;
         this.modelId = '';
         this.refresh();
-        // The document exists now; the agents only ever add to it.
-        this.stream.start(ingested, ['about', 'prose']);
+        // Only on a model's first ingest. A re-ingest refreshes the derived
+        // facts from config.json, and must not spend LLM calls doing it or
+        // overwrite a summary somebody regenerated on purpose (R6.5) -- the
+        // same rule summarise_after_first_ingest keeps on the backend.
+        if (!alreadyKnown) {
+          this.stream.start(ingested, ['about', 'prose']);
+        }
       },
       error: (err) => {
         this.busy.set(false);

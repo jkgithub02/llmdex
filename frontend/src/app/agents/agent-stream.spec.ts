@@ -1,3 +1,5 @@
+import { TestBed } from '@angular/core/testing';
+
 import { AgentStream, type AgentState } from './agent-stream';
 
 /**
@@ -53,5 +55,25 @@ describe('AgentStream.applyEvent', () => {
 
     expect(before[0].reasoning).toBe('');
     expect(after).not.toBe(before);
+  });
+});
+
+describe('AgentStream model scoping', () => {
+  it('remembers which model a run belongs to', () => {
+    // The service is a root singleton, so a detail page needs to know whether
+    // the run in flight is its own before rendering someone else's reasoning.
+    const stream = TestBed.inject(AgentStream);
+    spyOn(window, 'EventSource' as never).and.returnValue({
+      addEventListener: () => undefined,
+      close: () => undefined,
+    } as never);
+
+    stream.start('Qwen/Qwen3-8B', ['about']);
+
+    expect(stream.modelId()).toBe('Qwen/Qwen3-8B');
+    expect(stream.running()).toBe(true);
+
+    stream.stop();
+    expect(stream.running()).toBe(false);
   });
 });

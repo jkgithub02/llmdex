@@ -1,4 +1,12 @@
-import { Component, ElementRef, effect, inject, viewChildren } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  viewChildren,
+} from '@angular/core';
 
 import { AgentStream } from './agent-stream';
 
@@ -12,7 +20,7 @@ import { AgentStream } from './agent-stream';
 @Component({
   selector: 'app-agent-trace',
   template: `
-    @if (stream.agents().length) {
+    @if (mine() && stream.agents().length) {
       <section class="trace">
         @for (agent of stream.agents(); track agent.name) {
           <article class="pane" [class.failed]="agent.error">
@@ -82,6 +90,19 @@ import { AgentStream } from './agent-stream';
 })
 export class AgentTrace {
   protected readonly stream = inject(AgentStream);
+
+  /**
+   * Show only a run belonging to this model. The stream is a root singleton, so
+   * without this a detail page renders whatever run is in flight -- ingest model
+   * A, open model B, and B shows A's reasoning as if it were its own. Unset
+   * means "whatever is running", which is what the models list wants.
+   */
+  readonly only = input<string | null>(null);
+
+  protected readonly mine = computed(() => {
+    const only = this.only();
+    return !only || this.stream.modelId() === only;
+  });
   private readonly scrollers = viewChildren<ElementRef<HTMLElement>>('scroller');
 
   constructor() {
