@@ -30,8 +30,21 @@ export function derivedFields(checkpoint: Checkpoint): Field[] {
     // where the raw model_type ("qwen3_moe") only names the config entry.
     { label: 'architecture', value: derived?.architecture_class ?? null, state: 'derived' },
     { label: 'model type', value: derived?.architecture ?? null, state: 'derived' },
-    { label: 'parameters (total)', value: formatCount(derived?.params?.total), state: 'derived' },
-    { label: 'parameters (active)', value: formatCount(derived?.params?.active), state: 'derived' },
+    // Both carry the same reason: whatever made the total untrustworthy took
+    // the active count with it, and "unavailable" alone would leave a reader
+    // unable to tell a refused number from an unasked question (R2.7).
+    {
+      label: 'parameters (total)',
+      value: formatCount(derived?.params?.total),
+      state: 'derived',
+      unreliable: derived?.params?.unreliable_reason ?? null,
+    },
+    {
+      label: 'parameters (active)',
+      value: formatCount(derived?.params?.active),
+      state: 'derived',
+      unreliable: derived?.params?.unreliable_reason ?? null,
+    },
     { label: 'context length', value: formatCount(derived?.context_length), state: 'derived' },
     { label: 'hidden size', value: formatCount(derived?.hidden_size), state: 'derived' },
     { label: 'layers', value: formatCount(derived?.num_hidden_layers), state: 'derived' },

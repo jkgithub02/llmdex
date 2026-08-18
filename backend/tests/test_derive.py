@@ -861,3 +861,103 @@ def test_a_top_level_decoder_config_is_left_alone():
     d = derive(top_level, siblings=[], safetensors_total=None)
 
     assert d.num_hidden_layers == 80
+
+
+# --------------------------------------------------------------------------
+# R2.2 / R2.7 - counts a quantized or partly-MoE checkpoint cannot support
+#
+# nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4, trimmed. It broke both
+# halves of param_counts at once: the Hub reports 17.82B parameters for a model
+# whose name says 30B, and only 23 of its 52 layers hold experts.
+# --------------------------------------------------------------------------
+
+NEMOTRON_LIGHTNING_NVFP4 = {
+    "model_type": "nemotron_h",
+    "num_hidden_layers": 52,
+    "hidden_size": 2688,
+    "num_attention_heads": 32,
+    "intermediate_size": 1856,
+    "moe_intermediate_size": 1856,
+    "n_routed_experts": 128,
+    "n_shared_experts": 1,
+    "num_experts_per_tok": 6,
+    # 23 mamba, 23 moe, 6 attention -- the real file's distribution.
+    "layers_block_type": (["mamba", "moe"] * 23) + ["attention"] * 6,
+    "quantization_config": {
+        "config_groups": {"group_0": {"weights": {"num_bits": 4, "type": "float"}}},
+        "quant_method": "compressed-tensors",
+    },
+    "ssm_state_size": 128,
+    "mamba_num_heads": 112,
+}
+
+# What the Hub reports: 15.09B of it is packed FP4 stored as U8 bytes, 1.83B is
+# genuinely BF16, 0.89B is FP8 scales. Summing those is not a parameter count.
+NVFP4_REPORTED_TOTAL = 17_820_210_764
+
+
+def test_a_packed_quantized_total_is_refused_rather_than_reported():
+    """R2.2 - the Hub sums element counts across dtypes, so for a 4-bit
+    checkpoint the number counts bytes and scales, not parameters. Reporting
+    17.82B for a 30B model is the kind of plausible wrong number this whole
+    module exists to not produce."""
+    counts = param_counts(NEMOTRON_LIGHTNING_NVFP4, safetensors_total=NVFP4_REPORTED_TOTAL)
+
+    assert counts.total is None
+    assert counts.unreliable_reason is not None
+    assert "quantized" in counts.unreliable_reason.lower()
+
+
+def test_a_refused_total_takes_the_active_count_with_it():
+    """Active is total minus the dormant experts. Without a total there is
+    nothing to subtract from, and a bare None would not say that."""
+    counts = param_counts(NEMOTRON_LIGHTNING_NVFP4, safetensors_total=NVFP4_REPORTED_TOTAL)
+
+    assert counts.active is None
+    assert counts.is_moe is True
+
+
+def test_dormant_experts_are_counted_over_the_moe_layers_only():
+    """R2.6a again, in the parameter math this time: 23 of these 52 layers hold
+    experts, and charging all 52 overstates the dormant weights by 2.3x."""
+    # An unquantized checkpoint of the same shape, so the total is usable.
+    config = {k: v for k, v in NEMOTRON_LIGHTNING_NVFP4.items() if k != "quantization_config"}
+    total = 32_000_000_000
+
+    counts = param_counts(config, safetensors_total=total)
+
+    # 122 dormant experts x 3 x 2688 x 1856 x 23 MoE layers = 41.99B, which is
+    # larger than the total, so this config still cannot produce an active count
+    # -- but it must say so rather than going quietly null.
+    assert counts.total == total
+    assert counts.active is None
+    assert counts.unreliable_reason is not None
+
+
+def test_an_active_count_that_cannot_be_computed_says_why():
+    """R2.7 - `active > 0 else None` threw away the fact that the arithmetic
+    disagreed with the reported total."""
+    counts = param_counts({**MIXTRAL_MOE, "num_hidden_layers": 32}, safetensors_total=1_000_000_000)
+
+    assert counts.active is None
+    assert counts.unreliable_reason is not None
+
+
+def test_an_ordinary_moe_still_counts_both():
+    """The path that already worked must keep working: Qwen3-30B-A3B is
+    unquantized and every layer holds experts."""
+    qwen3_moe = {
+        "model_type": "qwen3_moe",
+        "num_hidden_layers": 48,
+        "hidden_size": 2048,
+        "moe_intermediate_size": 768,
+        "num_experts": 128,
+        "num_experts_per_tok": 8,
+    }
+
+    counts = param_counts(qwen3_moe, safetensors_total=30_532_122_624)
+
+    assert counts.total == 30_532_122_624
+    assert counts.active is not None
+    assert 3.0e9 < counts.active < 3.7e9, counts.active
+    assert counts.unreliable_reason is None

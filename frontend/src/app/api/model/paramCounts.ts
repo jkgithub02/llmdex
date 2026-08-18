@@ -5,8 +5,18 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * R2.2 - how many weights the model has, and how many fire per token.
+ *
+ * Carries ``unreliable_reason`` for the same reason every other block here
+ * does: both numbers can be wrong for structural reasons rather than missing
+ * ones -- a quantized checkpoint whose reported total counts packed bytes, or
+ * a hybrid whose expert layers are a subset of its layers -- and a bare null
+ * records that we have no number without recording that we knew why.
+ */
 export interface ParamCounts {
   total?: number | null;
   active?: number | null;
   is_moe?: boolean;
+  unreliable_reason?: string | null;
 }

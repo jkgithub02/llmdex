@@ -71,9 +71,19 @@ class KVCache(BaseModel):
 
 
 class ParamCounts(BaseModel):
+    """R2.2 - how many weights the model has, and how many fire per token.
+
+    Carries ``unreliable_reason`` for the same reason every other block here
+    does: both numbers can be wrong for structural reasons rather than missing
+    ones -- a quantized checkpoint whose reported total counts packed bytes, or
+    a hybrid whose expert layers are a subset of its layers -- and a bare null
+    records that we have no number without recording that we knew why.
+    """
+
     total: int | None = None
     active: int | None = None
     is_moe: bool = False
+    unreliable_reason: str | None = None
 
 
 class WeightBytes(BaseModel):

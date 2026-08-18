@@ -250,3 +250,36 @@ describe('layer composition row', () => {
     expect(fields.find((f) => f.label === 'layer composition')!.value).toBe('24 mamba');
   });
 });
+
+describe('parameter rows', () => {
+  it('explains a count that could not be trusted rather than showing a bare gap', () => {
+    // R2.7 - a quantized checkpoint's reported total counts packed bytes, and a
+    // reader seeing only "unavailable" cannot tell that from "nobody looked".
+    const fields = derivedFields(
+      checkpoint({
+        derived: {
+          params: {
+            total: null,
+            active: null,
+            is_moe: true,
+            unreliable_reason: 'checkpoint is quantized to 4-bit weights',
+          },
+        },
+      }),
+    );
+
+    const total = fields.find((f) => f.label === 'parameters (total)')!;
+    const active = fields.find((f) => f.label === 'parameters (active)')!;
+    expect(total.value).toBeNull();
+    expect(total.unreliable).toBe('checkpoint is quantized to 4-bit weights');
+    expect(active.unreliable).toBe('checkpoint is quantized to 4-bit weights');
+  });
+
+  it('says nothing extra when the counts are sound', () => {
+    const fields = derivedFields(
+      checkpoint({ derived: { params: { total: 30532122624, active: 3350000000, is_moe: true } } }),
+    );
+
+    expect(fields.find((f) => f.label === 'parameters (total)')!.unreliable).toBeNull();
+  });
+});
