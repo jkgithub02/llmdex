@@ -1,5 +1,6 @@
 """The stream endpoint: what it emits, and how it refuses."""
 
+import json
 import subprocess
 
 import pytest
@@ -63,11 +64,21 @@ def test_the_stream_is_server_sent_events(client, fake_agent):
 
 
 def test_reasoning_with_newlines_survives_the_wire(client, fake_agent):
+    """The fake agent emits "line one\nline two". A raw newline inside a data:
+    line would end the frame early and leave an unparseable fragment, so each
+    frame must carry exactly one data: line of complete JSON."""
     with client.stream("GET", "/models/a/one/agents/stream?agents=about") as response:
         body = "".join(response.iter_text())
 
-    # One data: line per frame -- a raw newline would have split it.
-    assert body.count("event: reasoning") == body.count('"text"')
+    frames = [frame for frame in body.split("\n\n") if frame.strip()]
+    reasoning = [frame for frame in frames if frame.startswith("event: reasoning")]
+    assert reasoning, "no reasoning frame arrived"
+
+    for frame in reasoning:
+        data_lines = [line for line in frame.split("\n") if line.startswith("data: ")]
+        assert len(data_lines) == 1, f"frame split across lines: {frame!r}"
+        payload = json.loads(data_lines[0].removeprefix("data: "))
+        assert "\n" in payload["text"], "the newline must survive inside the JSON payload"
 
 
 def test_streaming_for_an_unknown_model_is_a_404(client, fake_agent):
