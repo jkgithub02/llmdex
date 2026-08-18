@@ -67,9 +67,12 @@ _RECURRENT_MODEL_TYPES = {
     "rwkv7": "RWKV",
 }
 
-# Values a per-layer type list uses for a layer that carries attention. Anything
-# else in such a list is a recurrent layer of some kind.
+# Values a per-layer type list uses for a layer that carries attention.
 _ATTENTION_LAYER_NAMES = {"attention", "full_attention", "sliding_attention", "hybrid"}
+# ...and for a layer that is only a feed-forward block. These are neither
+# attention nor recurrent, and counting them as recurrent claimed 46 mamba
+# layers in a model whose config declares 23 of them.
+_MLP_LAYER_NAMES = {"moe", "mlp", "ffn", "dense", "mlp_only"}
 
 # What the non-attention layers are, by the key that declared them. The key is
 # evidence of the mechanism: only Qwen3-Next writes ``full_attention_interval``,
@@ -277,14 +280,18 @@ def _from_layer_list(
     if all(isinstance(v, int) and not isinstance(v, bool) for v in listed):
         # MiniMax's attn_type_list: 1 is full attention, 0 is not.
         attention = sum(1 for v in listed if v == 1)
+        mlp_only = 0
     else:
-        attention = sum(1 for v in listed if str(v).lower() in _ATTENTION_LAYER_NAMES)
+        names = [str(v).lower() for v in listed]
+        attention = sum(1 for name in names if name in _ATTENTION_LAYER_NAMES)
+        mlp_only = sum(1 for name in names if name in _MLP_LAYER_NAMES)
 
-    recurrent = len(listed) - attention
+    recurrent = len(listed) - attention - mlp_only
     return LayerComposition(
         family="hybrid" if recurrent else "transformer",
         attention=attention,
         recurrent=recurrent,
+        mlp_only=mlp_only,
         recurrent_kind=kind if recurrent else None,
     )
 

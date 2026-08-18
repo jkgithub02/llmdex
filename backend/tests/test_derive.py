@@ -961,3 +961,16 @@ def test_an_ordinary_moe_still_counts_both():
     assert counts.active is not None
     assert 3.0e9 < counts.active < 3.7e9, counts.active
     assert counts.unreliable_reason is None
+
+
+def test_a_feed_forward_block_is_not_a_recurrent_one():
+    """`layers_block_type` names three kinds here, and `moe` is an FFN layer.
+    Counting it as recurrent claimed 46 mamba layers in a model that has 23,
+    which is the same overstatement R2.6a forbids, wearing a different label."""
+    comp = layer_composition(NEMOTRON_LIGHTNING_NVFP4)
+
+    assert comp.attention == 6
+    assert comp.recurrent == 23
+    assert comp.mlp_only == 23
+    assert comp.recurrent_kind == "mamba"
+    assert comp.attention + comp.recurrent + comp.mlp_only == 52
