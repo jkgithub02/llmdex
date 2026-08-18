@@ -2,33 +2,41 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { LlmdexService } from '../api/llmdex.service';
+import type { Checkpoint } from '../api/model/checkpoint';
 import type { ModelDoc } from '../api/model/modelDoc';
-import { errorMessage } from '../format';
+import { errorMessage, formatCount } from '../format';
 import { StateBadge } from '../state-badge';
+import { architecturePills, architectureTone } from './architecture';
 import { derivedFields, extractedFields } from './fields';
+import { LayerStrip } from './layer-strip';
 import { sourceHost, summarySections } from './summary';
 
+type Tab = 'about' | 'spec' | 'prose' | 'measured';
+
 /**
- * R6.3 / R6.4 - every field, including the null ones, each labelled with how we
- * came to know it.
+ * R6.3 / R6.4 - every field, including the unavailable ones, each labelled with
+ * how we came to know it.
  *
  * The four states are the product. A derived number came from `config.json`; an
  * extracted phrase was copied out of the card and names the section it came
  * from; "absent" means we looked and it was not stated; "unmeasured" means no
  * vendor publishes it and nobody has run it here yet. Flattening those into one
  * blank cell is the failure this view exists to prevent.
+ *
+ * The layout follows a Pokedex entry: a hero coloured by what kind of model
+ * this is, then a light sheet of tabbed detail. The colour and the layer strip
+ * in that hero are both read from the derived block, so the decorative part of
+ * the page is carrying real information rather than sitting on top of it.
  */
 @Component({
   selector: 'app-model-detail',
-  imports: [RouterLink, StateBadge],
+  imports: [RouterLink, StateBadge, LayerStrip],
   host: { class: 'page' },
   template: `
-    <a routerLink="/models" class="back">← models</a>
-
     <!-- Outside the @if below: a call that fails after the document has loaded
          must still be seen. Rendering the message only in the "no document"
          branch meant a failed extraction stopped its spinner and said nothing at
-         all. The label names which call failed, because two of them can. -->
+         all. The label names which call failed, because several can. -->
     @if (error(); as message) {
       <p class="error" role="alert">
         <strong>{{ errorLabel() }}</strong>
@@ -37,321 +45,358 @@ import { sourceHost, summarySections } from './summary';
     }
 
     @if (doc(); as model) {
-      <header class="head">
-        <span class="vendor">{{ vendor() }}</span>
-        <h1 class="mono">{{ name() }}</h1>
-      </header>
+      <article class="dex" [attr.data-tone]="tone()">
+        <header class="hero">
+          <div class="hero-top">
+            <a routerLink="/models" class="back" aria-label="back to models">←</a>
+            <span class="vendor">{{ vendor() }}</span>
+            <span class="params mono">{{ params() ?? 'size unavailable' }}</span>
+          </div>
 
-      <!-- The summary belongs to the model, not a checkpoint: an AWQ build and a
-           GGUF build are the same model to a reader asking what it is for. -->
-      <section class="summary">
-        <div class="sum-head">
-          <h2>
-            Summary
-            <span class="note"
-              >written by an LLM from the card, the derived facts, and the web</span
-            >
-          </h2>
-          @if (model.summary) {
-            <button class="ghost" (click)="summarise(model.model_id)" [disabled]="summarising()">
-              {{ summarising() ? 'Rewriting…' : 'Regenerate' }}
-            </button>
+          <h1 class="mono">{{ name() }}</h1>
+
+          <div class="pills">
+            @for (pill of pills(); track pill) {
+              <span class="pill">{{ pill }}</span>
+            }
+          </div>
+
+          <!-- Stands where a Pokedex puts the creature, and is the one picture
+               of this model we can actually defend: its declared layer stack. -->
+          <app-layer-strip [layers]="primary()?.derived?.layers" />
+        </header>
+
+        <div class="sheet">
+          <nav class="tabs" role="tablist">
+            @for (t of tabs; track t.id) {
+              <button
+                role="tab"
+                [class.on]="tab() === t.id"
+                [attr.aria-selected]="tab() === t.id"
+                (click)="tab.set(t.id)"
+              >
+                {{ t.label }}
+              </button>
+            }
+          </nav>
+
+          @switch (tab()) {
+            @case ('about') {
+              <section class="pane">
+                @if (model.summary; as summary) {
+                  <p class="overview">{{ summary.overview }}</p>
+
+                  <div class="sections">
+                    @for (section of summarySections(summary); track section.label) {
+                      <div class="sum-section">
+                        <h3>{{ section.label }}</h3>
+                        @if (section.items.length) {
+                          <ul>
+                            @for (item of section.items; track item) {
+                              <li>{{ item }}</li>
+                            }
+                          </ul>
+                        } @else {
+                          <!-- Kept rather than hidden: a thin summary must not
+                               read like a complete one. -->
+                          <p class="none">none stated</p>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  <p class="prov">
+                    generated by <code>{{ summary.generated_by }}</code> on
+                    {{ summary.generated_on }}
+                    @if (summary.sources?.length) {
+                      · sources
+                      @for (url of summary.sources; track url) {
+                        <a [href]="url" target="_blank" rel="noopener noreferrer">{{
+                          sourceHost(url)
+                        }}</a>
+                      }
+                    } @else {
+                      · no web sources; written from the card alone
+                    }
+                  </p>
+
+                  <button class="ghost" (click)="summarise(model.model_id)" [disabled]="busy()">
+                    {{ summarising() ? 'Rewriting…' : 'Regenerate' }}
+                  </button>
+                } @else if (!summarising()) {
+                  <div class="cta">
+                    <p>Nobody has summarised this model yet.</p>
+                    <button (click)="summarise(model.model_id)">Generate summary</button>
+                  </div>
+                }
+                @if (summarising()) {
+                  <div class="bar"><span></span></div>
+                  <p class="hint">Searching the web and writing. About a minute.</p>
+                }
+              </section>
+            }
+
+            @case ('spec') {
+              @for (
+                checkpoint of model.checkpoints ?? [];
+                track checkpoint.repo + checkpoint.quantization
+              ) {
+                <section class="pane">
+                  <div class="ck-head">
+                    <span class="mono repo">{{ checkpoint.repo }}</span>
+                    @if (checkpoint.quantization) {
+                      <span class="tag mono">{{ checkpoint.quantization }}</span>
+                    }
+                    <span class="rev mono" title="the card revision this was built from (R1.3)">
+                      &#64;{{ checkpoint.card_revision?.slice(0, 7) ?? 'unknown' }}
+                    </span>
+                  </div>
+                  <p class="hint">computed from config.json — never guessed</p>
+
+                  <div class="grid">
+                    @for (field of derivedFields(checkpoint); track field.label) {
+                      <div class="field">
+                        <span class="key">{{ field.label }}</span>
+                        <span class="val mono" [class.null]="field.value === null">
+                          {{ field.value ?? 'unavailable' }}
+                        </span>
+                        <app-state-badge [state]="field.state" />
+                        @if (field.unreliable) {
+                          <p class="why">{{ field.unreliable }}</p>
+                        }
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
+            }
+
+            @case ('prose') {
+              @for (
+                checkpoint of model.checkpoints ?? [];
+                track checkpoint.repo + checkpoint.quantization
+              ) {
+                <section class="pane">
+                  <p class="hint">copied from the card — never generated</p>
+                  @if (checkpoint.extracted; as extracted) {
+                    <p class="prov">
+                      extracted by <code>{{ extracted.model }}</code> on
+                      {{ extracted.extracted_on }} from card
+                      <code>{{ extracted.card_revision.slice(0, 7) }}</code>
+                    </p>
+                    <div class="grid">
+                      @for (field of extractedFields(checkpoint); track field.label) {
+                        <div class="field">
+                          <span class="key">{{ field.label }}</span>
+                          <span class="val" [class.null]="field.value === null">
+                            {{ field.value ?? 'unavailable' }}
+                          </span>
+                          <app-state-badge [state]="field.state" />
+                          @if (field.source) {
+                            <p class="why">§ {{ field.source }}</p>
+                          }
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <div class="cta">
+                      <p>Nobody has read this card yet.</p>
+                      <button (click)="extract(model.model_id)" [disabled]="busy()">
+                        {{ extracting() ? 'Reading the card…' : 'Extract with the LLM' }}
+                      </button>
+                    </div>
+                    @if (extracting()) {
+                      <div class="bar"><span></span></div>
+                      <p class="hint">
+                        The whole card goes to the model, which returns quotes. Only quotes we can
+                        find in the card are kept. About a minute.
+                      </p>
+                    }
+                  }
+                </section>
+              }
+            }
+
+            @case ('measured') {
+              @for (
+                checkpoint of model.checkpoints ?? [];
+                track checkpoint.repo + checkpoint.quantization
+              ) {
+                <section class="pane">
+                  <p class="hint">nothing here comes from a vendor</p>
+                  @if (checkpoint.measured?.length) {
+                    @for (entry of checkpoint.measured; track $index) {
+                      <p class="mono">
+                        {{ entry.hardware }} · {{ entry.serving }} — TTFT
+                        {{ entry.ttft_ms ?? '—' }} ms
+                      </p>
+                    }
+                  } @else {
+                    <div class="field wide">
+                      <span class="key">latency, throughput, peak VRAM</span>
+                      <span class="val null">unavailable</span>
+                      <app-state-badge state="unmeasured" />
+                      <p class="why">
+                        Properties of your deployment, not the model. No vendor publishes them.
+                      </p>
+                    </div>
+                  }
+                </section>
+              }
+            }
           }
         </div>
-
-        @if (model.summary; as summary) {
-          <p class="overview">{{ summary.overview }}</p>
-
-          <div class="sections">
-            @for (section of summarySections(summary); track section.label) {
-              <div class="sum-section">
-                <h3>{{ section.label }}</h3>
-                @if (section.items.length) {
-                  <ul>
-                    @for (item of section.items; track item) {
-                      <li>{{ item }}</li>
-                    }
-                  </ul>
-                } @else {
-                  <!-- Kept rather than hidden: a thin summary must not read like
-                       a complete one. -->
-                  <p class="none">none stated</p>
-                }
-              </div>
-            }
-          </div>
-
-          <p class="prov">
-            generated by <code>{{ summary.generated_by }}</code> on {{ summary.generated_on }}
-            @if (summary.sources?.length) {
-              · sources
-              @for (url of summary.sources; track url) {
-                <a [href]="url" target="_blank" rel="noopener noreferrer">{{ sourceHost(url) }}</a>
-              }
-            } @else {
-              · no web sources; written from the card alone
-            }
-          </p>
-        } @else if (!summarising()) {
-          <div class="cta">
-            <p>Nobody has summarised this model yet.</p>
-            <button (click)="summarise(model.model_id)">Generate summary</button>
-          </div>
-        }
-
-        @if (summarising()) {
-          <div class="bar"><span></span></div>
-          <p class="note">Searching the web and writing. About a minute.</p>
-        }
-      </section>
-
-      @for (
-        checkpoint of model.checkpoints ?? [];
-        track checkpoint.repo + checkpoint.quantization
-      ) {
-        <section class="checkpoint">
-          <div class="ck-head">
-            <span class="mono repo">{{ checkpoint.repo }}</span>
-            @if (checkpoint.quantization) {
-              <span class="tag mono">{{ checkpoint.quantization }}</span>
-            }
-            <span class="rev mono" title="the card revision this was built from (R1.3)">
-              @{{ checkpoint.card_revision?.slice(0, 7) ?? 'unknown' }}
-            </span>
-          </div>
-
-          <h2>Derived <span class="note">computed from config.json — never guessed</span></h2>
-          <div class="grid">
-            @for (field of derivedFields(checkpoint); track field.label) {
-              <div class="field">
-                <span class="key">{{ field.label }}</span>
-                <span class="val mono" [class.null]="field.value === null">
-                  {{ field.value ?? 'unavailable' }}
-                </span>
-                <app-state-badge [state]="field.state" />
-                @if (field.unreliable) {
-                  <p class="why">{{ field.unreliable }}</p>
-                }
-              </div>
-            }
-          </div>
-
-          <h2>Prose <span class="note">copied from the card — never generated</span></h2>
-          @if (checkpoint.extracted; as extracted) {
-            <p class="prov">
-              extracted by <code>{{ extracted.model }}</code> on {{ extracted.extracted_on }} from
-              card <code>{{ extracted.card_revision.slice(0, 7) }}</code>
-            </p>
-            <div class="grid">
-              @for (field of extractedFields(checkpoint); track field.label) {
-                <div class="field">
-                  <span class="key">{{ field.label }}</span>
-                  <span class="val" [class.null]="field.value === null">
-                    {{ field.value ?? 'unavailable' }}
-                  </span>
-                  <app-state-badge [state]="field.state" />
-                  @if (field.source) {
-                    <p class="why">§ {{ field.source }}</p>
-                  }
-                </div>
-              }
-            </div>
-          } @else {
-            <div class="cta">
-              <p>Nobody has read this card yet.</p>
-              <button (click)="extract(model.model_id)" [disabled]="extracting()">
-                {{ extracting() ? 'Reading the card…' : 'Extract with the LLM' }}
-              </button>
-            </div>
-            @if (extracting()) {
-              <div class="bar"><span></span></div>
-              <p class="note">
-                The whole card goes to the model, which returns quotes. Only quotes we can find in
-                the card are kept. About a minute.
-              </p>
-            }
-          }
-
-          <h2>Measured <span class="note">nothing here comes from a vendor</span></h2>
-          @if (checkpoint.measured?.length) {
-            @for (entry of checkpoint.measured; track $index) {
-              <p class="mono">
-                {{ entry.hardware }} · {{ entry.serving }} — TTFT {{ entry.ttft_ms ?? '—' }} ms
-              </p>
-            }
-          } @else {
-            <div class="field wide">
-              <span class="key">latency, throughput, peak VRAM</span>
-              <span class="val null">unavailable</span>
-              <app-state-badge state="unmeasured" />
-              <p class="why">
-                Properties of your deployment, not the model. No vendor publishes them.
-              </p>
-            </div>
-          }
-        </section>
-      }
+      </article>
     } @else if (!error()) {
       <div class="bar"><span></span></div>
     }
   `,
   styles: `
-    .back {
-      color: var(--fg-muted);
-      font-size: 0.85rem;
+    :host(.page) {
+      max-width: 60rem;
+      padding-top: var(--space-4);
     }
-    .back:hover {
-      color: var(--fg);
+
+    /* The tone is set once on the article and everything coloured reads it from
+       here, so a hybrid and a transformer differ in exactly one place. */
+    .dex[data-tone='transformer'] {
+      --tone: var(--type-transformer);
     }
-    .head {
-      margin: var(--space-4) 0 var(--space-6);
+    .dex[data-tone='hybrid'] {
+      --tone: var(--type-hybrid);
     }
-    h1 {
-      margin: 0.15rem 0 0;
-      font-size: 1.45rem;
-      font-weight: 600;
-      overflow-wrap: anywhere;
+    .dex[data-tone='recurrent'] {
+      --tone: var(--type-recurrent);
     }
-    .checkpoint {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: var(--space-6);
-      margin-bottom: var(--space-4);
+    .dex[data-tone='unknown'] {
+      --tone: var(--type-unknown);
     }
-    .ck-head {
+
+    .hero {
+      background: var(--tone);
+      /* The soft highlight the reference puts behind its creature. */
+      background-image: radial-gradient(
+        120% 80% at 80% 0%,
+        rgb(255 255 255 / 0.18),
+        transparent 60%
+      );
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: var(--space-4) var(--space-6) var(--space-6);
+      color: #fff;
+    }
+    .hero-top {
       display: flex;
       align-items: center;
       gap: var(--space-3);
-      flex-wrap: wrap;
-      padding-bottom: var(--space-4);
-      border-bottom: 1px solid var(--border);
-    }
-    .repo {
-      font-size: 0.9rem;
-      overflow-wrap: anywhere;
-    }
-    .tag {
-      font-size: 0.7rem;
-      padding: 0.1rem 0.4rem;
-      border-radius: var(--radius-sm);
-      background: var(--bg-sunken);
-      border: 1px solid var(--border-strong);
-    }
-    .rev {
-      margin-left: auto;
-      font-size: 0.75rem;
-      color: var(--fg-faint);
-      cursor: help;
-    }
-    h2 {
-      margin: var(--space-6) 0 var(--space-3);
       font-size: 0.8rem;
-      font-weight: 600;
+    }
+    .back {
+      color: #fff;
+      font-size: 1.1rem;
+      line-height: 1;
+      opacity: 0.85;
+    }
+    .back:hover {
+      opacity: 1;
+    }
+    .hero .vendor {
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: var(--fg-muted);
+      opacity: 0.85;
+      color: #fff;
     }
-    .note {
-      font-weight: 400;
-      text-transform: none;
-      letter-spacing: 0;
-      color: var(--fg-faint);
-      margin-left: var(--space-2);
-      font-size: 0.78rem;
+    .params {
+      margin-left: auto;
+      font-weight: 500;
+      opacity: 0.9;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
-      gap: var(--space-2);
-    }
-    .field {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0.15rem var(--space-2);
-      align-items: center;
-      padding: var(--space-3);
-      background: var(--bg-sunken);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-    }
-    .field.wide {
-      grid-column: 1 / -1;
-    }
-    .key {
-      grid-column: 1 / -1;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--fg-faint);
-    }
-    .val {
-      font-size: 0.92rem;
+    h1 {
+      margin: var(--space-2) 0 var(--space-3);
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
       overflow-wrap: anywhere;
     }
-    .val.null {
-      color: var(--fg-faint);
-      font-style: italic;
-    }
-    .why {
-      grid-column: 1 / -1;
-      margin: 0.2rem 0 0;
-      font-size: 0.75rem;
-      color: var(--fg-muted);
-    }
-    .prov {
-      margin: 0 0 var(--space-3);
-      font-size: 0.78rem;
-      color: var(--fg-muted);
-    }
-    code {
-      background: var(--bg-sunken);
-      padding: 0.05rem 0.3rem;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-    }
-    .summary {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: var(--space-6);
-      margin-bottom: var(--space-4);
-    }
-    .sum-head {
+    .pills {
       display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: var(--space-4);
       flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-bottom: var(--space-6);
     }
-    .sum-head h2 {
-      margin-top: 0;
+    .pill {
+      background: rgb(255 255 255 / 0.22);
+      border: 1px solid rgb(255 255 255 / 0.25);
+      border-radius: 999px;
+      padding: 0.15rem 0.7rem;
+      font-size: 0.75rem;
+      font-weight: 500;
     }
+
+    /* The light sheet. Only this surface is light, so its tokens are scoped
+       here rather than added to the global theme. */
+    .sheet {
+      background: var(--sheet);
+      color: var(--sheet-fg);
+      border-radius: var(--radius);
+      margin-top: calc(var(--space-4) * -1);
+      padding: var(--space-2) var(--space-6) var(--space-6);
+      position: relative;
+    }
+    .tabs {
+      display: flex;
+      gap: var(--space-4);
+      border-bottom: 1px solid var(--sheet-border);
+      margin-bottom: var(--space-5, 1.25rem);
+      overflow-x: auto;
+    }
+    .tabs button {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      color: var(--sheet-faint);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: var(--space-4) 0 var(--space-3);
+      white-space: nowrap;
+    }
+    .tabs button:hover {
+      color: var(--sheet-fg);
+    }
+    .tabs button.on {
+      color: var(--tone);
+      border-bottom-color: var(--tone);
+    }
+    .pane {
+      padding-top: var(--space-4);
+    }
+    .pane + .pane {
+      border-top: 1px solid var(--sheet-border);
+    }
+
     .overview {
-      margin: 0 0 var(--space-5);
+      margin: 0 0 var(--space-6);
       font-size: 1rem;
-      line-height: 1.55;
+      line-height: 1.6;
       max-width: 62ch;
     }
     .sections {
       display: grid;
-      /* Wide enough that four sections land as 2x2 rather than 3 and an orphan. */
-      grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
       gap: var(--space-4);
     }
     .sum-section {
       padding: var(--space-4);
-      background: var(--bg-sunken);
-      border: 1px solid var(--border);
+      background: var(--sheet-sunken);
       border-radius: var(--radius-sm);
     }
     .sum-section h3 {
       margin: 0 0 var(--space-2);
       font-size: 0.7rem;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--fg-faint);
+      color: var(--sheet-faint);
     }
     .sum-section ul {
       margin: 0;
@@ -362,23 +407,95 @@ import { sourceHost, summarySections } from './summary';
       line-height: 1.5;
       margin-bottom: 0.3rem;
     }
+
+    .ck-head {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+    .repo {
+      font-size: 0.9rem;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+    .tag {
+      font-size: 0.7rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: var(--radius-sm);
+      background: var(--sheet-sunken);
+      border: 1px solid var(--sheet-border);
+    }
+    .rev {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: var(--sheet-faint);
+      cursor: help;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+      gap: var(--space-2);
+    }
+    .field {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.15rem var(--space-2);
+      align-items: center;
+      padding: var(--space-3);
+      background: var(--sheet-sunken);
+      border-radius: var(--radius-sm);
+    }
+    .field.wide {
+      grid-column: 1 / -1;
+    }
+    .key {
+      grid-column: 1 / -1;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sheet-faint);
+    }
+    .val {
+      font-size: 0.92rem;
+      overflow-wrap: anywhere;
+    }
+    .val.null {
+      color: var(--sheet-faint);
+      font-style: italic;
+    }
+    .why {
+      grid-column: 1 / -1;
+      margin: 0.2rem 0 0;
+      font-size: 0.75rem;
+      color: var(--sheet-muted);
+    }
+    .hint,
+    .prov,
+    .none {
+      font-size: 0.78rem;
+      color: var(--sheet-muted);
+    }
+    .hint {
+      margin: 0 0 var(--space-3);
+    }
+    .prov {
+      margin: var(--space-4) 0 var(--space-3);
+    }
     .none {
       margin: 0;
-      font-size: 0.85rem;
       font-style: italic;
-      color: var(--fg-faint);
+    }
+    code {
+      background: var(--sheet-sunken);
+      padding: 0.05rem 0.3rem;
+      border-radius: 4px;
     }
     .prov a {
       margin-left: var(--space-2);
-      color: var(--fg-muted);
+      color: var(--tone);
       text-decoration: underline;
-    }
-    .prov a:hover {
-      color: var(--fg);
-    }
-    button.ghost {
-      font-size: 0.75rem;
-      padding: 0.25rem 0.6rem;
     }
     .cta {
       display: flex;
@@ -386,9 +503,30 @@ import { sourceHost, summarySections } from './summary';
       align-items: center;
       flex-wrap: wrap;
       padding: var(--space-4);
-      border: 1px dashed var(--border-strong);
+      border: 1px dashed var(--sheet-border);
       border-radius: var(--radius-sm);
-      color: var(--fg-muted);
+      color: var(--sheet-muted);
+    }
+    .pane button {
+      background: var(--tone);
+      color: #fff;
+      border: none;
+    }
+    .pane button:hover:not(:disabled) {
+      filter: brightness(1.08);
+    }
+    button.ghost {
+      margin-top: var(--space-4);
+      background: none;
+      border: 1px solid var(--sheet-border);
+      color: var(--sheet-muted);
+      font-size: 0.78rem;
+      padding: 0.3rem 0.7rem;
+    }
+    button.ghost:hover:not(:disabled) {
+      filter: none;
+      color: var(--sheet-fg);
+      border-color: var(--sheet-faint);
     }
   `,
 })
@@ -404,7 +542,15 @@ export class ModelDetail {
   protected readonly errorLabel = signal('Extraction failed.');
   protected readonly extracting = signal(false);
   protected readonly summarising = signal(false);
+  protected readonly tab = signal<Tab>('about');
   protected readonly modelId = computed(() => `${this.vendor()}/${this.name()}`);
+
+  protected readonly tabs: { id: Tab; label: string }[] = [
+    { id: 'about', label: 'About' },
+    { id: 'spec', label: 'Spec' },
+    { id: 'prose', label: 'Prose' },
+    { id: 'measured', label: 'Measured' },
+  ];
 
   constructor() {
     queueMicrotask(() => this.load());
@@ -415,6 +561,24 @@ export class ModelDetail {
   protected readonly extractedFields = extractedFields;
   protected readonly summarySections = summarySections;
   protected readonly sourceHost = sourceHost;
+
+  /**
+   * The checkpoint the hero describes.
+   *
+   * The first one, because architecture and size are properties of the model
+   * rather than of a quantization of it. Where they genuinely differ, the Spec
+   * tab shows every checkpoint separately.
+   */
+  protected readonly primary = computed<Checkpoint | undefined>(() => this.doc()?.checkpoints?.[0]);
+
+  protected readonly pills = computed(() =>
+    architecturePills(this.primary()?.derived?.architecture_class),
+  );
+  protected readonly tone = computed(() =>
+    architectureTone(this.primary()?.derived?.architecture_class),
+  );
+  protected readonly params = computed(() => formatCount(this.primary()?.derived?.params?.total));
+  protected readonly busy = computed(() => this.summarising() || this.extracting());
 
   protected load(): void {
     this.api.getModelModelsModelIdGet(this.modelId()).subscribe({

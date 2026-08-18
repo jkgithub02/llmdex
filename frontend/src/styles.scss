@@ -30,6 +30,25 @@
   --state-absent: #eab308;
   --state-unmeasured: #fb7185;
 
+  /* Architecture tones. One per layout axis of `architecture_class`, so a
+     hybrid never wears the same colour as a transformer. Routing (dense vs MoE)
+     deliberately does NOT change the colour: they are the same shape of model
+     to look at. `unknown` has its own tone because "we could not classify this"
+     is a state worth seeing across a whole grid at once. */
+  --type-transformer: #3f6ff5;
+  --type-hybrid: #0d9488;
+  --type-recurrent: #ea7317;
+  --type-unknown: #64748b;
+
+  /* The light sheet the detail page floats over its coloured hero. Scoped
+     tokens rather than a second theme: only this one surface is light. */
+  --sheet: #ffffff;
+  --sheet-sunken: #f1f5f9;
+  --sheet-fg: #0f172a;
+  --sheet-muted: #52627d;
+  --sheet-faint: #8394ad;
+  --sheet-border: #e2e8f0;
+
   /* Dense scale: this is a dashboard, not a landing page. */
   --space-1: 0.25rem;
   --space-2: 0.5rem;

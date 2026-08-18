@@ -6,6 +6,8 @@ import { LlmdexService } from '../api/llmdex.service';
 import type { ModelDoc } from '../api/model/modelDoc';
 import { errorMessage, formatBytes, formatCount, routeFor } from '../format';
 import { StateBadge } from '../state-badge';
+import { architecturePills, architectureTone } from './architecture';
+import { LayerStrip } from './layer-strip';
 
 /**
  * R6.2 - everything in the vault, plus the box that fills it.
@@ -16,15 +18,13 @@ import { StateBadge } from '../state-badge';
  */
 @Component({
   selector: 'app-models-page',
-  imports: [FormsModule, RouterLink, StateBadge],
+  imports: [FormsModule, RouterLink, StateBadge, LayerStrip],
   host: { class: 'page' },
   template: `
     <header class="head">
       <div>
         <h1>Models</h1>
-        <p class="sub">
-          {{ count() }} in the vault · every field carries how it came to be known
-        </p>
+        <p class="sub">{{ count() }} in the vault · every field carries how it came to be known</p>
       </div>
     </header>
 
@@ -58,14 +58,24 @@ import { StateBadge } from '../state-badge';
           <p class="sub">Paste a model ID above. Ingest reads config.json and the file listing.</p>
         </div>
       } @else {
-        <ul class="rows">
+        <ul class="dex-grid">
           @for (row of rows; track row.model_id) {
             <li>
-              <a [routerLink]="route(row.model_id)" class="row">
-                <div class="identity">
+              <a [routerLink]="route(row.model_id)" class="card" [attr.data-tone]="tone(row)">
+                <div class="card-top">
                   <span class="vendor">{{ vendor(row.model_id) }}</span>
-                  <span class="name mono">{{ name(row.model_id) }}</span>
+                  <app-state-badge [state]="proseState(row)" />
                 </div>
+
+                <h2 class="mono">{{ name(row.model_id) }}</h2>
+
+                <div class="pills">
+                  @for (pill of pills(row); track pill) {
+                    <span class="pill">{{ pill }}</span>
+                  }
+                </div>
+
+                <app-layer-strip [layers]="row.checkpoints?.[0]?.derived?.layers" />
 
                 <dl class="facts">
                   <div>
@@ -82,13 +92,7 @@ import { StateBadge } from '../state-badge';
                       {{ vram(row) ?? 'withheld' }}
                     </dd>
                   </div>
-                  <div>
-                    <dt>checkpoints</dt>
-                    <dd class="mono">{{ row.checkpoints?.length ?? 0 }}</dd>
-                  </div>
                 </dl>
-
-                <app-state-badge [state]="proseState(row)" />
               </a>
             </li>
           }
@@ -136,68 +140,110 @@ import { StateBadge } from '../state-badge';
     input:hover:not(:disabled) {
       border-color: var(--border-strong);
     }
-    .row {
+    .dex-grid {
+      list-style: none;
+      margin: 0;
+      padding: 0;
       display: grid;
-      grid-template-columns: minmax(12rem, 1fr) auto auto;
+      grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
       gap: var(--space-4);
-      align-items: center;
-      padding: var(--space-3) var(--space-4);
-      background: var(--surface);
-      border: 1px solid var(--border);
+    }
+    /* One tone per architecture layout, same mapping the detail hero uses, so a
+       model is the same colour wherever you meet it. */
+    .card[data-tone='transformer'] {
+      --tone: var(--type-transformer);
+    }
+    .card[data-tone='hybrid'] {
+      --tone: var(--type-hybrid);
+    }
+    .card[data-tone='recurrent'] {
+      --tone: var(--type-recurrent);
+    }
+    .card[data-tone='unknown'] {
+      --tone: var(--type-unknown);
+    }
+    .card {
+      display: block;
+      background: var(--tone);
+      background-image: radial-gradient(
+        120% 80% at 85% 0%,
+        rgb(255 255 255 / 0.18),
+        transparent 60%
+      );
       border-radius: var(--radius);
+      padding: var(--space-4);
+      color: #fff;
       transition:
-        border-color 180ms ease,
-        background 180ms ease,
-        transform 120ms ease;
+        transform 140ms ease,
+        box-shadow 140ms ease;
     }
-    .row:hover {
-      border-color: var(--border-strong);
-      background: var(--bg-raised);
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgb(0 0 0 / 0.35);
     }
-    .row:active {
-      transform: scale(0.995);
+    .card:active {
+      transform: translateY(0);
     }
-    .identity {
+    .card-top {
       display: flex;
-      flex-direction: column;
-      min-width: 0;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
     }
-    .name {
-      font-size: 0.95rem;
-      font-weight: 500;
+    .card .vendor {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgb(255 255 255 / 0.85);
+    }
+    .card h2 {
+      margin: var(--space-1) 0 var(--space-3);
+      font-size: 1.05rem;
+      font-weight: 700;
       overflow-wrap: anywhere;
+    }
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+    }
+    .pill {
+      background: rgb(255 255 255 / 0.22);
+      border: 1px solid rgb(255 255 255 / 0.25);
+      border-radius: 999px;
+      padding: 0.1rem 0.6rem;
+      font-size: 0.7rem;
+      font-weight: 500;
     }
     .facts {
       display: flex;
-      gap: var(--space-6);
-      margin: 0;
+      gap: var(--space-4);
+      margin: var(--space-4) 0 0;
+      flex-wrap: wrap;
     }
     .facts div {
       display: flex;
       flex-direction: column;
     }
     dt {
-      font-size: 0.65rem;
+      font-size: 0.62rem;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: var(--fg-faint);
+      color: rgb(255 255 255 / 0.7);
     }
     dd {
       margin: 0;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 500;
     }
     .withheld {
-      color: var(--state-absent);
+      color: #ffe9a8;
       cursor: help;
     }
     @media (max-width: 760px) {
-      .row {
+      .dex-grid {
         grid-template-columns: 1fr;
-        gap: var(--space-3);
-      }
-      .facts {
-        flex-wrap: wrap;
-        gap: var(--space-4);
       }
     }
   `,
@@ -216,6 +262,14 @@ export class ModelsPage {
   }
 
   protected route = routeFor;
+
+  protected pills(doc: ModelDoc): string[] {
+    return architecturePills(doc.checkpoints?.[0]?.derived?.architecture_class);
+  }
+
+  protected tone(doc: ModelDoc): string {
+    return architectureTone(doc.checkpoints?.[0]?.derived?.architecture_class);
+  }
 
   protected vendor(modelId: string): string {
     return modelId.split('/')[0];
