@@ -5,11 +5,13 @@ drive it through a stub transport rather than a live server: what matters here i
 the request we build and which responses we refuse.
 """
 
+import json
+
 import httpx
 import pytest
 
 from backend.core.config import LLMNotConfigured, LLMSettings, llm_settings
-from backend.extraction.llm import LLMError, complete
+from backend.extraction.llm import LLMError, complete, stream_json
 
 SCHEMA = {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"]}
 SETTINGS = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model", api_key="k")
@@ -93,3 +95,86 @@ def test_an_http_error_names_the_status():
 
     with _client(handler) as client, pytest.raises(LLMError, match="400"):
         complete([{"role": "user", "content": "hi"}], SCHEMA, settings=SETTINGS, client=client)
+
+
+def _sse(*chunks: dict) -> bytes:
+    """The wire format the endpoint speaks: one `data:` line per chunk."""
+    body = "".join(f"data: {json.dumps(chunk)}\n\n" for chunk in chunks)
+    return (body + "data: [DONE]\n\n").encode()
+
+
+def _delta(**fields) -> dict:
+    return {"choices": [{"index": 0, "delta": fields}]}
+
+
+def test_streaming_separates_reasoning_from_the_answer():
+    """The endpoint sends `reasoning` deltas beside `content` ones. The answer is
+    built from content alone; reasoning is for watching, never for parsing."""
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert httpx.Response(200, content=request.content).json()["stream"] is True
+        return httpx.Response(
+            200,
+            content=_sse(
+                _delta(reasoning="Checking "),
+                _delta(reasoning="the card."),
+                _delta(content='{"ok":'),
+                _delta(content=" true}"),
+            ),
+        )
+
+    with _client(handler) as client:
+        result = stream_json(
+            [{"role": "user", "content": "hi"}],
+            SCHEMA,
+            settings=SETTINGS,
+            client=client,
+            on_reasoning=seen.append,
+        )
+
+    assert result == {"ok": True}
+    assert "".join(seen) == "Checking the card."
+
+
+def test_streaming_works_without_any_reasoning_deltas():
+    """A model that does not expose reasoning must still answer (spec: degraded,
+    not broken)."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=_sse(_delta(content='{"ok": true}')))
+
+    with _client(handler) as client:
+        assert stream_json(
+            [{"role": "user", "content": "hi"}], SCHEMA, settings=SETTINGS, client=client
+        ) == {"ok": True}
+
+
+def test_a_truncated_stream_is_an_error_not_a_partial_result():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=_sse(
+                _delta(content='{"ok": tr'),
+                {"choices": [{"index": 0, "delta": {}, "finish_reason": "length"}]},
+            ),
+        )
+
+    with _client(handler) as client, pytest.raises(LLMError, match="truncated"):
+        stream_json([{"role": "user", "content": "hi"}], SCHEMA, settings=SETTINGS, client=client)
+
+
+def test_a_streamed_non_json_answer_is_never_repaired():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=_sse(_delta(content="sorry, no")))
+
+    with _client(handler) as client, pytest.raises(LLMError, match="not valid JSON"):
+        stream_json([{"role": "user", "content": "hi"}], SCHEMA, settings=SETTINGS, client=client)
+
+
+def test_a_streaming_http_error_names_the_status():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json={"error": "slow down"})
+
+    with _client(handler) as client, pytest.raises(LLMError, match="429"):
+        stream_json([{"role": "user", "content": "hi"}], SCHEMA, settings=SETTINGS, client=client)
