@@ -33,20 +33,36 @@ def run(
     tavily: TavilySettings,
     store: Store,
     emit: Callable[[AgentEvent], None],
+    card_revision: str | None = None,
 ) -> str:
-    """Locate, verify, store. Returns the name of the block it wrote."""
+    """Locate, verify, store. Returns the name of the block it wrote.
+
+    ``card_revision`` is the revision of the card in ``card``, passed in rather
+    than read off the checkpoint: the spans below are offsets into this text,
+    and stamping them with the revision from an earlier ingest would describe
+    them against a card they were never found in (R1.3, R3.3).
+    """
     checkpoint = doc.checkpoints[0]
 
     emit(AgentEvent(agent=NAME, kind="phase", phase=f"reading a {len(card)} character card"))
-    answer = stream_json(
-        [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": card},
-        ],
-        RESPONSE_SCHEMA,
-        settings=llm,
-        on_reasoning=lambda text: emit(AgentEvent(agent=NAME, kind="reasoning", text=text)),
-    )
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": card},
+    ]
+
+    def on_reasoning(text: str) -> None:
+        emit(AgentEvent(agent=NAME, kind="reasoning", text=text))
+
+    answer = stream_json(messages, RESPONSE_SCHEMA, settings=llm, on_reasoning=on_reasoning)
+    # The same retry backend.extraction.extract carries, and for the same
+    # measured reason: of eight identical calls for one card, seven located both
+    # its serving engines and one returned {}. An empty answer stored as "the
+    # card states none of this" is indistinguishable from a card that really
+    # states none of it (R3.2). Two agreeing empties are believed -- a card with
+    # nothing to find is the common case, and a third call relearns it.
+    if not any(answer.get(field) for field in ("quantization", "serving", "benchmarks")):
+        emit(AgentEvent(agent=NAME, kind="phase", phase="nothing came back; asking again"))
+        answer = stream_json(messages, RESPONSE_SCHEMA, settings=llm, on_reasoning=on_reasoning)
 
     emit(AgentEvent(agent=NAME, kind="phase", phase="checking every value against the card"))
     grounded = GroundedCard(card)
@@ -68,7 +84,7 @@ def run(
         repo=checkpoint.repo,
         quantization=checkpoint.quantization,
         extracted=Extracted(
-            card_revision=checkpoint.card_revision or "",
+            card_revision=card_revision or checkpoint.card_revision or "",
             extracted_on=datetime.now(tz=UTC).date().isoformat(),
             model=llm.model,
             quantization=quantization,

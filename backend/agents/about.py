@@ -27,8 +27,14 @@ def run(
     tavily: TavilySettings,
     store: Store,
     emit: Callable[[AgentEvent], None],
+    card_revision: str | None = None,
 ) -> str:
-    """Search, write, store. Returns the name of the block it wrote."""
+    """Search, write, store. Returns the name of the block it wrote.
+
+    ``card_revision`` is accepted and unused so every agent shares one
+    signature: a summary describes the model rather than one revision of its
+    card, so there is nothing here for it to stamp.
+    """
     derived = doc.checkpoints[0].derived if doc.checkpoints else None
 
     emit(AgentEvent(agent=NAME, kind="phase", phase="searching"))

@@ -56,14 +56,16 @@ def stream_agents(
         raise HTTPException(status_code=422, detail=f"no agent named {', '.join(unknown)}")
 
     try:
-        card, _ = fetch_card(model_id)
+        card, revision = fetch_card(model_id)
     except IngestError as exc:
         raise http_error(exc) from exc
     if not card:
         raise HTTPException(status_code=422, detail=f"{model_id} has no model card to read")
 
     def frames() -> Iterator[str]:
-        for event in run_agents(names, doc, card, llm=llm, tavily=tavily, store=store):
+        for event in run_agents(
+            names, doc, card, llm=llm, tavily=tavily, store=store, card_revision=revision
+        ):
             yield event.to_sse()
         yield AgentEvent(agent="", kind="phase", phase="finished").to_sse()
 

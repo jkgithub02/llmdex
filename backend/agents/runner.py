@@ -32,6 +32,7 @@ def run_agents(
     llm: LLMSettings,
     tavily: TavilySettings,
     store: Store,
+    card_revision: str | None = None,
 ) -> Iterator[AgentEvent]:
     """Yield every agent's events as they happen, in arrival order.
 
@@ -48,7 +49,15 @@ def run_agents(
             if agent is None:
                 raise KeyError(f"no agent named {name!r}")
             emit(AgentEvent(agent=name, kind="phase", phase="started"))
-            wrote = agent(doc, card, llm=llm, tavily=tavily, store=store, emit=emit)
+            wrote = agent(
+                doc,
+                card,
+                llm=llm,
+                tavily=tavily,
+                store=store,
+                emit=emit,
+                card_revision=card_revision,
+            )
             emit(AgentEvent(agent=name, kind="phase", phase="done", detail=wrote))
         except Exception as exc:  # noqa: BLE001 - reported to the reader, not swallowed
             emit(AgentEvent(agent=name, kind="error", detail=str(exc)))

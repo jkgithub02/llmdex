@@ -16,7 +16,7 @@ def _drain(names, agents, monkeypatch):
 
 
 def test_every_agent_reports_started_and_done(monkeypatch):
-    def agent(doc, card, *, llm, tavily, store, emit):
+    def agent(doc, card, *, llm, tavily, store, emit, card_revision=None):
         emit(AgentEvent(agent="x", kind="reasoning", text="hmm"))
         return "block"
 
@@ -28,10 +28,10 @@ def test_every_agent_reports_started_and_done(monkeypatch):
 
 
 def test_a_failing_agent_does_not_stop_the_others(monkeypatch):
-    def good(doc, card, *, llm, tavily, store, emit):
+    def good(doc, card, *, llm, tavily, store, emit, card_revision=None):
         return "block"
 
-    def bad(doc, card, *, llm, tavily, store, emit):
+    def bad(doc, card, *, llm, tavily, store, emit, card_revision=None):
         raise RuntimeError("endpoint unreachable")
 
     events = _drain(["good", "bad"], {"good": good, "bad": bad}, monkeypatch)
@@ -46,7 +46,7 @@ def test_agents_run_concurrently_not_one_after_another(monkeypatch):
     """Two agents that each sleep must finish in about one sleep, not two."""
     started = threading.Barrier(2, timeout=5)
 
-    def agent(doc, card, *, llm, tavily, store, emit):
+    def agent(doc, card, *, llm, tavily, store, emit, card_revision=None):
         started.wait()  # raises BrokenBarrierError if the other never starts
         return "block"
 

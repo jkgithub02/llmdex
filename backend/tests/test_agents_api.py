@@ -45,7 +45,7 @@ def client(vault):
 
 @pytest.fixture
 def fake_agent(monkeypatch):
-    def agent(doc, card, *, llm, tavily, store, emit):
+    def agent(doc, card, *, llm, tavily, store, emit, card_revision=None):
         emit(AgentEvent(agent="about", kind="reasoning", text="line one\nline two"))
         return "summary"
 

@@ -97,3 +97,56 @@ def test_the_prose_agent_still_grounds_every_value(store, monkeypatch):
     assert extracted.quantization.method is None, "a value not in the card must not be stored"
     assert [r.proposed for r in extracted.rejected] == ["invented"]
     assert any(e.kind == "reasoning" for e in events)
+
+
+def test_the_prose_agent_stamps_the_card_it_was_actually_given(store, monkeypatch):
+    """R1.3 - the spans are offsets into the card in hand. Stamping them with the
+    revision from an earlier ingest would describe them against a card they were
+    never found in, and the UI prints that as the revision it read."""
+    monkeypatch.setattr(
+        "backend.agents.prose.stream_json",
+        lambda *a, **kw: {"quantization": {"format": "NVFP4"}},
+    )
+
+    prose.run(
+        store.read("a/one"),
+        CARD,
+        llm=LLM,
+        tavily=TAVILY,
+        store=store,
+        emit=lambda event: None,
+        card_revision="fresh123",
+    )
+
+    assert store.read("a/one").checkpoints[0].extracted.card_revision == "fresh123"
+
+
+def test_the_prose_agent_asks_again_when_nothing_comes_back(store, monkeypatch):
+    """The retry extraction.extract carries, kept here because the UI now routes
+    all extraction through this path rather than POST /extract."""
+    calls = []
+
+    def stream_json(messages, schema, *, on_reasoning=None, **kw):
+        calls.append(1)
+        return {} if len(calls) == 1 else {"quantization": {"format": "NVFP4"}}
+
+    monkeypatch.setattr("backend.agents.prose.stream_json", stream_json)
+
+    prose.run(store.read("a/one"), CARD, llm=LLM, tavily=TAVILY, store=store, emit=lambda e: None)
+
+    assert len(calls) == 2, "an empty answer should have been retried"
+    assert store.read("a/one").checkpoints[0].extracted.quantization.format.text == "NVFP4"
+
+
+def test_the_prose_agent_believes_two_empty_answers(store, monkeypatch):
+    calls = []
+
+    def stream_json(messages, schema, *, on_reasoning=None, **kw):
+        calls.append(1)
+        return {}
+
+    monkeypatch.setattr("backend.agents.prose.stream_json", stream_json)
+
+    prose.run(store.read("a/one"), CARD, llm=LLM, tavily=TAVILY, store=store, emit=lambda e: None)
+
+    assert len(calls) == 2, "two agreeing empties are believed, not asked a third time"
