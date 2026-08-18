@@ -61,6 +61,26 @@ import { LayerStrip } from './layer-strip';
         <ul class="dex-grid">
           @for (row of rows; track row.model_id) {
             <li>
+              <!-- Outside the anchor on purpose: a button inside a link is
+                   invalid HTML, and the click would navigate before deleting. -->
+              @if (confirming() === row.model_id) {
+                <div class="confirm">
+                  <span>Delete?</span>
+                  <button type="button" class="yes" (click)="remove(row.model_id)">
+                    {{ deleting() === row.model_id ? '…' : 'Delete' }}
+                  </button>
+                  <button type="button" class="no" (click)="confirming.set(null)">Keep</button>
+                </div>
+              } @else {
+                <button
+                  type="button"
+                  class="del"
+                  [attr.aria-label]="'delete ' + row.model_id"
+                  (click)="confirming.set(row.model_id)"
+                >
+                  ✕
+                </button>
+              }
               <a [routerLink]="route(row.model_id)" class="card" [attr.data-tone]="tone(row)">
                 <div class="card-top">
                   <span class="vendor">{{ vendor(row.model_id) }}</span>
@@ -140,6 +160,64 @@ import { LayerStrip } from './layer-strip';
     input:hover:not(:disabled) {
       border-color: var(--border-strong);
     }
+    .dex-grid li {
+      position: relative;
+    }
+    .del,
+    .confirm {
+      position: absolute;
+      top: var(--space-3);
+      right: var(--space-3);
+      z-index: 1;
+    }
+    .del {
+      background: rgb(0 0 0 / 0.18);
+      border: none;
+      color: rgb(255 255 255 / 0.75);
+      border-radius: 999px;
+      width: 1.5rem;
+      height: 1.5rem;
+      padding: 0;
+      font-size: 0.8rem;
+      line-height: 1;
+      opacity: 0.45;
+      transition: opacity 140ms ease;
+    }
+    /* Dimmed rather than hidden. Revealing it on hover would keep the
+       destructive control out of the way, but there is no hover on a touch
+       screen, and a button you cannot reach without a mouse fails R6.7. */
+    li:hover .del,
+    .del:focus-visible {
+      opacity: 1;
+    }
+    .del:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+    .confirm {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      background: var(--bg-sunken);
+      border: 1px solid var(--danger);
+      border-radius: var(--radius-sm);
+      padding: 0.2rem 0.4rem;
+      font-size: 0.72rem;
+      color: var(--fg);
+    }
+    .confirm button {
+      font-size: 0.7rem;
+      padding: 0.1rem 0.45rem;
+    }
+    .confirm .yes {
+      background: var(--danger);
+      color: #fff;
+    }
+    .confirm .no {
+      background: none;
+      border: 1px solid var(--border-strong);
+      color: var(--fg-muted);
+    }
     .dex-grid {
       list-style: none;
       margin: 0;
@@ -189,6 +267,9 @@ import { LayerStrip } from './layer-strip';
       align-items: center;
       justify-content: space-between;
       gap: var(--space-2);
+      /* Room for the delete control, which floats over this corner from
+         outside the anchor. */
+      padding-right: 1.9rem;
     }
     .card .vendor {
       font-size: 0.68rem;
@@ -255,6 +336,9 @@ export class ModelsPage {
   protected readonly models = signal<ModelDoc[] | null>(null);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
+  /** Which card is asking to be confirmed, and which is mid-delete. */
+  protected readonly confirming = signal<string | null>(null);
+  protected readonly deleting = signal<string | null>(null);
   protected readonly count = computed(() => this.models()?.length ?? 0);
 
   constructor() {
@@ -300,6 +384,30 @@ export class ModelsPage {
       },
       error: (err) => {
         this.busy.set(false);
+        this.error.set(errorMessage(err));
+      },
+    });
+  }
+
+  /**
+   * Remove a model from the vault.
+   *
+   * Destructive, so it asks first. It is not irreversible though: the vault is a
+   * git repository and the removal lands as a commit, so a mistake is recovered
+   * with `git revert` rather than by re-ingesting and losing the summary.
+   */
+  protected remove(modelId: string): void {
+    this.deleting.set(modelId);
+    this.error.set(null);
+    this.api.deleteModelModelsModelIdDelete(modelId).subscribe({
+      next: () => {
+        this.deleting.set(null);
+        this.confirming.set(null);
+        this.refresh();
+      },
+      error: (err) => {
+        this.deleting.set(null);
+        this.confirming.set(null);
         this.error.set(errorMessage(err));
       },
     });

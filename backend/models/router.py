@@ -115,3 +115,16 @@ def get_model(model_id: str, store: StoreDep) -> ModelDoc:
     if doc is None:
         raise HTTPException(status_code=404, detail=f"{model_id} is not in the store")
     return doc
+
+
+@router.delete("/models/{model_id:path}", status_code=204, tags=["models"])
+def delete_model(model_id: str, store: StoreDep) -> None:
+    """Remove a model from the vault.
+
+    204 rather than the deleted document: there is nothing left to return, and a
+    body would invite a caller to treat it as still being there. The removal is
+    a commit in the vault repository, so this is undoable outside the app (R4.7).
+    """
+    model_id = normalise_model_id(model_id)
+    if not store.delete(model_id):
+        raise HTTPException(status_code=404, detail=f"{model_id} is not in the store")

@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from backend.core.schemas import Checkpoint, ModelDoc
 from backend.core.store import Store
 from backend.main import app, get_fetcher, get_store
 from backend.models.fetch import GatedRepo, RepoNotFound, RepoSnapshot
@@ -230,3 +231,32 @@ def test_reads_work_with_the_fetcher_removed(client, vault):
     app.dependency_overrides[get_fetcher] = lambda: exploding_fetcher
     assert client.get("/models").status_code == 200
     assert client.get("/models/Qwen/Qwen3-8B").status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# deleting a model
+# ---------------------------------------------------------------------------
+
+
+def test_delete_removes_the_model_and_returns_no_content(client, vault):
+    vault.write(ModelDoc(model_id="a/one", checkpoints=[Checkpoint(repo="a/one")]), "ingest")
+
+    response = client.delete("/models/a/one")
+
+    assert response.status_code == 204
+    assert vault.read("a/one") is None
+    assert client.get("/models").json() == []
+
+
+def test_deleting_a_model_that_is_not_there_is_a_404(client):
+    assert client.delete("/models/nobody/nothing").status_code == 404
+
+
+def test_delete_accepts_a_full_url_like_every_other_route(client, vault):
+    """R1.1 - the same identifier handling ingest has, so a pasted URL works."""
+    vault.write(ModelDoc(model_id="a/one", checkpoints=[Checkpoint(repo="a/one")]), "ingest")
+
+    response = client.delete("/models/https://huggingface.co/a/one")
+
+    assert response.status_code == 204
+    assert vault.read("a/one") is None

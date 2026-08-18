@@ -272,6 +272,28 @@ class Store:
         self.write(doc, operation=operation)
         return doc
 
+    def delete(self, model_id: str, operation: str = "delete") -> bool:
+        """Remove a model's document. Returns False if there was nothing to remove.
+
+        The only write in this class that destroys rather than adds, which is
+        precisely why the vault is a git repository (R4.7): the removal lands as
+        a commit, so the document and its whole history stay recoverable from the
+        vault itself. That makes an archive flag unnecessary -- git already is
+        the archive, and a flag would leave documents nobody wants sitting in
+        every listing and validation pass.
+
+        A missing file is not an error here. A delete that finds nothing has
+        nothing to undo; the router turns that into a 404 because a caller naming
+        a model that is not there is worth telling.
+        """
+        path = self.path_for(model_id)
+        if not path.exists():
+            return False
+
+        path.unlink()
+        self._commit(path, f"{operation}: {model_id}")
+        return True
+
     def stub_benchmark(self, slug: str, referring_model: str) -> Benchmark:
         """R5.3 - a benchmark we have a score for but no document.
 

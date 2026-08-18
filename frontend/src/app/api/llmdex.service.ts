@@ -261,6 +261,45 @@ export class LlmdexService {
   }
 
 /**
+ * Remove a model from the vault.
+ *
+ * 204 rather than the deleted document: there is nothing left to return, and a
+ * body would invite a caller to treat it as still being there. The removal is
+ * a commit in the vault repository, so this is undoable outside the app (R4.7).
+ * @summary Delete Model
+ */
+ deleteModelModelsModelIdDelete<TData = void>(modelId: string, options?: HttpClientBodyOptions): Observable<TData>;
+ deleteModelModelsModelIdDelete<TData = void>(modelId: string, options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ deleteModelModelsModelIdDelete<TData = void>(modelId: string, options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
+  deleteModelModelsModelIdDelete<TData = void>(
+    modelId: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+    if (options?.observe === 'events') {
+      return this.http.delete<TData>(
+      `/api/models/${modelId}`,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'events',
+      }
+    );
+    }
+
+    if (options?.observe === 'response') {
+      return this.http.delete<TData>(
+      `/api/models/${modelId}`,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'response',
+      }
+    );
+    }
+
+    return this.http.delete<TData>(
+      `/api/models/${modelId}`,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
+  }
+
+/**
  * @summary List Benchmarks
  */
  listBenchmarksBenchmarksGet<TData = Benchmark[]>( options?: HttpClientBodyOptions): Observable<TData>;

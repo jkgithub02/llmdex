@@ -527,3 +527,61 @@ def test_re_ingest_leaves_the_summary_alone(store):
     store.merge_ingest(make_doc())
 
     assert store.read(doc.model_id).summary.overview == "Written once."
+
+
+# ---------------------------------------------------------------------------
+# deletion
+# ---------------------------------------------------------------------------
+
+
+def test_delete_removes_the_document(store):
+    doc = make_doc()
+    store.write(doc, operation="ingest")
+
+    assert store.delete(doc.model_id) is True
+    assert store.read(doc.model_id) is None
+    assert not store.path_for(doc.model_id).exists()
+
+
+def test_deleting_what_is_not_there_says_so_rather_than_raising(store):
+    """The endpoint above turns this into a 404; a missing file is not an error
+    here, because a delete that finds nothing has nothing to undo."""
+    assert store.delete("nobody/nothing") is False
+
+
+def test_a_deletion_lands_as_a_commit(store):
+    """R4.7 - the vault is a git repository so that this is recoverable. A
+    removal that left no commit would be the one write that loses information."""
+    doc = make_doc()
+    store.write(doc, operation="ingest")
+
+    store.delete(doc.model_id)
+
+    log = subprocess.run(
+        [
+            "git",
+            "log",
+            "--oneline",
+            "--",
+            str(store.path_for(doc.model_id).relative_to(store.root)),
+        ],
+        cwd=store.root,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert f"delete: {doc.model_id}" in log
+    assert "ingest:" in log, "the document's history must survive its deletion"
+
+
+def test_a_deleted_document_is_recoverable_from_git(store):
+    doc = make_doc()
+    store.write(doc, operation="ingest")
+    rel = str(store.path_for(doc.model_id).relative_to(store.root))
+
+    store.delete(doc.model_id)
+
+    restored = subprocess.run(
+        ["git", "show", f"HEAD~1:{rel}"], cwd=store.root, capture_output=True, text=True, check=True
+    ).stdout
+    assert doc.model_id in restored
