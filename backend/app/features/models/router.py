@@ -15,7 +15,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.common.deps import StoreDep
-from app.core.document import DriftReport, IngestRequest, ModelDoc
+from app.core.document import ModelDoc
 from app.core.http import http_error, normalise_model_id
 from app.features.models.fetch import (
     IngestError,
@@ -24,6 +24,7 @@ from app.features.models.fetch import (
     fetch_snapshot,
 )
 from app.features.models.ingest import ingest
+from app.features.models.schemas import DriftReport, IngestRequest
 from app.features.summary.router import (
     OptionalLLMDep,
     OptionalTavilyDep,

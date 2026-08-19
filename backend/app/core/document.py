@@ -1,4 +1,4 @@
-"""The vault document: one Markdown file per model, holding every block.
+"""The vault document: one Markdown file per model, or one per benchmark.
 
 The only module in `core` that imports a feature, and it does so because the
 document is genuinely shared -- a checkpoint carries the models feature's derived
@@ -6,32 +6,48 @@ block, the extraction feature's quotes, and the benchmarks feature's scores, in
 one file that the store reads and writes as a unit. Assembling it anywhere else
 would mean a feature owning the whole.
 
+``Benchmark`` lives here too, alongside ``ModelDoc``, rather than in
+`app.features.benchmarks.schemas`. It is not a block inside a checkpoint the way
+``BenchmarkScore``/``ExtractedBenchmarks`` are -- it is the vault's other
+document, one Markdown file per benchmark, and :mod:`app.core.store` reads and
+writes it exactly as it does ``ModelDoc``.
+
 ``Manual`` lives here rather than in :mod:`app.core.schemas` for the same
 reason: its ``quantization``/``serving`` fields are the extraction feature's
 hand-entered counterparts (R6.5), so it cannot be built without importing them.
 
-``Benchmark`` is re-exported here too, even though it is not part of
-``ModelDoc``. It is the vault's other document type, and :mod:`app.core.store`
-reads and writes both kinds but -- per the layering rule this module is the one
-exemption to -- may not reach into a feature itself.
+A feature is allowed to import this module for its document types -- summary's
+``generate.py`` reads ``Derived`` from here rather than from
+`app.features.models.schemas` directly, because it is consuming the stored
+document's shape, not reaching into the models feature's internals; importing
+`app.features.models.schemas` instead would be the cross-feature coupling the
+layering rule exists to prevent.
 """
+
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 from app.core.schemas import Measured
-from app.features.benchmarks.schemas import (
-    Benchmark,  # noqa: F401  # re-exported: app.core.store needs it and may not import a feature
-    BenchmarkScore,
-    ExtractedBenchmarks,
-)
+from app.features.benchmarks.schemas import BenchmarkScore, ExtractedBenchmarks
 from app.features.extraction.schemas import Extracted, Quantization, Serving
 from app.features.models.schemas import Derived
 from app.features.summary.schemas import Summary
 
-DEFAULT_CONTEXT = 32768
-"""R2.5's context length when a caller does not name one. Defined here, not in
-`app.features.models.ingest`, so that module can import `Checkpoint`/`ModelDoc`
-from this one without the two modules importing each other."""
+
+class Benchmark(BaseModel):
+    """R5.1 - one document per benchmark."""
+
+    slug: str
+    name: str | None = None
+    group: str | None = None
+    unit: str | None = None
+    direction: Literal["higher_is_better", "lower_is_better"] | None = None
+    explanation: str = ""
+    """R5.2 - human-written. The system must never generate this."""
+    unwritten: bool = True
+    """R5.3 - a stub created by ingest, awaiting a human."""
+    referring_models: list[str] = Field(default_factory=list)
 
 
 class Manual(BaseModel):
@@ -106,22 +122,3 @@ class ModelDoc(BaseModel):
 
     _source_digest: str | None = PrivateAttr(default=None)
     """Digest of the file this was read from, for the concurrent-write guard."""
-
-
-class DriftReport(BaseModel):
-    model_id: str
-    stored_revision: str | None
-    upstream_revision: str | None
-    drifted: bool
-
-
-class IngestRequest(BaseModel):
-    model_id: str = Field(
-        description="A Hugging Face model ID or a full URL, e.g. `Qwen/Qwen3-8B`.",
-        examples=["Qwen/Qwen3-8B"],
-    )
-    context: int = Field(
-        default=DEFAULT_CONTEXT,
-        gt=0,
-        description="Context length the VRAM estimate is computed at (R2.5).",
-    )

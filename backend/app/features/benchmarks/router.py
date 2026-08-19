@@ -7,7 +7,7 @@ human-written (R5.2), so nothing here generates a document.
 from fastapi import APIRouter, HTTPException
 
 from app.common.deps import StoreDep
-from app.features.benchmarks.schemas import Benchmark
+from app.core.document import Benchmark
 
 router = APIRouter(prefix="/benchmarks", tags=["benchmarks"])
 

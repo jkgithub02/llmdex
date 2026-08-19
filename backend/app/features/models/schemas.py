@@ -130,3 +130,26 @@ class Derived(BaseModel):
     vram: VRAMEstimate | None = None
     underivable: list[str] = Field(default_factory=list)
     """R2.7 - names every field that could not be computed, rather than omitting it."""
+
+
+DEFAULT_CONTEXT = 32768
+"""R2.5's context length when a caller does not name one."""
+
+
+class DriftReport(BaseModel):
+    model_id: str
+    stored_revision: str | None
+    upstream_revision: str | None
+    drifted: bool
+
+
+class IngestRequest(BaseModel):
+    model_id: str = Field(
+        description="A Hugging Face model ID or a full URL, e.g. `Qwen/Qwen3-8B`.",
+        examples=["Qwen/Qwen3-8B"],
+    )
+    context: int = Field(
+        default=DEFAULT_CONTEXT,
+        gt=0,
+        description="Context length the VRAM estimate is computed at (R2.5).",
+    )

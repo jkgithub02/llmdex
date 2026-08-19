@@ -1,4 +1,7 @@
-"""R4.5 / R5.1 - benchmark results, both the extracted table and the reviewed score."""
+"""R4.5 - benchmark results: the extracted table, and the reviewed score on a
+checkpoint. ``Benchmark`` -- the per-benchmark document itself -- lives in
+:mod:`app.core.document` alongside ``ModelDoc``; these are blocks, not documents.
+"""
 
 from typing import Literal
 
@@ -60,18 +63,3 @@ class BenchmarkScore(BaseModel):
     harness_name: str | None = None
     num_shots: int | None = None
     eval_date: str | None = None
-
-
-class Benchmark(BaseModel):
-    """R5.1 - one document per benchmark."""
-
-    slug: str
-    name: str | None = None
-    group: str | None = None
-    unit: str | None = None
-    direction: Literal["higher_is_better", "lower_is_better"] | None = None
-    explanation: str = ""
-    """R5.2 - human-written. The system must never generate this."""
-    unwritten: bool = True
-    """R5.3 - a stub created by ingest, awaiting a human."""
-    referring_models: list[str] = Field(default_factory=list)
