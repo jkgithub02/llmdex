@@ -6,12 +6,12 @@ import subprocess
 import pytest
 from fastapi.testclient import TestClient
 
+from app.common.deps import get_card_fetcher, get_llm_settings, get_tavily_settings
 from app.core.config import LLMSettings, TavilySettings
 from app.core.document import Checkpoint, ModelDoc
 from app.core.events import AgentEvent
 from app.core.store import Store
 from app.features.agents import runner
-from app.features.summary.router import get_card_fetcher, get_llm_settings, get_tavily_settings
 from app.main import app, get_store
 
 CARD = "# One\n\nA small model.\n"

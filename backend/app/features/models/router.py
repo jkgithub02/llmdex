@@ -7,6 +7,10 @@ Two properties this module exists to preserve:
   endpoints can be tested with the network removed entirely.
 - **The OpenAPI schema is the contract** (R7.3). The frontend client is generated
   from it, so response models are declared rather than left to duck typing.
+
+The handlers themselves live in :mod:`app.features.models.service`; this module
+keeps only the decorator, the signature and its ``Depends``, and the mapping
+from a domain exception to an ``HTTPException``.
 """
 
 from collections.abc import Callable
@@ -14,22 +18,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.common.deps import StoreDep
+from app.common.deps import OptionalLLMDep, OptionalTavilyDep, StoreDep
+from app.common.exceptions import IngestError, NotFound
 from app.core.document import ModelDoc
-from app.core.http import http_error, normalise_model_id
-from app.features.models.fetch import (
-    IngestError,
-    RepoSnapshot,
-    fetch_revision,
-    fetch_snapshot,
-)
-from app.features.models.ingest import ingest
+from app.core.http import http_error
+from app.features.models import service
+from app.features.models.fetch import RepoSnapshot, fetch_snapshot
 from app.features.models.schemas import DriftReport, IngestRequest
-from app.features.summary.router import (
-    OptionalLLMDep,
-    OptionalTavilyDep,
-    summarise_after_first_ingest,
-)
 
 router = APIRouter()
 
@@ -50,62 +45,40 @@ def ingest_model(
     llm: OptionalLLMDep,
     tavily: OptionalTavilyDep,
 ) -> ModelDoc:
-    """Fetch, derive, and write a document. Atomic: it completes or it fails (R1.5).
-
-    A model entering the vault for the first time is summarised on the way in, so
-    nobody has to ask for the first one. That step cannot fail this endpoint: see
-    :func:`~app.features.summary.router.summarise_after_first_ingest`.
-    """
-    model_id = normalise_model_id(body.model_id)
     try:
-        snapshot = fetcher(model_id)
+        return service.ingest_model(
+            body.model_id, store, body.context, fetcher=fetcher, llm=llm, tavily=tavily
+        )
     except IngestError as exc:
         raise http_error(exc) from exc
-    doc = ingest(snapshot, store, context=body.context)
-    return summarise_after_first_ingest(doc, store, snapshot.readme, llm=llm, tavily=tavily)
 
 
 @router.get("/models", response_model=list[ModelDoc], tags=["models"])
 def list_models(store: StoreDep) -> list[ModelDoc]:
-    return store.list_models()
+    return service.list_models(store)
 
 
 @router.get("/models/{model_id:path}/drift", response_model=DriftReport, tags=["models"])
 def model_drift(model_id: str, store: StoreDep) -> DriftReport:
-    """R6.6 - has the upstream card moved since we read it?"""
-    doc = store.read(model_id)
-    if doc is None:
-        raise HTTPException(status_code=404, detail=f"{model_id} is not in the store")
-    stored = doc.checkpoints[0].card_revision if doc.checkpoints else None
     try:
-        upstream = fetch_revision(model_id)
+        return service.drift_report(model_id, store)
+    except NotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except IngestError as exc:
         raise http_error(exc) from exc
-    return DriftReport(
-        model_id=model_id,
-        stored_revision=stored,
-        upstream_revision=upstream,
-        drifted=any(c.has_drifted_from(upstream) for c in doc.checkpoints),
-    )
 
 
 @router.get("/models/{model_id:path}", response_model=ModelDoc, tags=["models"])
 def get_model(model_id: str, store: StoreDep) -> ModelDoc:
-    """Every field, including the null ones (R6.3)."""
-    doc = store.read(normalise_model_id(model_id))
-    if doc is None:
-        raise HTTPException(status_code=404, detail=f"{model_id} is not in the store")
-    return doc
+    try:
+        return service.read_model(model_id, store)
+    except NotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.delete("/models/{model_id:path}", status_code=204, tags=["models"])
 def delete_model(model_id: str, store: StoreDep) -> None:
-    """Remove a model from the vault.
-
-    204 rather than the deleted document: there is nothing left to return, and a
-    body would invite a caller to treat it as still being there. The removal is
-    a commit in the vault repository, so this is undoable outside the app (R4.7).
-    """
-    model_id = normalise_model_id(model_id)
-    if not store.delete(model_id):
-        raise HTTPException(status_code=404, detail=f"{model_id} is not in the store")
+    try:
+        service.delete_model(model_id, store)
+    except NotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

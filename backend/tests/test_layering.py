@@ -5,17 +5,14 @@ that is how a slice stops being a slice. `agents/runner.py` is the one module
 this task introduces to assemble features on purpose, and is named below rather
 than left to convention.
 
-Writing this test against the real tree (as opposed to the tree the plan
-imagined) also surfaces cross-feature imports task 5 did not introduce and is
-not the task to fix: `agents/router.py`, `extraction/router.py`,
-`summary/router.py` and `models/router.py` already reach into a sibling
-feature's router or fetcher to wire dependency injection, predating this test.
-Widening the exemption to cover them is the honest option -- pretending they
-pass by narrowing what the test looks at would not -- but it is debt, not
-design: Task 8 extracts a service layer per feature and is where the shared DI
-providers (the card fetcher, the LLM/Tavily settings providers, `fetch_snapshot`)
-should move into `common/deps.py`, which already exists and already holds
-`StoreDep` for exactly this. Not attempted here.
+Task 8 removed the last of the pre-existing exemptions: `agents/router.py`,
+`extraction/router.py`, `summary/router.py` and `models/router.py` used to
+reach into a sibling feature's router or fetcher to wire dependency injection.
+The shared DI providers (the card fetcher, the LLM/Tavily settings providers,
+`fetch_snapshot`) now live in `common/deps.py` beside `StoreDep`, and the one
+function that genuinely needs both models and summary
+(`summarise_after_first_ingest`) lives in `common/summarise.py`. No router
+needs a sibling feature any more.
 
 An earlier version of this file also exempted `benchmarks/agent.py` and
 `extraction/benchmarks.py` for a benchmarks/extraction cycle: extraction read
@@ -47,16 +44,6 @@ def _feature_imports(path: Path) -> list[str]:
 
 # The composition root task 5 names outright:
 COMPOSITION_ROOTS = {"agents/runner.py"}  # imports summary/extraction/benchmarks
-
-# Pre-existing dependency-injection wiring at the router layer, predating this
-# test. Task 8's to remove, by moving the shared DI providers into
-# `common/deps.py` -- see the module docstring above.
-COMPOSITION_ROOTS |= {
-    "agents/router.py",
-    "extraction/router.py",
-    "summary/router.py",
-    "models/router.py",
-}
 
 
 def test_no_feature_imports_another_feature():
@@ -95,3 +82,33 @@ def test_document_is_the_module_that_assembles_the_vault_document():
     """A guard on the guard: if document.py stops importing features, the
     exemption above is dead and should be deleted rather than left standing."""
     assert _feature_imports(CORE / "document.py")
+
+
+COMMON = Path(__file__).resolve().parents[1] / "app" / "common"
+
+# `common` holds what several features share. Two modules in it assemble
+# features rather than merely being shared by them, which is the same category
+# as `main.py` and `agents/runner.py`:
+#
+#   deps.py       the dependency-injection wiring. Building `CardFetcherDep`
+#                 means naming a concrete card fetcher, and fetching a card is
+#                 the models feature's job. Wiring is assembly by definition.
+#   summarise.py  summarising on first ingest needs models' ingest to know when
+#                 "first" is true and summary's generator to write the block.
+#                 In either feature it would recreate the cycle this layout
+#                 removed.
+#
+# Both are named here so the exception is enforced rather than assumed. Adding
+# a third entry to silence a failure is how the guard stops guarding: the test
+# for whether something belongs here is whether assembling features is its
+# whole job, not whether it happens to need one.
+COMMON_COMPOSITION = {"deps.py", "summarise.py"}
+
+
+def test_only_the_named_module_in_common_may_import_a_feature():
+    offenders = {
+        path.name: imports
+        for path in COMMON.glob("*.py")
+        if path.name not in COMMON_COMPOSITION and (imports := _feature_imports(path))
+    }
+    assert offenders == {}

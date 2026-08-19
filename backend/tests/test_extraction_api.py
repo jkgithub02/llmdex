@@ -9,11 +9,11 @@ import subprocess
 import pytest
 from fastapi.testclient import TestClient
 
+from app.common.deps import get_card_fetcher, get_llm_settings
 from app.core.config import LLMNotConfigured, LLMSettings
 from app.core.document import Checkpoint, ModelDoc
 from app.core.llm import LLMError
 from app.core.store import Store
-from app.features.extraction.router import get_card_fetcher, get_llm_settings
 from app.main import app, get_store
 
 CARD = """# Model Card

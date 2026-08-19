@@ -9,18 +9,18 @@ import subprocess
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import LLMSettings, TavilyNotConfigured, TavilySettings
-from app.core.document import Checkpoint, ModelDoc
-from app.core.llm import LLMError
-from app.core.search import SearchError
-from app.core.store import Store
-from app.features.summary.router import (
+from app.common.deps import (
     get_card_fetcher,
     get_llm_settings,
     get_optional_llm_settings,
     get_optional_tavily_settings,
     get_tavily_settings,
 )
+from app.core.config import LLMSettings, TavilyNotConfigured, TavilySettings
+from app.core.document import Checkpoint, ModelDoc
+from app.core.llm import LLMError
+from app.core.search import SearchError
+from app.core.store import Store
 from app.features.summary.schemas import Summary
 from app.main import app, get_store
 
