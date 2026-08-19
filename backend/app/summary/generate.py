@@ -16,9 +16,9 @@ from datetime import UTC, datetime
 import httpx
 
 from app.core.config import LLMSettings, TavilySettings
+from app.core.llm import complete
 from app.core.schemas import Derived, Summary
-from app.extraction.llm import complete
-from app.search.tavily import SearchResult, search
+from app.core.search import SearchResult, search
 
 SYSTEM_PROMPT = """You write short, factual descriptions of open-weights language models
 for an engineering audience deciding whether to deploy one.

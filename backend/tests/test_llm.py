@@ -11,7 +11,7 @@ import httpx
 import pytest
 
 from app.core.config import LLMNotConfigured, LLMSettings, llm_settings
-from app.extraction.llm import LLMError, complete, stream_json
+from app.core.llm import LLMError, complete, stream_json
 
 SCHEMA = {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"]}
 SETTINGS = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model", api_key="k")

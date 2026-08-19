@@ -10,9 +10,9 @@ import httpx
 import pytest
 
 from app.core.config import LLMSettings, TavilySettings
+from app.core.llm import LLMError
 from app.core.schemas import Derived, ParamCounts, Summary
-from app.extraction.llm import LLMError
-from app.search.tavily import SearchError, SearchResult
+from app.core.search import SearchError, SearchResult
 from app.summary.generate import generate_summary
 
 LLM = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model")

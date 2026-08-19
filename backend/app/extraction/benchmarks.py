@@ -16,10 +16,10 @@ from datetime import UTC, datetime
 import httpx
 
 from app.core.config import LLMSettings
+from app.core.llm import complete
 from app.core.schemas import ExtractedBenchmark, ExtractedBenchmarks, RejectedValue
 from app.extraction.extract import _locate
 from app.extraction.ground import GroundedCard
-from app.extraction.llm import complete
 
 SYSTEM_PROMPT = """You copy a results table out of a Hugging Face model card.
 

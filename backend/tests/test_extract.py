@@ -8,8 +8,8 @@ whether this design holds.
 import pytest
 
 from app.core.config import LLMSettings
+from app.core.llm import LLMError
 from app.extraction.extract import extract
-from app.extraction.llm import LLMError
 
 SETTINGS = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model")
 

@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 import httpx
 
 from app.core.config import LLMSettings
+from app.core.llm import complete
 from app.core.schemas import (
     Extracted,
     ExtractedQuantization,
@@ -22,7 +23,6 @@ from app.core.schemas import (
     Span,
 )
 from app.extraction.ground import GroundedCard
-from app.extraction.llm import complete
 
 SYSTEM_PROMPT = """You extract facts from Hugging Face model cards.
 

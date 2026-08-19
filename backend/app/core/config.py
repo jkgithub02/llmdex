@@ -46,7 +46,7 @@ class LLMSettings(BaseModel):
     Generous on purpose. A reasoning model spends this budget on hidden
     reasoning before it writes a single field, and running out mid-document is
     a hard failure rather than a partial result -- the answer is thrown away
-    (see :func:`app.extraction.llm.complete`). 8000 was not enough for a
+    (see :func:`app.core.llm.complete`). 8000 was not enough for a
     135M model's card, which is a fact about how much the model thinks, not
     about how much there is to extract.
     """

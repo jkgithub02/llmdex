@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 
 from app.agents.events import AgentEvent
 from app.core.config import LLMSettings, TavilySettings
+from app.core.llm import stream_json
 from app.core.schemas import Extracted, ModelDoc, RejectedValue
 from app.core.store import Store
 from app.extraction.extract import (
@@ -19,7 +20,6 @@ from app.extraction.extract import (
     _serving,
 )
 from app.extraction.ground import GroundedCard
-from app.extraction.llm import stream_json
 
 NAME = "prose"
 

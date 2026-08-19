@@ -9,7 +9,7 @@ import httpx
 import pytest
 
 from app.core.config import TavilyNotConfigured, TavilySettings, tavily_settings
-from app.search.tavily import SearchError, search
+from app.core.search import SearchError, search
 
 SETTINGS = TavilySettings(api_key="tvly-test")
 
