@@ -12,17 +12,22 @@ import threading
 from collections.abc import Callable, Iterator
 
 from app.core.config import LLMSettings, TavilySettings
+from app.core.events import AgentEvent
 from app.core.schemas import ModelDoc
 from app.core.store import Store
-from app.features.agents import about, benchmarks, prose
-from app.features.agents.events import AgentEvent
+from app.features.benchmarks import agent as benchmarks_agent
+from app.features.extraction import agent as extraction_agent
+from app.features.summary import agent as summary_agent
 
+# The composition root for agents: like `main.py`, it is allowed to import every
+# feature, because assembling them is its whole job. Nothing else in `features/`
+# may.
 # ponytail: thread per agent + one queue. Fine at this size on a single-user
 # tool; move to asyncio with httpx.AsyncClient if this ever fans out wider.
 AGENTS: dict[str, Callable[..., str]] = {
-    about.NAME: about.run,
-    prose.NAME: prose.run,
-    benchmarks.NAME: benchmarks.run,
+    summary_agent.NAME: summary_agent.run,
+    extraction_agent.NAME: extraction_agent.run,
+    benchmarks_agent.NAME: benchmarks_agent.run,
 }
 
 _DONE = object()

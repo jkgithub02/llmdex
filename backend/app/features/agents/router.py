@@ -14,8 +14,8 @@ from fastapi.responses import StreamingResponse
 
 from app.common.deps import StoreDep
 from app.core.config import LLMSettings, TavilySettings
+from app.core.events import AgentEvent
 from app.core.http import http_error, normalise_model_id
-from app.features.agents.events import AgentEvent
 from app.features.agents.runner import AGENTS, run_agents
 from app.features.models.fetch import IngestError
 from app.features.summary.router import (

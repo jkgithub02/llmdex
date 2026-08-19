@@ -1,8 +1,8 @@
 """The Benchmarks tab's agent: the results table, copied and narrated.
 
-A sibling of :mod:`app.features.agents.prose` over a different prompt. It reads the
-card's published table and nothing else, and it writes its own block, so a
-re-run of either agent leaves the other's work where it is.
+A sibling of :mod:`app.features.extraction.agent` over a different prompt. It
+reads the card's published table and nothing else, and it writes its own
+block, so a re-run of either agent leaves the other's work where it is.
 
 The grounding is the extractor's, unchanged. Every cell -- including the column
 header saying which checkpoint a number belongs to -- is a slice of this card or
@@ -13,11 +13,12 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 
 from app.core.config import LLMSettings, TavilySettings
+from app.core.events import AgentEvent
 from app.core.llm import stream_json
 from app.core.schemas import ExtractedBenchmarks, ModelDoc, RejectedValue
 from app.core.store import Store
-from app.features.agents.events import AgentEvent
-from app.features.extraction.benchmarks import RESPONSE_SCHEMA, SYSTEM_PROMPT, rows
+from app.features.benchmarks.prompts import RESPONSE_SCHEMA, SYSTEM_PROMPT
+from app.features.extraction.benchmarks import rows
 from app.features.extraction.ground import GroundedCard
 
 NAME = "benchmarks"
