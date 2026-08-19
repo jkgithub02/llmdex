@@ -2,7 +2,7 @@
 
 The model is asked for quotes, not values: each field it fills must be text
 copied out of the card. Nothing it returns is stored directly -- every string
-goes through :class:`~app.extraction.ground.GroundedCard`, and what survives
+goes through :class:`~app.features.extraction.ground.GroundedCard`, and what survives
 is a slice of the card itself (R3.1).
 
 Fields the model leaves out are simply absent. Fields it fills with something
@@ -22,7 +22,7 @@ from app.core.schemas import (
     RejectedValue,
     Span,
 )
-from app.extraction.ground import GroundedCard
+from app.features.extraction.ground import GroundedCard
 
 SYSTEM_PROMPT = """You extract facts from Hugging Face model cards.
 

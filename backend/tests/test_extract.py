@@ -9,7 +9,7 @@ import pytest
 
 from app.core.config import LLMSettings
 from app.core.llm import LLMError
-from app.extraction.extract import extract
+from app.features.extraction.extract import extract
 
 SETTINGS = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model")
 
@@ -42,7 +42,7 @@ def _responder(payload: dict):
 
 def test_a_faithful_response_becomes_verified_spans(monkeypatch):
     monkeypatch.setattr(
-        "app.extraction.extract.complete",
+        "app.features.extraction.extract.complete",
         _responder(
             {
                 "quantization": {"format": "NVFP4", "method": "PTQ via NVIDIA ModelOpt"},
@@ -64,7 +64,7 @@ def test_a_faithful_response_becomes_verified_spans(monkeypatch):
 def test_an_invented_value_lands_in_rejected_and_the_field_is_null(monkeypatch):
     """R3.2 - the defect the whole system exists to prevent."""
     monkeypatch.setattr(
-        "app.extraction.extract.complete",
+        "app.features.extraction.extract.complete",
         _responder({"quantization": {"format": "INT4", "method": "PTQ via NVIDIA ModelOpt"}}),
     )
 
@@ -78,7 +78,7 @@ def test_an_invented_value_lands_in_rejected_and_the_field_is_null(monkeypatch):
 
 def test_a_card_with_nothing_extractable_is_a_success_not_an_error(monkeypatch):
     """research.md 5 - most cards state none of this. An empty result is a fact."""
-    monkeypatch.setattr("app.extraction.extract.complete", _responder({}))
+    monkeypatch.setattr("app.features.extraction.extract.complete", _responder({}))
 
     result = extract(CARD, card_revision="abc123", settings=SETTINGS, today="2026-08-17")
 
@@ -91,7 +91,7 @@ def test_a_client_failure_propagates(monkeypatch):
     def boom(messages, schema, **kwargs):
         raise LLMError("extraction endpoint unreachable")
 
-    monkeypatch.setattr("app.extraction.extract.complete", boom)
+    monkeypatch.setattr("app.features.extraction.extract.complete", boom)
 
     with pytest.raises(LLMError):
         extract(CARD, card_revision="abc123", settings=SETTINGS, today="2026-08-17")
@@ -105,7 +105,7 @@ def test_the_schema_closes_the_set_of_serving_engines():
     none of them a serving engine. A schema the model cannot violate is a
     stronger guarantee than an instruction it can ignore.
     """
-    from app.extraction.extract import RESPONSE_SCHEMA
+    from app.features.extraction.extract import RESPONSE_SCHEMA
 
     serving = RESPONSE_SCHEMA["properties"]["serving"]
     assert serving["additionalProperties"] is False
@@ -116,7 +116,7 @@ def test_a_category_that_is_not_an_engine_is_not_recorded(monkeypatch):
     """Belt and braces: not every OpenAI-compatible endpoint honours strict mode."""
     card = "Requires vLLM 0.27.1 or newer. Recommended sampling: Temperature 1.0."
     monkeypatch.setattr(
-        "app.extraction.extract.complete",
+        "app.features.extraction.extract.complete",
         _responder(
             {
                 "serving": {
@@ -157,7 +157,7 @@ def _answers(*responses):
 
 def test_an_empty_answer_is_asked_again(monkeypatch):
     complete, calls = _answers({}, {"serving": {"vllm": "vLLM 0.27.1"}})
-    monkeypatch.setattr("app.extraction.extract.complete", complete)
+    monkeypatch.setattr("app.features.extraction.extract.complete", complete)
 
     result = extract(CARD, card_revision="r1", settings=SETTINGS)
 
@@ -170,7 +170,7 @@ def test_a_second_empty_answer_is_believed(monkeypatch):
     """Two agreeing empties is the evidence that the card really says none of
     this. Retrying past that would spend tokens to relearn the same answer."""
     complete, calls = _answers({}, {})
-    monkeypatch.setattr("app.extraction.extract.complete", complete)
+    monkeypatch.setattr("app.features.extraction.extract.complete", complete)
 
     result = extract(CARD, card_revision="r1", settings=SETTINGS)
 
@@ -182,7 +182,7 @@ def test_a_second_empty_answer_is_believed(monkeypatch):
 def test_an_answer_with_content_is_never_asked_twice(monkeypatch):
     """The common path must still cost exactly one call."""
     complete, calls = _answers({"quantization": {"format": "NVFP4"}})
-    monkeypatch.setattr("app.extraction.extract.complete", complete)
+    monkeypatch.setattr("app.features.extraction.extract.complete", complete)
 
     extract(CARD, card_revision="r1", settings=SETTINGS)
 
@@ -193,7 +193,7 @@ def test_an_answer_whose_every_value_is_rejected_is_not_retried(monkeypatch):
     """The model answered; it answered with something not in the card. That is a
     finding worth keeping (R3.2), not an empty response to ask again about."""
     complete, calls = _answers({"quantization": {"format": "invented"}})
-    monkeypatch.setattr("app.extraction.extract.complete", complete)
+    monkeypatch.setattr("app.features.extraction.extract.complete", complete)
 
     result = extract(CARD, card_revision="r1", settings=SETTINGS)
 

@@ -13,14 +13,14 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from app.agents.router import router as agents_router
-from app.benchmarks.router import router as benchmarks_router
 from app.common.deps import StoreDep, get_store
 from app.core.config import LLMNotConfigured, TavilyNotConfigured
-from app.extraction.router import router as extraction_router
-from app.models.router import get_fetcher
-from app.models.router import router as models_router
-from app.summary.router import router as summary_router
+from app.features.agents.router import router as agents_router
+from app.features.benchmarks.router import router as benchmarks_router
+from app.features.extraction.router import router as extraction_router
+from app.features.models.router import get_fetcher
+from app.features.models.router import router as models_router
+from app.features.summary.router import router as summary_router
 
 __all__ = ["app", "get_fetcher", "get_store"]
 

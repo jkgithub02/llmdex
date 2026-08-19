@@ -11,11 +11,11 @@ import queue
 import threading
 from collections.abc import Callable, Iterator
 
-from app.agents import about, benchmarks, prose
-from app.agents.events import AgentEvent
 from app.core.config import LLMSettings, TavilySettings
 from app.core.schemas import ModelDoc
 from app.core.store import Store
+from app.features.agents import about, benchmarks, prose
+from app.features.agents.events import AgentEvent
 
 # ponytail: thread per agent + one queue. Fine at this size on a single-user
 # tool; move to asyncio with httpx.AsyncClient if this ever fans out wider.

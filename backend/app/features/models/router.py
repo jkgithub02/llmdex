@@ -18,14 +18,14 @@ from pydantic import BaseModel, Field
 from app.common.deps import StoreDep
 from app.core.http import http_error, normalise_model_id
 from app.core.schemas import ModelDoc
-from app.models.fetch import (
+from app.features.models.fetch import (
     IngestError,
     RepoSnapshot,
     fetch_revision,
     fetch_snapshot,
 )
-from app.models.ingest import DEFAULT_CONTEXT, ingest
-from app.summary.router import (
+from app.features.models.ingest import DEFAULT_CONTEXT, ingest
+from app.features.summary.router import (
     OptionalLLMDep,
     OptionalTavilyDep,
     summarise_after_first_ingest,
@@ -73,7 +73,7 @@ def ingest_model(
 
     A model entering the vault for the first time is summarised on the way in, so
     nobody has to ask for the first one. That step cannot fail this endpoint: see
-    :func:`~app.summary.router.summarise_after_first_ingest`.
+    :func:`~app.features.summary.router.summarise_after_first_ingest`.
     """
     model_id = normalise_model_id(body.model_id)
     try:

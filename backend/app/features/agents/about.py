@@ -1,20 +1,20 @@
 """The About tab's agent: the summariser, narrating.
 
 A thin adapter rather than a rewrite. Everything about what the summary says
-lives in :mod:`app.summary.generate`; this module only swaps the blocking
+lives in :mod:`app.features.summary.generate`; this module only swaps the blocking
 call for the streaming one and forwards what the model is thinking.
 """
 
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from app.agents.events import AgentEvent
 from app.core.config import LLMSettings, TavilySettings
 from app.core.llm import stream_json
 from app.core.schemas import ModelDoc, Summary
 from app.core.search import search
 from app.core.store import Store
-from app.summary.generate import RESPONSE_SCHEMA, SYSTEM_PROMPT, _prompt
+from app.features.agents.events import AgentEvent
+from app.features.summary.generate import RESPONSE_SCHEMA, SYSTEM_PROMPT, _prompt
 
 NAME = "about"
 

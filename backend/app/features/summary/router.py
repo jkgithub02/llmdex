@@ -28,8 +28,8 @@ from app.core.llm import LLMError
 from app.core.schemas import ModelDoc
 from app.core.search import SearchError
 from app.core.store import Store
-from app.models.fetch import IngestError, fetch_snapshot
-from app.summary.generate import generate_summary
+from app.features.models.fetch import IngestError, fetch_snapshot
+from app.features.summary.generate import generate_summary
 
 log = logging.getLogger(__name__)
 

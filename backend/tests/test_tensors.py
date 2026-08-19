@@ -18,7 +18,7 @@ import struct
 
 import pytest
 
-from app.models.tensors import count_parameters, parse_header
+from app.features.models.tensors import count_parameters, parse_header
 
 
 def tensor(dtype: str, shape: list[int]) -> dict:

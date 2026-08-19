@@ -15,7 +15,7 @@ against a repository name and hoping.
 import pytest
 
 from app.core.config import LLMSettings
-from app.extraction.benchmarks import extract_benchmarks
+from app.features.extraction.benchmarks import extract_benchmarks
 
 SETTINGS = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model")
 
@@ -50,7 +50,7 @@ def _responder(payload: dict):
 
 
 def _rows(monkeypatch, card: str, payload: dict):
-    monkeypatch.setattr("app.extraction.benchmarks.complete", _responder(payload))
+    monkeypatch.setattr("app.features.extraction.benchmarks.complete", _responder(payload))
     return extract_benchmarks(card, card_revision="abc123", settings=SETTINGS, today="2026-08-18")
 
 
@@ -163,7 +163,7 @@ def test_an_empty_answer_is_asked_once_more(monkeypatch):
             return {}
         return {"benchmarks": [{"name": "MMLU Pro", "score": "81.94"}]}
 
-    monkeypatch.setattr("app.extraction.benchmarks.complete", flaky)
+    monkeypatch.setattr("app.features.extraction.benchmarks.complete", flaky)
     block = extract_benchmarks(CARD, card_revision="abc", settings=SETTINGS, today="2026-08-18")
 
     assert len(calls) == 2
@@ -177,7 +177,7 @@ def test_two_agreeing_empties_are_believed(monkeypatch):
         calls.append(1)
         return {}
 
-    monkeypatch.setattr("app.extraction.benchmarks.complete", empty)
+    monkeypatch.setattr("app.features.extraction.benchmarks.complete", empty)
     block = extract_benchmarks(CARD, card_revision="abc", settings=SETTINGS, today="2026-08-18")
 
     assert len(calls) == 2
@@ -188,7 +188,7 @@ def test_two_agreeing_empties_are_believed(monkeypatch):
 def test_a_card_with_no_table_produces_an_empty_block_not_a_missing_one(monkeypatch, payload):
     """R6.3 - "we read the card and it publishes no scores" is information, and
     it is different from "nobody has looked yet"."""
-    monkeypatch.setattr("app.extraction.benchmarks.complete", _responder(payload))
+    monkeypatch.setattr("app.features.extraction.benchmarks.complete", _responder(payload))
     block = extract_benchmarks(
         SINGLE_COLUMN, card_revision="abc", settings=SETTINGS, today="2026-08-18"
     )

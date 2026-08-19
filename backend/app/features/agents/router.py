@@ -12,13 +12,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
-from app.agents.events import AgentEvent
-from app.agents.runner import AGENTS, run_agents
 from app.common.deps import StoreDep
 from app.core.config import LLMSettings, TavilySettings
 from app.core.http import http_error, normalise_model_id
-from app.models.fetch import IngestError
-from app.summary.router import (
+from app.features.agents.events import AgentEvent
+from app.features.agents.runner import AGENTS, run_agents
+from app.features.models.fetch import IngestError
+from app.features.summary.router import (
     CardFetcherDep,
     get_llm_settings,
     get_tavily_settings,

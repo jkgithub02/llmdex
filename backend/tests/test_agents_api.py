@@ -6,13 +6,13 @@ import subprocess
 import pytest
 from fastapi.testclient import TestClient
 
-from app.agents import runner
-from app.agents.events import AgentEvent
 from app.core.config import LLMSettings, TavilySettings
 from app.core.schemas import Checkpoint, ModelDoc
 from app.core.store import Store
+from app.features.agents import runner
+from app.features.agents.events import AgentEvent
+from app.features.summary.router import get_card_fetcher, get_llm_settings, get_tavily_settings
 from app.main import app, get_store
-from app.summary.router import get_card_fetcher, get_llm_settings, get_tavily_settings
 
 CARD = "# One\n\nA small model.\n"
 LLM = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model")

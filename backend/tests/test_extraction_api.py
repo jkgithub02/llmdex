@@ -13,7 +13,7 @@ from app.core.config import LLMNotConfigured, LLMSettings
 from app.core.llm import LLMError
 from app.core.schemas import Checkpoint, ModelDoc
 from app.core.store import Store
-from app.extraction.router import get_card_fetcher, get_llm_settings
+from app.features.extraction.router import get_card_fetcher, get_llm_settings
 from app.main import app, get_store
 
 CARD = """# Model Card
@@ -56,7 +56,7 @@ def client(vault):
 def test_extraction_writes_verified_spans(client, monkeypatch):
     """Only the HTTP call is stubbed; the real extract and grounding run."""
     monkeypatch.setattr(
-        "app.extraction.extract.complete",
+        "app.features.extraction.extract.complete",
         lambda messages, schema, **kw: {"quantization": {"format": "NVFP4"}},
     )
 
@@ -75,7 +75,7 @@ def test_extracting_an_unknown_model_is_a_404(client):
 
 def test_an_unreachable_endpoint_is_a_502_and_writes_nothing(client, vault, monkeypatch):
     monkeypatch.setattr(
-        "app.extraction.extract.complete",
+        "app.features.extraction.extract.complete",
         lambda messages, schema, **kw: (_ for _ in ()).throw(LLMError("unreachable")),
     )
 

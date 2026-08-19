@@ -37,8 +37,8 @@ __all__ = [
     "fetch_tensor_headers",
 ]
 
-from app.models.derive import packed_quantization_bits
-from app.models.tensors import header_length, parse_header
+from app.features.models.derive import packed_quantization_bits
+from app.features.models.tensors import header_length, parse_header
 
 HF_BASE = "https://huggingface.co"
 TIMEOUT = 60.0

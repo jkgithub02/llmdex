@@ -8,18 +8,18 @@ R3.2) -- the agent narrates that work, it does not relax it.
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from app.agents.events import AgentEvent
 from app.core.config import LLMSettings, TavilySettings
 from app.core.llm import stream_json
 from app.core.schemas import Extracted, ModelDoc, RejectedValue
 from app.core.store import Store
-from app.extraction.extract import (
+from app.features.agents.events import AgentEvent
+from app.features.extraction.extract import (
     RESPONSE_SCHEMA,
     SYSTEM_PROMPT,
     _quantization,
     _serving,
 )
-from app.extraction.ground import GroundedCard
+from app.features.extraction.ground import GroundedCard
 
 NAME = "prose"
 
@@ -53,7 +53,7 @@ def run(
         emit(AgentEvent(agent=NAME, kind="reasoning", text=text))
 
     answer = stream_json(messages, RESPONSE_SCHEMA, settings=llm, on_reasoning=on_reasoning)
-    # The same retry app.extraction.extract carries, and for the same
+    # The same retry app.features.extraction.extract carries, and for the same
     # measured reason: of eight identical calls for one card, seven located both
     # its serving engines and one returned {}. An empty answer stored as "the
     # card states none of this" is indistinguishable from a card that really

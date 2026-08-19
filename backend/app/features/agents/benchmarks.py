@@ -1,6 +1,6 @@
 """The Benchmarks tab's agent: the results table, copied and narrated.
 
-A sibling of :mod:`app.agents.prose` over a different prompt. It reads the
+A sibling of :mod:`app.features.agents.prose` over a different prompt. It reads the
 card's published table and nothing else, and it writes its own block, so a
 re-run of either agent leaves the other's work where it is.
 
@@ -12,13 +12,13 @@ it is not stored (R3.1, R3.2).
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from app.agents.events import AgentEvent
 from app.core.config import LLMSettings, TavilySettings
 from app.core.llm import stream_json
 from app.core.schemas import ExtractedBenchmarks, ModelDoc, RejectedValue
 from app.core.store import Store
-from app.extraction.benchmarks import RESPONSE_SCHEMA, SYSTEM_PROMPT, rows
-from app.extraction.ground import GroundedCard
+from app.features.agents.events import AgentEvent
+from app.features.extraction.benchmarks import RESPONSE_SCHEMA, SYSTEM_PROMPT, rows
+from app.features.extraction.ground import GroundedCard
 
 NAME = "benchmarks"
 

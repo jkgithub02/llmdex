@@ -5,7 +5,7 @@ grounding. It is the only place that talks to the extraction endpoint, so every
 way that call can fail is enumerated here, and each one raises rather than
 returning something a caller might mistake for an answer.
 
-The client is injectable for the same reason it is in ``app.models.fetch``:
+The client is injectable for the same reason it is in ``app.features.models.fetch``:
 so the layers above can be tested with the network removed entirely.
 """
 

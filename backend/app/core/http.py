@@ -1,6 +1,6 @@
 """HTTP conventions shared by every feature's router.
 
-These two helpers started in ``app.models.router`` and were imported from
+These two helpers started in ``app.features.models.router`` and were imported from
 there by the other features, which is the one thing this layout otherwise avoids:
 a feature depending on a sibling feature rather than on the core. They answer
 questions that are not the models feature's to own -- how a fetch failure maps to

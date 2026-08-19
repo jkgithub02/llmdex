@@ -29,11 +29,11 @@ from app.core.config import (
 )
 from app.core.llm import stream_json
 from app.core.search import search
-from app.extraction.benchmarks import extract_benchmarks
-from app.extraction.extract import SERVING_ENGINES, extract
-from app.models.derive import derive
-from app.models.fetch import fetch_snapshot
-from app.summary.generate import generate_summary
+from app.features.extraction.benchmarks import extract_benchmarks
+from app.features.extraction.extract import SERVING_ENGINES, extract
+from app.features.models.derive import derive
+from app.features.models.fetch import fetch_snapshot
+from app.features.summary.generate import generate_summary
 
 pytestmark = pytest.mark.live
 

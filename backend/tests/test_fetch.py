@@ -19,7 +19,7 @@ import struct
 import httpx
 import pytest
 
-from app.models.fetch import (
+from app.features.models.fetch import (
     AccessUndetermined,
     GatedRepo,
     RepoNotFound,

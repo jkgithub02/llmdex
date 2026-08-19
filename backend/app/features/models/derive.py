@@ -30,7 +30,7 @@ from app.core.schemas import (
     VRAMEstimate,
     WeightBytes,
 )
-from app.models.tensors import count_parameters
+from app.features.models.tensors import count_parameters
 
 WEIGHT_SUFFIXES = (".safetensors", ".gguf", ".bin", ".pt", ".pth")
 
@@ -449,7 +449,7 @@ def param_counts(
     ``headers`` are the checkpoint's safetensors headers, when they were read.
     They outrank both paths below: every tensor is named, so packed containers
     are unpacked, scales are left out, and the expert bank is counted instead of
-    being modelled as three matrices. See :mod:`app.models.tensors`.
+    being modelled as three matrices. See :mod:`app.features.models.tensors`.
     """
     n_experts = _first(config, *_MOE_EXPERT_KEYS)
     is_moe = n_experts is not None and n_experts > 1

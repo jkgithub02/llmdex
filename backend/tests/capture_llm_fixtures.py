@@ -14,9 +14,9 @@ from pathlib import Path
 
 from app.core.config import llm_settings
 from app.core.llm import complete
-from app.extraction import benchmarks as bench
-from app.extraction.extract import RESPONSE_SCHEMA, SYSTEM_PROMPT
-from app.models.fetch import fetch_snapshot
+from app.features.extraction import benchmarks as bench
+from app.features.extraction.extract import RESPONSE_SCHEMA, SYSTEM_PROMPT
+from app.features.models.fetch import fetch_snapshot
 
 FIXTURES = Path(__file__).parent / "fixtures" / "llm"
 MODELS = [

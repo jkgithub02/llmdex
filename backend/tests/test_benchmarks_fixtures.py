@@ -19,8 +19,8 @@ from pathlib import Path
 import pytest
 
 from app.core.schemas import RejectedValue
-from app.extraction.benchmarks import rows
-from app.extraction.ground import GroundedCard, normalise
+from app.features.extraction.benchmarks import rows
+from app.features.extraction.ground import GroundedCard, normalise
 
 FIXTURES = sorted((Path(__file__).parent / "fixtures" / "llm").glob("benchmarks--*.json"))
 
