@@ -15,7 +15,6 @@ from backend.core.store import Store
 from backend.extraction.extract import (
     RESPONSE_SCHEMA,
     SYSTEM_PROMPT,
-    _benchmarks,
     _quantization,
     _serving,
 )
@@ -60,7 +59,7 @@ def run(
     # card states none of this" is indistinguishable from a card that really
     # states none of it (R3.2). Two agreeing empties are believed -- a card with
     # nothing to find is the common case, and a third call relearns it.
-    if not any(answer.get(field) for field in ("quantization", "serving", "benchmarks")):
+    if not any(answer.get(field) for field in ("quantization", "serving")):
         emit(AgentEvent(agent=NAME, kind="phase", phase="nothing came back; asking again"))
         answer = stream_json(messages, RESPONSE_SCHEMA, settings=llm, on_reasoning=on_reasoning)
 
@@ -69,7 +68,6 @@ def run(
     rejected: list[RejectedValue] = []
     quantization = _quantization(grounded, answer.get("quantization") or {}, rejected)
     serving = _serving(grounded, answer.get("serving") or {}, rejected)
-    benchmarks = _benchmarks(grounded, answer.get("benchmarks") or [], rejected)
     if rejected:
         emit(
             AgentEvent(
@@ -89,7 +87,6 @@ def run(
             model=llm.model,
             quantization=quantization,
             serving=serving,
-            benchmarks=benchmarks,
             rejected=rejected,
         ),
     )

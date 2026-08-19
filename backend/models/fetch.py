@@ -15,8 +15,17 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, Field
 
+from backend.models.derive import packed_quantization_bits
+from backend.models.tensors import header_length, parse_header
+
 HF_BASE = "https://huggingface.co"
 TIMEOUT = 60.0
+
+#: How much of a shard to ask for when reading its header. The header is a u64
+#: length followed by that much JSON; one megabyte covers the largest seen (a
+#: 128-expert layer runs to a few hundred kilobytes) and a longer one is fetched
+#: exactly rather than guessed around.
+HEADER_WINDOW = 1 << 20
 
 
 class IngestError(RuntimeError):
@@ -56,6 +65,9 @@ class RepoSnapshot(BaseModel):
     generation_config: dict[str, Any] | None = None
     readme: str | None = None
     safetensors_total: int | None = None
+    #: One parsed safetensors header per shard, read only when the summed total
+    #: above cannot be a parameter count (R2.2). ``None`` means not read.
+    tensor_headers: list[dict[str, Any]] | None = None
 
 
 def _token() -> str | None:
@@ -124,6 +136,12 @@ def fetch_snapshot(model_id: str, client: httpx.Client | None = None) -> RepoSna
         snapshot.config = _optional_json(client, model_id, "config.json")
         snapshot.generation_config = _optional_json(client, model_id, "generation_config.json")
         snapshot.readme = _optional_text(client, model_id, "README.md")
+
+        # Only for a checkpoint whose reported total counts packed containers
+        # rather than parameters. Everywhere else the Hub's number is right and
+        # this would be two range requests per shard spent to confirm it.
+        if packed_quantization_bits(snapshot.config or {}) is not None:
+            snapshot.tensor_headers = fetch_tensor_headers(client, model_id)
         return snapshot
     finally:
         if owns_client:
@@ -158,6 +176,54 @@ def _optional_json(client: httpx.Client, model_id: str, filename: str) -> dict[s
         # Present but unparseable is a different fact from absent, and silently
         # returning None would erase the difference.
         raise IngestError(f"{model_id}/{filename} is present but is not valid JSON") from exc
+
+
+def fetch_tensor_headers(client: httpx.Client, model_id: str) -> list[dict[str, Any]] | None:
+    """Every shard's safetensors header, or ``None`` if the repo has no safetensors.
+
+    Reads the header only -- the tensor data behind it is hundreds of gigabytes
+    and is never touched. A shard that answers anything other than 200/206 is
+    raised rather than skipped: a missing header does not make the count
+    smaller, it makes it wrong (R1.5).
+    """
+    index = _optional_json(client, model_id, "model.safetensors.index.json")
+    if index is not None:
+        shards = sorted(set((index.get("weight_map") or {}).values()))
+    else:
+        shards = ["model.safetensors"]
+
+    headers = []
+    for shard in shards:
+        blob = _range(client, model_id, shard, 0, HEADER_WINDOW - 1)
+        if blob is None:
+            # Only reachable for the single-file guess above; an indexed shard
+            # that is absent means the index is lying, and _range raises.
+            return None
+        try:
+            headers.append(parse_header(blob))
+        except ValueError:
+            # The header is longer than the window. Read its declared length and
+            # fetch exactly that, rather than growing the window by guesswork.
+            length = header_length(blob)
+            exact = _range(client, model_id, shard, 8, 8 + length - 1)
+            headers.append(json.loads(exact or b"{}"))
+    return headers or None
+
+
+def _range(
+    client: httpx.Client, model_id: str, filename: str, start: int, end: int
+) -> bytes | None:
+    """A byte range of a repository file. 404 is absent; anything else raises."""
+    r = client.get(
+        f"{HF_BASE}/{model_id}/resolve/main/{filename}",
+        headers={**_headers(), "Range": f"bytes={start}-{end}"},
+    )
+    if r.status_code in (200, 206):
+        return r.content
+    if r.status_code == 404:
+        return None
+    _raise_for_repo(model_id, r.status_code, r.text)
+    return None  # unreachable; _raise_for_repo always raises
 
 
 def fetch_revision(model_id: str, client: httpx.Client | None = None) -> str | None:

@@ -37,7 +37,9 @@ def stream_agents(
     fetch_card: CardFetcherDep,
     llm: LLMDep,
     tavily: TavilyDep,
-    agents: Annotated[str, Query(description="comma-separated agent names")] = "about,prose",
+    agents: Annotated[
+        str, Query(description="comma-separated agent names")
+    ] = "about,prose,benchmarks",
 ) -> StreamingResponse:
     """Run the named agents and narrate them as server-sent events.
 

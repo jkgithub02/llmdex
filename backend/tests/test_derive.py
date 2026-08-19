@@ -943,6 +943,76 @@ def test_an_active_count_that_cannot_be_computed_says_why():
     assert counts.unreliable_reason is not None
 
 
+def _nvfp4_headers() -> list[dict]:
+    """One MoE layer of the real checkpoint, at its published shapes.
+
+    The stored widths are the evidence for the packing factor: `moe_intermediate
+    x hidden` is 1856 x 2688, and the file holds [1856, 1344] -- two 4-bit
+    weights to the byte. The `mtp` module is the speculative-decoding head the
+    config declares with `num_nextn_predict_layers`.
+    """
+    header = {
+        "backbone.embeddings.weight": {"dtype": "BF16", "shape": [131072, 2688]},
+        "mtp.layers.0.norm.weight": {"dtype": "BF16", "shape": [10, 10]},
+    }
+    for index in range(128):
+        stem = f"backbone.layers.1.mixer.experts.{index}"
+        header[f"{stem}.up_proj.weight"] = {"dtype": "U8", "shape": [1856, 1344]}
+        header[f"{stem}.down_proj.weight"] = {"dtype": "U8", "shape": [2688, 928]}
+        header[f"{stem}.up_proj.weight_scale"] = {"dtype": "F8_E4M3", "shape": [1856, 168]}
+        header[f"{stem}.down_proj.weight_scale"] = {"dtype": "F8_E4M3", "shape": [2688, 116]}
+    return [header]
+
+
+def test_the_headers_lift_the_refusal_a_summed_total_earns():
+    """R2.2 - the refusal above is about one number being unusable, not about
+    the count being unknowable. The headers name every tensor, so the packed
+    containers can be unpacked and the scales left out."""
+    config = {**NEMOTRON_LIGHTNING_NVFP4, "num_nextn_predict_layers": 1}
+
+    counts = param_counts(config, NVFP4_REPORTED_TOTAL, headers=_nvfp4_headers())
+
+    # 128 experts x (1856x1344 + 2688x928) x 2 = 1,277,165,568, plus embeddings.
+    assert counts.total == 1_277_165_568 + 352_321_536
+    assert counts.unreliable_reason is None
+    # Larger than the number the Hub reported for the whole model, which is the
+    # point: 17.82B counted containers.
+    assert counts.total > NVFP4_REPORTED_TOTAL / 17
+
+
+def test_active_is_counted_from_the_expert_tensors_not_an_assumed_ffn():
+    """These experts are two matrices. `param_counts` assumes three, and does so
+    only because it has nothing but the config; given the files it does not have
+    to assume at all."""
+    config = {**NEMOTRON_LIGHTNING_NVFP4, "num_nextn_predict_layers": 1}
+
+    counts = param_counts(config, NVFP4_REPORTED_TOTAL, headers=_nvfp4_headers())
+
+    # 122 of 128 experts dormant, at 9,977,856 parameters each.
+    assert counts.active == counts.total - 122 * 9_977_856
+
+
+def test_a_declared_draft_head_is_counted_and_kept_out_of_the_total():
+    """R2.2 - the MTP head ships in the same files and is not part of the model
+    you prompt. Folding it in would contradict the card; dropping it silently
+    would lose weights that are really on disk and really in VRAM."""
+    config = {**NEMOTRON_LIGHTNING_NVFP4, "num_nextn_predict_layers": 1}
+
+    counts = param_counts(config, NVFP4_REPORTED_TOTAL, headers=_nvfp4_headers())
+
+    assert counts.auxiliary == 100
+    assert counts.auxiliary_module == "mtp"
+
+
+def test_a_config_that_declares_no_draft_head_keeps_every_module():
+    """Without `num_nextn_predict_layers` there is no evidence, and a module
+    name is not evidence."""
+    counts = param_counts(NEMOTRON_LIGHTNING_NVFP4, NVFP4_REPORTED_TOTAL, headers=_nvfp4_headers())
+
+    assert counts.auxiliary is None
+    assert counts.total == 1_277_165_568 + 352_321_536 + 100
+
+
 def test_an_ordinary_moe_still_counts_both():
     """The path that already worked must keep working: Qwen3-30B-A3B is
     unquantized and every layer holds experts."""

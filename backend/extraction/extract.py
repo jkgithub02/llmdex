@@ -16,7 +16,6 @@ import httpx
 from backend.core.config import LLMSettings
 from backend.core.schemas import (
     Extracted,
-    ExtractedBenchmark,
     ExtractedQuantization,
     ExtractedServing,
     RejectedValue,
@@ -48,13 +47,9 @@ serving.<engine>      For each serving engine the card gives instructions for,
                       Only real inference engines belong here. Sampling
                       settings, operating systems and hardware are NOT engines.
 
-benchmarks[].name     The name of the benchmark or task, such as MMLU, GPQA or
-                      SWE-bench Verified. This is NEVER the name of the model.
-                      In a results table the benchmark names are usually the row
-                      labels, while the column headers are the models compared.
-benchmarks[].score    The number as written, such as "52.80". Do not round it,
-                      strip trailing zeros, or convert it.
-benchmarks[].unit     The unit, if the card states one.
+Do not report benchmark scores here. A separate pass reads the results table,
+because a table needs its column headers to say which checkpoint each number
+belongs to and this schema has nowhere to put them.
 
 If the card does not state something, omit that field entirely. An omitted field
 is correct and expected; a real quotation placed in a field it does not answer is
@@ -95,19 +90,6 @@ RESPONSE_SCHEMA = {
             "properties": {engine: {"type": "string"} for engine in SERVING_ENGINES},
             "additionalProperties": False,
         },
-        "benchmarks": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "score": {"type": "string"},
-                    "unit": {"type": "string"},
-                },
-                "required": ["name", "score"],
-                "additionalProperties": False,
-            },
-        },
     },
     "additionalProperties": False,
 }
@@ -141,7 +123,7 @@ def extract(
     # the same answer. The cost lands only on that path: a card with anything in
     # it still costs one call.
     answer = complete(messages, RESPONSE_SCHEMA, settings=settings, client=client)
-    if not any(answer.get(field) for field in ("quantization", "serving", "benchmarks")):
+    if not any(answer.get(field) for field in ("quantization", "serving")):
         answer = complete(messages, RESPONSE_SCHEMA, settings=settings, client=client)
 
     grounded = GroundedCard(card)
@@ -149,15 +131,12 @@ def extract(
 
     quantization = _quantization(grounded, answer.get("quantization") or {}, rejected)
     serving = _serving(grounded, answer.get("serving") or {}, rejected)
-    benchmarks = _benchmarks(grounded, answer.get("benchmarks") or [], rejected)
-
     return Extracted(
         card_revision=card_revision,
         extracted_on=today or datetime.now(tz=UTC).date().isoformat(),
         model=settings.model,
         quantization=quantization,
         serving=serving,
-        benchmarks=benchmarks,
         rejected=rejected,
     )
 
@@ -201,22 +180,3 @@ def _serving(
         if span is not None:
             engines[engine] = span
     return ExtractedServing(engines=engines) if engines else None
-
-
-def _benchmarks(
-    grounded: GroundedCard, rows: list[dict], rejected: list[RejectedValue]
-) -> list[ExtractedBenchmark]:
-    """A row survives only if both its name and its score verify.
-
-    A score whose benchmark name could not be found is an orphan number, and an
-    orphan number in a catalogue of model specifications is worse than no number.
-    """
-    out: list[ExtractedBenchmark] = []
-    for index, row in enumerate(rows):
-        name = _locate(grounded, row.get("name"), f"benchmarks.{index}.name", rejected)
-        score = _locate(grounded, row.get("score"), f"benchmarks.{index}.score", rejected)
-        unit = _locate(grounded, row.get("unit"), f"benchmarks.{index}.unit", rejected)
-        if name is None or score is None:
-            continue
-        out.append(ExtractedBenchmark(name=name, score=score, unit=unit))
-    return out

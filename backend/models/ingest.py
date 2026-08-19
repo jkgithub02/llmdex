@@ -65,6 +65,10 @@ def build_document(
                     config,
                     siblings=snapshot.siblings,
                     safetensors_total=snapshot.safetensors_total,
+                    # Not passed to the GGUF branch above: those headers describe
+                    # the safetensors artifact, and a GGUF checkpoint is a
+                    # different set of files.
+                    tensor_headers=snapshot.tensor_headers,
                     context=context,
                 ),
             )

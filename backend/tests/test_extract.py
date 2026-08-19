@@ -29,6 +29,8 @@ Requires vLLM 0.27.1 or newer.
 |---|---|---|
 | SWE-bench Verified | 52.80 | percent |
 """
+# The table above is deliberately still here: this pass must leave it alone.
+# backend/tests/test_extract_benchmarks.py covers reading it.
 
 
 def _responder(payload: dict):
@@ -45,7 +47,6 @@ def test_a_faithful_response_becomes_verified_spans(monkeypatch):
             {
                 "quantization": {"format": "NVFP4", "method": "PTQ via NVIDIA ModelOpt"},
                 "serving": {"vllm": "Requires vLLM 0.27.1"},
-                "benchmarks": [{"name": "SWE-bench Verified", "score": "52.80", "unit": "percent"}],
             }
         ),
     )
@@ -55,7 +56,6 @@ def test_a_faithful_response_becomes_verified_spans(monkeypatch):
     assert result.quantization.format.text == "NVFP4"
     assert result.quantization.format.section == "Quantization"
     assert result.serving.engines["vllm"].text == "Requires vLLM 0.27.1"
-    assert result.benchmarks[0].score.text == "52.80"
     assert result.rejected == []
     assert result.card_revision == "abc123"
     assert result.model == "vllm/some-model"
@@ -76,19 +76,6 @@ def test_an_invented_value_lands_in_rejected_and_the_field_is_null(monkeypatch):
     assert result.rejected[0].field == "quantization.format"
 
 
-def test_a_benchmark_row_is_dropped_whole_when_its_name_cannot_be_verified(monkeypatch):
-    """A score without a verified benchmark name is an orphan number."""
-    monkeypatch.setattr(
-        "backend.extraction.extract.complete",
-        _responder({"benchmarks": [{"name": "MMLU-Pro", "score": "52.80"}]}),
-    )
-
-    result = extract(CARD, card_revision="abc123", settings=SETTINGS, today="2026-08-17")
-
-    assert result.benchmarks == []
-    assert any(r.field.startswith("benchmarks") for r in result.rejected)
-
-
 def test_a_card_with_nothing_extractable_is_a_success_not_an_error(monkeypatch):
     """research.md 5 - most cards state none of this. An empty result is a fact."""
     monkeypatch.setattr("backend.extraction.extract.complete", _responder({}))
@@ -97,7 +84,6 @@ def test_a_card_with_nothing_extractable_is_a_success_not_an_error(monkeypatch):
 
     assert result.quantization is None
     assert result.serving is None
-    assert result.benchmarks == []
     assert result.rejected == []
 
 
@@ -191,7 +177,6 @@ def test_a_second_empty_answer_is_believed(monkeypatch):
     assert len(calls) == 2
     assert result.quantization is None
     assert result.serving is None
-    assert result.benchmarks == []
 
 
 def test_an_answer_with_content_is_never_asked_twice(monkeypatch):

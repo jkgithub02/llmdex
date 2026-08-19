@@ -11,7 +11,7 @@ import queue
 import threading
 from collections.abc import Callable, Iterator
 
-from backend.agents import about, prose
+from backend.agents import about, benchmarks, prose
 from backend.agents.events import AgentEvent
 from backend.core.config import LLMSettings, TavilySettings
 from backend.core.schemas import ModelDoc
@@ -19,7 +19,11 @@ from backend.core.store import Store
 
 # ponytail: thread per agent + one queue. Fine at this size on a single-user
 # tool; move to asyncio with httpx.AsyncClient if this ever fans out wider.
-AGENTS: dict[str, Callable[..., str]] = {about.NAME: about.run, prose.NAME: prose.run}
+AGENTS: dict[str, Callable[..., str]] = {
+    about.NAME: about.run,
+    prose.NAME: prose.run,
+    benchmarks.NAME: benchmarks.run,
+}
 
 _DONE = object()
 

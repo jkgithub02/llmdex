@@ -21,7 +21,14 @@ from typing import Any
 
 import yaml
 
-from backend.core.schemas import Benchmark, Checkpoint, Extracted, ModelDoc, Summary
+from backend.core.schemas import (
+    Benchmark,
+    Checkpoint,
+    Extracted,
+    ExtractedBenchmarks,
+    ModelDoc,
+    Summary,
+)
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n(.*)\Z", re.DOTALL)
 
@@ -241,12 +248,42 @@ class Store:
         extracted: Extracted,
         operation: str = "extract",
     ) -> ModelDoc:
-        """Write one checkpoint's ``extracted`` block and nothing else (R3.x).
+        """Write one checkpoint's ``extracted`` block and nothing else (R3.x)."""
+        return self._merge_block(model_id, repo, quantization, "extracted", extracted, operation)
 
-        Extraction never creates a document or a checkpoint. If the target is not
-        already in the store that is an error, not an invitation to invent one: a
-        span is only meaningful against a card ingest has already read and
-        recorded a revision for.
+    def merge_benchmarks(
+        self,
+        model_id: str,
+        repo: str,
+        quantization: str | None,
+        benchmarks: ExtractedBenchmarks,
+        operation: str = "benchmarks",
+    ) -> ModelDoc:
+        """Write one checkpoint's ``extracted_benchmarks`` block and nothing else.
+
+        Its own block, so a re-run of the extractor cannot take the table with
+        it: the two agents read the card at different times and each stamps its
+        spans with the revision it actually read (R1.3, R3.3).
+        """
+        return self._merge_block(
+            model_id, repo, quantization, "extracted_benchmarks", benchmarks, operation
+        )
+
+    def _merge_block(
+        self,
+        model_id: str,
+        repo: str,
+        quantization: str | None,
+        field: str,
+        value: object,
+        operation: str,
+    ) -> ModelDoc:
+        """Replace one field of one checkpoint, leaving every other block alone.
+
+        Neither agent ever creates a document or a checkpoint. If the target is
+        not already in the store that is an error, not an invitation to invent
+        one: a span is only meaningful against a card ingest has already read
+        and recorded a revision for.
         """
         with _LOCK:
             doc = self.read(model_id)
@@ -256,7 +293,7 @@ class Store:
             wanted = (repo, quantization or "")
             for checkpoint in doc.checkpoints:
                 if _checkpoint_key(checkpoint) == wanted:
-                    checkpoint.extracted = extracted
+                    setattr(checkpoint, field, value)
                     break
             else:
                 raise KeyError(

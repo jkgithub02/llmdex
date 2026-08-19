@@ -30,6 +30,7 @@ from backend.core.schemas import (
     VRAMEstimate,
     WeightBytes,
 )
+from backend.models.tensors import count_parameters
 
 WEIGHT_SUFFIXES = (".safetensors", ".gguf", ".bin", ".pt", ".pth")
 
@@ -395,7 +396,7 @@ def kv_cache(
 # ---------------------------------------------------------------------------
 
 
-def _packed_quantization_bits(config: dict[str, Any]) -> int | None:
+def packed_quantization_bits(config: dict[str, Any]) -> int | None:
     """Weight bit-width, if this checkpoint stores weights below one byte each.
 
     Only sub-byte weights matter here: they are packed several to a container,
@@ -434,21 +435,48 @@ def _moe_layer_count(config: dict[str, Any]) -> int | None:
     return config.get("num_hidden_layers")
 
 
-def param_counts(config: dict[str, Any], safetensors_total: int | None) -> ParamCounts:
+def param_counts(
+    config: dict[str, Any],
+    safetensors_total: int | None,
+    headers: list[dict[str, Any]] | None = None,
+) -> ParamCounts:
     """Total params, plus active params for mixture-of-experts models.
 
     Active is total minus the routed-expert params that do not fire for a given
     token. Requires enough of the config to size one expert; if that is missing
     the count is ``None`` with a reason rather than approximated.
+
+    ``headers`` are the checkpoint's safetensors headers, when they were read.
+    They outrank both paths below: every tensor is named, so packed containers
+    are unpacked, scales are left out, and the expert bank is counted instead of
+    being modelled as three matrices. See :mod:`backend.models.tensors`.
     """
     n_experts = _first(config, *_MOE_EXPERT_KEYS)
     is_moe = n_experts is not None and n_experts > 1
+
+    bits = packed_quantization_bits(config)
+
+    if headers:
+        tally = count_parameters(
+            headers,
+            bits=bits,
+            experts_per_tok=config.get("num_experts_per_tok"),
+            has_draft_head=bool(config.get("num_nextn_predict_layers")),
+        )
+        if tally.total is not None:
+            return ParamCounts(
+                total=tally.total,
+                active=tally.active,
+                is_moe=bool(is_moe),
+                auxiliary=tally.auxiliary,
+                auxiliary_module=tally.auxiliary_module,
+                unreliable_reason=tally.unreliable_reason,
+            )
 
     # A sub-byte checkpoint packs several weights into each stored element, so
     # the Hub's parameter total counts containers, not parameters -- 17.82B for
     # a 30B model. It also sums the quantization scales in alongside the weights.
     # Neither can be undone from one summed number, so no number is reported.
-    bits = _packed_quantization_bits(config)
     if bits is not None and safetensors_total is not None:
         return ParamCounts(
             is_moe=bool(is_moe),
@@ -722,6 +750,7 @@ def derive(
     config: dict[str, Any],
     siblings: list[dict[str, Any]],
     safetensors_total: int | None = None,
+    tensor_headers: list[dict[str, Any]] | None = None,
     context: int = 32768,
     batch: int = 1,
     kv_dtype: str = "fp16",
@@ -744,10 +773,10 @@ def derive(
 
     weights = weight_bytes(siblings)
     layers = layer_composition(config)
-    params = param_counts(config, safetensors_total)
+    params = param_counts(config, safetensors_total, tensor_headers)
     kind = architecture_class(layers, params)
 
-    if safetensors_total is None:
+    if params.total is None:
         underivable.append("params_total")
     if weights.bytes is None:
         underivable.append("weights_bytes")

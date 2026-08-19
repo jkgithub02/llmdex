@@ -83,6 +83,11 @@ class ParamCounts(BaseModel):
     total: int | None = None
     active: int | None = None
     is_moe: bool = False
+    #: A speculative-decoding draft head shipped in the same files, when the
+    #: config declares one. Held out of ``total`` -- it is not part of the model
+    #: you prompt -- but recorded, because it is really on disk and in VRAM.
+    auxiliary: int | None = None
+    auxiliary_module: str | None = None
     unreliable_reason: str | None = None
 
 
@@ -251,11 +256,18 @@ class ExtractedServing(BaseModel):
 
 
 class ExtractedBenchmark(BaseModel):
-    """R3.4 - a row of the vendor's reported table.
+    """R3.4 - one cell of the vendor's reported table.
 
     ``score`` stays a string. Turning ``"52.80"`` into ``52.8`` is a conversion,
     and R3.1 forbids conversion at extraction time; that promotion happens with
     the Benchmarks tab, where a human confirms the slug (R4.5b, R5.3).
+
+    ``variant`` is the column header the score sat under, copied like everything
+    else. Published tables compare checkpoints -- a BF16 sibling beside this
+    NVFP4 one -- and without the header a number from the wrong column reads as
+    this repository's result. Nothing here decides which column *is* this
+    checkpoint: the header text and a repo name are close but not equal, and
+    that gap is exactly where a wrong attribution would live.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -263,6 +275,25 @@ class ExtractedBenchmark(BaseModel):
     name: Span
     score: Span
     unit: Span | None = None
+    variant: Span | None = None
+
+
+class ExtractedBenchmarks(BaseModel):
+    """R3.4 - the results table of one card, as its own block.
+
+    Separate from :class:`Extracted` because a separate agent reads it. Both
+    blocks carry the revision of the card their own spans were found in, and a
+    re-run of one cannot overwrite the other.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    card_revision: str
+    extracted_on: str
+    model: str
+    """Which endpoint and model produced this (R7.4)."""
+    rows: list[ExtractedBenchmark] = Field(default_factory=list)
+    rejected: list[RejectedValue] = Field(default_factory=list)
 
 
 class Extracted(BaseModel):
@@ -281,8 +312,22 @@ class Extracted(BaseModel):
     """Which endpoint and model produced this (R7.4)."""
     quantization: ExtractedQuantization | None = None
     serving: ExtractedServing | None = None
-    benchmarks: list[ExtractedBenchmark] = Field(default_factory=list)
     rejected: list[RejectedValue] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_a_legacy_empty_table(cls, value: object) -> object:
+        """The results table moved to :class:`ExtractedBenchmarks`.
+
+        Documents written before that carry ``benchmarks: []`` here, which says
+        exactly what its absence now says -- nobody found any -- so they load,
+        and the next write of this block drops the key. Only an empty list is
+        forgiven: a populated one is real data in the wrong place, and quietly
+        discarding it would lose spans somebody's card really supported.
+        """
+        if isinstance(value, dict) and value.get("benchmarks") == []:
+            value = {k: v for k, v in value.items() if k != "benchmarks"}
+        return value
 
 
 class Measured(BaseModel):
@@ -338,6 +383,8 @@ class Checkpoint(BaseModel):
     derived: Derived | None = None
     extracted: Extracted | None = None
     """The extractor owns this. None means nobody has run it (R3.2)."""
+    extracted_benchmarks: ExtractedBenchmarks | None = None
+    """The benchmarks agent owns this. None means nobody has read the table."""
 
     @field_validator("extracted", mode="before")
     @classmethod

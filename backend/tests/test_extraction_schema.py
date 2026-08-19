@@ -39,5 +39,40 @@ def test_an_extraction_names_the_card_and_the_model_that_produced_it():
         extracted_on="2026-08-17",
         model="vllm/Qwen/Qwen3.5-122B-A10B-GPTQ-Int4",
     )
-    assert extracted.benchmarks == []
     assert extracted.rejected == []
+
+
+def test_a_legacy_empty_benchmarks_list_still_loads():
+    """The table moved to its own block. Documents written before that carry
+    `extracted: {benchmarks: []}`, which says exactly what its absence says --
+    nobody found any -- so it loads and the next write drops it. A populated one
+    would be real data in the wrong place and still raises."""
+    checkpoint = Checkpoint.model_validate(
+        {
+            "repo": "a/b",
+            "extracted": {
+                "card_revision": "abc",
+                "extracted_on": "2026-08-18",
+                "model": "vllm/m",
+                "benchmarks": [],
+            },
+        }
+    )
+
+    assert checkpoint.extracted is not None
+    assert not hasattr(checkpoint.extracted, "benchmarks")
+
+
+def test_a_populated_legacy_benchmarks_list_is_not_silently_dropped():
+    with pytest.raises(ValidationError):
+        Checkpoint.model_validate(
+            {
+                "repo": "a/b",
+                "extracted": {
+                    "card_revision": "abc",
+                    "extracted_on": "2026-08-18",
+                    "model": "vllm/m",
+                    "benchmarks": [{"name": {}, "score": {}}],
+                },
+            }
+        )

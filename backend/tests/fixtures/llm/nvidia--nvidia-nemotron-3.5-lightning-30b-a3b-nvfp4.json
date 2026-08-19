@@ -1,0 +1,14 @@
+{
+  "model_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+  "model": "vllm/Qwen/Qwen3.5-122B-A10B-GPTQ-Int4",
+  "answer": {
+    "quantization": {
+      "format": "NVFP4",
+      "method": "post-training quantization (PTQ) with Nvidia Model Optimizer",
+      "scope": "W4A16 on routed and shared experts, FP8 per-tensor dynamic scales on mamba in_proj/out_proj and KV cache. We used a subset of the Nemotron Ultra validation set for calibration with 1000 samples at 32k token length."
+    },
+    "serving": {
+      "vllm": "vLLM version: `vllm/vllm-openai:v0.27.1`"
+    }
+  }
+}

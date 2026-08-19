@@ -27,6 +27,7 @@ from backend.core.config import (
     llm_settings,
     tavily_settings,
 )
+from backend.extraction.benchmarks import extract_benchmarks
 from backend.extraction.extract import SERVING_ENGINES, extract
 from backend.extraction.llm import stream_json
 from backend.models.derive import derive
@@ -442,3 +443,113 @@ def test_the_endpoint_really_streams_reasoning():
     assert seen, "no reasoning deltas arrived; the trace UI would show nothing"
     print(f"\n{len(seen)} reasoning deltas, {sum(len(s) for s in seen)} chars")
     print(f"first 200 chars: {''.join(seen)[:200]!r}")
+
+
+# --------------------------------------------------------------------------
+# R2.2 - a packed checkpoint, counted from its own safetensors headers
+#
+# The offline suite cannot verify this: the whole claim is that the Hub's
+# summed total is wrong and the headers are right, and only the real repository
+# has both. Every number below was computed from all 52 shard headers.
+# --------------------------------------------------------------------------
+
+NVFP4_REPO = "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"
+
+
+def test_a_packed_checkpoint_is_counted_from_its_headers():
+    """The Hub reports 17.82B for this repo because 15.09B of those "elements"
+    are uint8 containers holding two 4-bit weights each. Counting the tensors
+    themselves gives 31.58B, and the card says 30B (which excludes embeddings:
+    31,577,940,288 - 704,643,072 = 30.87B)."""
+    snapshot = fetch_snapshot(NVFP4_REPO)
+
+    assert snapshot.safetensors_total == 17_820_210_764
+    assert snapshot.tensor_headers is not None and len(snapshot.tensor_headers) == 52
+
+    d = derive(
+        snapshot.config,
+        siblings=snapshot.siblings,
+        safetensors_total=snapshot.safetensors_total,
+        tensor_headers=snapshot.tensor_headers,
+    )
+
+    assert d.params.total == 31_577_940_288
+    assert d.params.unreliable_reason is None
+
+
+def test_active_params_match_what_the_card_claims():
+    """3,580,076,352 less the embeddings and lm_head is 2.88B -- the card's
+    "3B active". The config's own arithmetic cannot reach this: these experts
+    are two matrices and `param_counts` assumes three."""
+    snapshot = fetch_snapshot(NVFP4_REPO)
+
+    d = derive(
+        snapshot.config,
+        siblings=snapshot.siblings,
+        safetensors_total=snapshot.safetensors_total,
+        tensor_headers=snapshot.tensor_headers,
+    )
+
+    assert d.params.active == 3_580_076_352
+
+
+def test_the_speculative_decoding_head_is_counted_apart():
+    """`num_nextn_predict_layers: 1`, and 270 tensors under `mtp.`. Folding them
+    into the total would contradict the card by a whole 1.3B."""
+    snapshot = fetch_snapshot(NVFP4_REPO)
+
+    d = derive(
+        snapshot.config,
+        siblings=snapshot.siblings,
+        safetensors_total=snapshot.safetensors_total,
+        tensor_headers=snapshot.tensor_headers,
+    )
+
+    assert d.params.auxiliary == 1_335_325_952
+    assert d.params.auxiliary_module == "mtp"
+
+
+def test_an_unquantized_repo_reads_no_headers_at_all():
+    """The cost is only paid where the summed total is unusable."""
+    snapshot = fetch_snapshot("Qwen/Qwen3-8B")
+
+    assert snapshot.tensor_headers is None
+    assert snapshot.safetensors_total == 8_190_735_360
+
+
+# --------------------------------------------------------------------------
+# R3.1 / R3.4 - the results table, read from the real card by the real endpoint
+# --------------------------------------------------------------------------
+
+
+def test_a_real_results_table_is_copied_column_by_column():
+    """Nemotron publishes one column per precision of the same model. Both are
+    kept, each labelled with the header the card printed, because deciding which
+    column is this repository is a guess and printing both is not."""
+    settings = llm_settings()
+    snapshot = fetch_snapshot(NVFP4_REPO)
+
+    block = extract_benchmarks(snapshot.readme, card_revision=snapshot.revision, settings=settings)
+
+    assert len(block.rows) > 20
+    variants = {row.variant.text for row in block.rows if row.variant}
+    assert any("BF16" in v for v in variants)
+    assert any("NVFP4" in v for v in variants)
+    # R3.1 - every cell is a slice of the card, the column header included.
+    for row in block.rows:
+        for span in (row.name, row.score, row.variant):
+            if span is not None:
+                assert snapshot.readme[span.start : span.end] == span.text
+
+
+def test_a_card_with_no_table_reports_none_rather_than_something():
+    """Qwen3-8B's card has no results table and no benchmark named anywhere in
+    it. An empty answer is the correct one, and the expensive failure would be
+    a plausible number appearing here."""
+    settings = llm_settings()
+    snapshot = fetch_snapshot("Qwen/Qwen3-8B")
+
+    block = extract_benchmarks(snapshot.readme, card_revision=snapshot.revision, settings=settings)
+
+    assert block.rows == []
+    assert block.rejected == []
