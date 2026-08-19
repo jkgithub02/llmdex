@@ -22,7 +22,7 @@ from app.core.grounding import GroundedCard, normalise
 from app.core.schemas import RejectedValue
 from app.features.benchmarks.extract import rows
 
-FIXTURES = sorted((Path(__file__).parent / "fixtures" / "llm").glob("benchmarks--*.json"))
+FIXTURES = sorted((Path(__file__).parent.parent / "fixtures" / "llm").glob("benchmarks--*.json"))
 
 
 def _fixture(path: Path) -> dict:
@@ -90,7 +90,7 @@ def test_a_multi_column_table_keeps_its_columns_apart(captured):
 def test_nemotron_reports_both_precisions_separately():
     """The card this was built for: one column per precision of the same model."""
     captured = _fixture(
-        Path(__file__).parent
+        Path(__file__).parent.parent
         / "fixtures"
         / "llm"
         / "benchmarks--nvidia--nvidia-nemotron-3.5-lightning-30b-a3b-nvfp4.json"
@@ -111,7 +111,7 @@ def test_deepseek_keeps_five_competitors_out_of_this_checkpoints_numbers():
     """Six columns, and only one of them is this repository. Attributing any of
     the other five to it is the sibling confusion this block exists to stop."""
     captured = _fixture(
-        Path(__file__).parent
+        Path(__file__).parent.parent
         / "fixtures"
         / "llm"
         / "benchmarks--deepseek-ai--deepseek-v2-lite.json"

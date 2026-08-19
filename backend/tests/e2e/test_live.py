@@ -39,7 +39,7 @@ pytestmark = pytest.mark.live
 
 # backend/tests/test_live.py -> repo root, where pyproject.toml and the package live.
 # uvicorn is launched from here so `app.main:app` resolves.
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 MODELS = {
     "Qwen/Qwen3-8B": "dense GQA with an explicit head_dim",

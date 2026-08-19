@@ -18,7 +18,7 @@ from app.features.extraction.schemas import Quantization
 from app.features.models.fetch import GatedRepo, RepoNotFound, RepoSnapshot
 from app.features.models.ingest import ingest
 
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parent.parent / "fixtures"
 
 
 def snapshot(name: str) -> RepoSnapshot:

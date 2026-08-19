@@ -16,7 +16,7 @@ from app.core.store import Store
 from app.features.models.fetch import GatedRepo, RepoNotFound, RepoSnapshot
 from app.main import app, get_fetcher, get_store
 
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parent.parent / "fixtures"
 
 
 def snapshot(name: str) -> RepoSnapshot:

@@ -27,8 +27,8 @@ neither exemption is needed any more.
 import ast
 from pathlib import Path
 
-FEATURES = Path(__file__).resolve().parents[1] / "app" / "features"
-CORE = Path(__file__).resolve().parents[1] / "app" / "core"
+FEATURES = Path(__file__).resolve().parents[2] / "app" / "features"
+CORE = Path(__file__).resolve().parents[2] / "app" / "core"
 
 
 def _feature_imports(path: Path) -> list[str]:
@@ -84,7 +84,7 @@ def test_document_is_the_module_that_assembles_the_vault_document():
     assert _feature_imports(CORE / "document.py")
 
 
-COMMON = Path(__file__).resolve().parents[1] / "app" / "common"
+COMMON = Path(__file__).resolve().parents[2] / "app" / "common"
 
 # `common` holds what several features share. Two modules in it assemble
 # features rather than merely being shared by them, which is the same category

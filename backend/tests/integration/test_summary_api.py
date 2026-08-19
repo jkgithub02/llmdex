@@ -147,7 +147,7 @@ def test_regenerating_replaces_the_previous_summary(client, vault, endpoints):
 def test_a_first_ingest_generates_a_summary(vault, monkeypatch, endpoints):
     """The user should not have to ask for the first one."""
     from app.features.models.router import get_fetcher
-    from tests.test_api import snapshot
+    from tests.integration.test_api import snapshot
 
     app.dependency_overrides[get_store] = lambda: vault
     app.dependency_overrides[get_fetcher] = lambda: lambda model_id: snapshot("qwen3-8b")
@@ -166,7 +166,7 @@ def test_a_re_ingest_does_not_generate_again(vault, monkeypatch, endpoints):
     """A card refresh must not silently spend tokens, and must not overwrite a
     summary somebody regenerated on purpose."""
     from app.features.models.router import get_fetcher
-    from tests.test_api import snapshot
+    from tests.integration.test_api import snapshot
 
     calls = []
     monkeypatch.setattr(
@@ -191,7 +191,7 @@ def test_ingest_survives_a_summary_that_cannot_be_generated(vault, monkeypatch):
     """R1.5 - ingest is atomic and owns the document. Whether some other endpoint
     was reachable is not allowed to decide if a model can enter the vault."""
     from app.features.models.router import get_fetcher
-    from tests.test_api import snapshot
+    from tests.integration.test_api import snapshot
 
     monkeypatch.setattr(
         "app.features.summary.generate.search",
@@ -214,7 +214,7 @@ def test_ingest_survives_a_summary_that_cannot_be_generated(vault, monkeypatch):
 def test_ingest_survives_summarisation_being_unconfigured(vault, monkeypatch):
     """A deployment with no search key still ingests; it just has no summaries."""
     from app.features.models.router import get_fetcher
-    from tests.test_api import snapshot
+    from tests.integration.test_api import snapshot
 
     monkeypatch.delenv("LLMDEX_TAVILY_API_KEY", raising=False)
     monkeypatch.delenv("LLMDEX_LLM_BASE_URL", raising=False)
