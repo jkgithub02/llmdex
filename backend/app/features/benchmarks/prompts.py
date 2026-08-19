@@ -2,7 +2,7 @@
 the answer must be shaped.
 
 Worth reading on its own, apart from the code that posts it and the code that
-verifies what comes back. The verifying code -- :mod:`app.features.extraction.benchmarks`
+verifies what comes back. The verifying code -- :mod:`app.features.benchmarks.extract`
 -- reads a card the same way the extractor does, so it stays beside that
 grounding machinery; only the prompt itself belongs to this feature.
 """

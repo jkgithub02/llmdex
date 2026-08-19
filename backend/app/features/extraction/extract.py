@@ -2,7 +2,7 @@
 
 The model is asked for quotes, not values: each field it fills must be text
 copied out of the card. Nothing it returns is stored directly -- every string
-goes through :class:`~app.features.extraction.ground.GroundedCard`, and what survives
+goes through :class:`~app.core.grounding.GroundedCard`, and what survives
 is a slice of the card itself (R3.1).
 
 Fields the model leaves out are simply absent. Fields it fills with something
@@ -14,15 +14,14 @@ from datetime import UTC, datetime
 import httpx
 
 from app.core.config import LLMSettings
+from app.core.grounding import GroundedCard, _locate
 from app.core.llm import complete
 from app.core.schemas import (
     Extracted,
     ExtractedQuantization,
     ExtractedServing,
     RejectedValue,
-    Span,
 )
-from app.features.extraction.ground import GroundedCard
 from app.features.extraction.prompts import (
     QUANTIZATION_FIELDS,
     RESPONSE_SCHEMA,
@@ -73,19 +72,6 @@ def extract(
         serving=serving,
         rejected=rejected,
     )
-
-
-def _locate(
-    grounded: GroundedCard, value: str | None, field: str, rejected: list[RejectedValue]
-) -> Span | None:
-    """One verification. Anything that is not a Span is recorded and dropped."""
-    if value is None:
-        return None
-    found = grounded.find(value, field=field)
-    if isinstance(found, Span):
-        return found
-    rejected.append(found)
-    return None
 
 
 def _quantization(

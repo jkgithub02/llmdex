@@ -12,13 +12,19 @@ not the task to fix: `agents/router.py`, `extraction/router.py`,
 feature's router or fetcher to wire dependency injection, predating this test.
 Widening the exemption to cover them is the honest option -- pretending they
 pass by narrowing what the test looks at would not -- but it is debt, not
-design, and is flagged in the task 5 report for a follow-up task to actually
-move the shared DI wiring into `common/`.
+design: Task 8 extracts a service layer per feature and is where the shared DI
+providers (the card fetcher, the LLM/Tavily settings providers, `fetch_snapshot`)
+should move into `common/deps.py`, which already exists and already holds
+`StoreDep` for exactly this. Not attempted here.
 
-`benchmarks/agent.py` is a second case, deliberately introduced by this task:
-the benchmarks agent verifies its answers with the extractor's grounding
-machinery (`rows`, `GroundedCard`) rather than duplicating it, per this task's
-own instructions to leave that machinery where it is.
+An earlier version of this file also exempted `benchmarks/agent.py` and
+`extraction/benchmarks.py` for a benchmarks/extraction cycle: extraction read
+its prompt out of the benchmarks feature while the benchmarks agent read
+`rows`/`GroundedCard` back out of extraction. That cycle is gone -- the
+one-quote-verification concern (`GroundedCard`, `_locate`) moved to
+`app.core.grounding`, and the benchmark-table extraction that used it moved
+into the benchmarks feature outright (`features/benchmarks/extract.py`) -- so
+neither exemption is needed any more.
 """
 
 import ast
@@ -38,18 +44,12 @@ def _feature_imports(path: Path) -> list[str]:
     return found
 
 
-# The composition root task 5 names outright, and the one other exception it
-# deliberately introduces:
-COMPOSITION_ROOTS = {
-    "agents/runner.py",  # imports summary/extraction/benchmarks to build AGENTS
-    "benchmarks/agent.py",  # borrows the extractor's grounding rather than copy it
-    "extraction/benchmarks.py",  # the other half of that pair: reads its prompt
-    # from features/benchmarks/prompts.py, per this task's own instructions to
-    # leave extract_benchmarks()/rows() where they are rather than move them.
-}
+# The composition root task 5 names outright:
+COMPOSITION_ROOTS = {"agents/runner.py"}  # imports summary/extraction/benchmarks
 
 # Pre-existing dependency-injection wiring at the router layer, predating this
-# test. Not task 5's to fix -- see the module docstring above.
+# test. Task 8's to remove, by moving the shared DI providers into
+# `common/deps.py` -- see the module docstring above.
 COMPOSITION_ROOTS |= {
     "agents/router.py",
     "extraction/router.py",

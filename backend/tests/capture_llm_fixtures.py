@@ -14,7 +14,7 @@ from pathlib import Path
 
 from app.core.config import llm_settings
 from app.core.llm import complete
-from app.features.extraction import benchmarks as bench
+from app.features.benchmarks import extract as bench
 from app.features.extraction.extract import RESPONSE_SCHEMA, SYSTEM_PROMPT
 from app.features.models.fetch import fetch_snapshot
 

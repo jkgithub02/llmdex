@@ -29,7 +29,7 @@ from app.core.config import (
 )
 from app.core.llm import stream_json
 from app.core.search import search
-from app.features.extraction.benchmarks import extract_benchmarks
+from app.features.benchmarks.extract import extract_benchmarks
 from app.features.extraction.extract import SERVING_ENGINES, extract
 from app.features.models.derive import derive
 from app.features.models.fetch import fetch_snapshot
