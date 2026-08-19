@@ -1,0 +1,125 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: 0 var(--space-6);
+  height: 56px;
+  background: color-mix(in srgb, var(--bg-sunken) 82%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* The card-box mark, in its white cut. The app chrome is dark everywhere --
+   only the detail sheet is light -- so the white asset is the right one and
+   needs no recolouring. */
+.mark {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+nav {
+  display: flex;
+  gap: var(--space-4);
+}
+
+nav a {
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
+  border-bottom: 2px solid transparent;
+  transition: color 180ms ease;
+}
+
+nav a:hover {
+  color: var(--fg);
+}
+
+nav a.active {
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+}
+
+.app-footer {
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-sunken) 85%, transparent);
+  padding: var(--space-4) var(--space-6);
+  font-size: 0.8rem;
+  color: var(--fg-faint);
+}
+
+.footer-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.developer {
+  color: var(--fg-muted);
+  font-weight: 500;
+}
+
+.version-tag {
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    gap: var(--space-4);
+  }
+
+  .footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .footer-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+

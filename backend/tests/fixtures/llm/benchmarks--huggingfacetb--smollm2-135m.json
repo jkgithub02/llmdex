@@ -1,0 +1,179 @@
+{
+  "model_id": "HuggingFaceTB/SmolLM2-135M",
+  "model": "vllm/Qwen/Qwen3.5-122B-A10B-GPTQ-Int4",
+  "card": "---\nlibrary_name: transformers\nlicense: apache-2.0\nlanguage:\n- en\n---\n\n\n# SmolLM2\n\n![image/png](https://cdn-uploads.huggingface.co/production/uploads/61c141342aac764ce1654e43/XtSR4NkriicR6fGiWGowZ.png)\n\n##  Table of Contents\n\n1. [Model Summary](##model-summary)\n2. [Limitations](##limitations)\n3. [Training](##training)\n4. [License](##license)\n5. [Citation](##citation)\n\n## Model Summary\n\nSmolLM2 is a family of compact language models available in three size: 135M, 360M, and 1.7B parameters. They are capable of solving a wide range of tasks while being lightweight enough to run on-device. More details in our paper: https://arxiv.org/abs/2502.02737\n\nSmolLM2 demonstrates significant advances over its predecessor SmolLM1, particularly in instruction following, knowledge, reasoning. The 135M model was trained on 2 trillion tokens using a diverse dataset combination: FineWeb-Edu, DCLM, The Stack, along with new filtered datasets we curated and will release soon.  We developed the instruct version through supervised fine-tuning (SFT) using a combination of public datasets and our own curated datasets. We then applied Direct Preference Optimization (DPO) using [UltraFeedback](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized).\n\nThe instruct model additionally supports tasks such as text rewriting, summarization and function calling (for the 1.7B) thanks to datasets developed by [Argilla](https://huggingface.co/argilla) such as [Synth-APIGen-v0.1](https://huggingface.co/datasets/argilla/Synth-APIGen-v0.1).\nYou can find the SFT dataset here: https://huggingface.co/datasets/HuggingFaceTB/smol-smoltalk and finetuning code at https://github.com/huggingface/alignment-handbook/tree/main/recipes/smollm2\n\n### How to use\n\n```bash\npip install transformers\n```\n\n#### Running the model on CPU/GPU/multi GPU\n* _Using full precision_\n```python\n# pip install transformers\nfrom transformers import AutoModelForCausalLM, AutoTokenizer\ncheckpoint = \"HuggingFaceTB/SmolLM2-135M\"\ndevice = \"cuda\" # for GPU usage or \"cpu\" for CPU usage\ntokenizer = AutoTokenizer.from_pretrained(checkpoint)\n# for multiple GPUs install accelerate and do `model = AutoModelForCausalLM.from_pretrained(checkpoint, device_map=\"auto\")`\nmodel = AutoModelForCausalLM.from_pretrained(checkpoint).to(device)\ninputs = tokenizer.encode(\"Gravity is\", return_tensors=\"pt\").to(device)\noutputs = model.generate(inputs)\nprint(tokenizer.decode(outputs[0]))\n```\n\n* _Using `torch.bfloat16`_\n```python\n# pip install accelerate\nimport torch\nfrom transformers import AutoTokenizer, AutoModelForCausalLM\ncheckpoint = \"HuggingFaceTB/SmolLM2-135M\"\ntokenizer = AutoTokenizer.from_pretrained(checkpoint)\n# for fp16 use `torch_dtype=torch.float16` instead\nmodel = AutoModelForCausalLM.from_pretrained(checkpoint, device_map=\"auto\", torch_dtype=torch.bfloat16)\ninputs = tokenizer.encode(\"Gravity is\", return_tensors=\"pt\").to(\"cuda\")\noutputs = model.generate(inputs)\nprint(tokenizer.decode(outputs[0]))\n```\n```bash\n>>> print(f\"Memory footprint: {model.get_memory_footprint() / 1e6:.2f} MB\")\nMemory footprint: 723.56 MB\n```\n\n## Evaluation\n\nIn this section, we report the evaluation results of SmolLM2. All evaluations are zero-shot unless stated otherwise, and we use [lighteval](https://github.com/huggingface/lighteval) to run them.\n\n## Base pre-trained model\n\n| Metrics            | SmolLM2-135M-8k | SmolLM-135M  |\n|:-------------------|:----------------:|:------------:|\n| HellaSwag         | **42.1**         | 41.2         |\n| ARC (Average)     | **43.9**         | 42.4         |\n| PIQA              | 68.4             | 68.4         |\n| MMLU (cloze)      | **31.5**         | 30.2         |\n| CommonsenseQA     | **33.9**         | 32.7         |\n| TriviaQA          | 4.1              | **4.3**      |\n| Winogrande        | 51.3             | 51.3         |\n| OpenBookQA        | **34.6**         | 34.0         |\n| GSM8K (5-shot)    | **1.4**          | 1.0          |\n\n\n## Instruction model\n\n| Metric                       | SmolLM2-135M-Instruct | SmolLM-135M-Instruct |\n|:-----------------------------|:---------------------:|:--------------------:|\n| IFEval (Average prompt/inst) | **29.9**                 | 17.2                |\n| MT-Bench                     | **1.98**                 | 1.68                |\n| HellaSwag                    | **40.9**                 | 38.9                |\n| ARC (Average)                | **37.3**                 | 33.9                |\n| PIQA                         | **66.3**                 | 64.0                |\n| MMLU (cloze)                 | **29.3**                 | 28.3                |\n| BBH (3-shot)                 | **28.2**                 | 25.2                |\n| GSM8K (5-shot)               | 1.4                  | 1.4                 |\n\n\n\n## Limitations\n\nSmolLM2 models primarily understand and generate content in English. They can produce text on a variety of topics, but the generated content may not always be factually accurate, logically consistent, or free from biases present in the training data. These models should be used as assistive tools rather than definitive sources of information. Users should always verify important information and critically evaluate any generated content.\n\n## Training\n\n### Model\n\n- **Architecture:** Transformer decoder\n- **Pretraining tokens:** 2T\n- **Precision:** bfloat16\n\n### Hardware\n\n- **GPUs:** 64 H100\n\n### Software\n\n- **Training Framework:** [nanotron](https://github.com/huggingface/nanotron/tree/main)\n\n## License\n\n[Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)\n\n## Citation\n```bash\n@misc{allal2025smollm2smolgoesbig,\n      title={SmolLM2: When Smol Goes Big -- Data-Centric Training of a Small Language Model}, \n      author={Loubna Ben Allal and Anton Lozhkov and Elie Bakouch and Gabriel Mart\u00edn Bl\u00e1zquez and Guilherme Penedo and Lewis Tunstall and Andr\u00e9s Marafioti and Hynek Kydl\u00ed\u010dek and Agust\u00edn Piqueres Lajar\u00edn and Vaibhav Srivastav and Joshua Lochner and Caleb Fahlgren and Xuan-Son Nguyen and Cl\u00e9mentine Fourrier and Ben Burtenshaw and Hugo Larcher and Haojun Zhao and Cyril Zakka and Mathieu Morlon and Colin Raffel and Leandro von Werra and Thomas Wolf},\n      year={2025},\n      eprint={2502.02737},\n      archivePrefix={arXiv},\n      primaryClass={cs.CL},\n      url={https://arxiv.org/abs/2502.02737}, \n}\n```",
+  "answer": {
+    "benchmarks": [
+      {
+        "name": "HellaSwag",
+        "score": "42.1",
+        "variant": "SmolLM2-135M-8k"
+      },
+      {
+        "name": "HellaSwag",
+        "score": "41.2",
+        "variant": "SmolLM-135M"
+      },
+      {
+        "name": "ARC (Average)",
+        "score": "43.9",
+        "variant": "SmolLM2-135M-8k"
+      },
+      {
+        "name": "ARC (Average)",
+        "score": "42.4",
+        "variant": "SmolLM-135M"
+      },
+      {
+        "name": "PIQA",
+        "score": "68.4",
+        "variant": "SmolLM2-135M-8k"
+      },
+      {
+        "name": "PIQA",
+        "score": "68.4",
+        "variant": "SmolLM-135M"
+      },
+      {
+        "name": "MMLU (cloze)",
+        "score": "31.5",
+        "variant": "SmolLM2-135M-8k"
+      },
+      {
+        "name": "MMLU (cloze)",
+        "score": "30.2",
+        "variant": "SmolLM-135M"
+      },
+      {
+        "name": "CommonsenseQA",
+        "score": "33.9",
+        "variant": "SmolLM2-135M-8k"
+      },
+      {
+        "name": "CommonsenseQA",
+        "score": "32.7",
+        "variant": "SmolLM-135M"
+      },
+      {
+        "name": "TriviaQA",
+        "score": "4.1",
+        "variant": "SmolLM2-135M-8k"
+      },
+      {
+        "name": "TriviaQA",
+        "score": "4.3",
+        "variant": "SmolLM-135M"
+      },
+      {
+        "name": "Winogrande",
+        "score": "51.3",
+        "variant": "SmolLM2-135M-8k"
+      },
+      {
+        "name": "Winogrande",
+        "score": "51.3",
+        "variant": "SmolLM-135M"
+      },
+      {
+        "name": "OpenBookQA",
+        "score": "34.6",
+        "variant": "SmolLM2-135M-8k"
+      },
+      {
+        "name": "OpenBookQA",
+        "score": "34.0",
+        "variant": "SmolLM-135M"
+      },
+      {
+        "name": "GSM8K (5-shot)",
+        "score": "1.4",
+        "variant": "SmolLM2-135M-8k"
+      },
+      {
+        "name": "GSM8K (5-shot)",
+        "score": "1.0",
+        "variant": "SmolLM-135M"
+      },
+      {
+        "name": "IFEval (Average prompt/inst)",
+        "score": "29.9",
+        "variant": "SmolLM2-135M-Instruct"
+      },
+      {
+        "name": "IFEval (Average prompt/inst)",
+        "score": "17.2",
+        "variant": "SmolLM-135M-Instruct"
+      },
+      {
+        "name": "MT-Bench",
+        "score": "1.98",
+        "variant": "SmolLM2-135M-Instruct"
+      },
+      {
+        "name": "MT-Bench",
+        "score": "1.68",
+        "variant": "SmolLM-135M-Instruct"
+      },
+      {
+        "name": "HellaSwag",
+        "score": "40.9",
+        "variant": "SmolLM2-135M-Instruct"
+      },
+      {
+        "name": "HellaSwag",
+        "score": "38.9",
+        "variant": "SmolLM-135M-Instruct"
+      },
+      {
+        "name": "ARC (Average)",
+        "score": "37.3",
+        "variant": "SmolLM2-135M-Instruct"
+      },
+      {
+        "name": "ARC (Average)",
+        "score": "33.9",
+        "variant": "SmolLM-135M-Instruct"
+      },
+      {
+        "name": "PIQA",
+        "score": "66.3",
+        "variant": "SmolLM2-135M-Instruct"
+      },
+      {
+        "name": "PIQA",
+        "score": "64.0",
+        "variant": "SmolLM-135M-Instruct"
+      },
+      {
+        "name": "MMLU (cloze)",
+        "score": "29.3",
+        "variant": "SmolLM2-135M-Instruct"
+      },
+      {
+        "name": "MMLU (cloze)",
+        "score": "28.3",
+        "variant": "SmolLM-135M-Instruct"
+      },
+      {
+        "name": "BBH (3-shot)",
+        "score": "28.2",
+        "variant": "SmolLM2-135M-Instruct"
+      },
+      {
+        "name": "BBH (3-shot)",
+        "score": "25.2",
+        "variant": "SmolLM-135M-Instruct"
+      },
+      {
+        "name": "GSM8K (5-shot)",
+        "score": "1.4",
+        "variant": "SmolLM2-135M-Instruct"
+      },
+      {
+        "name": "GSM8K (5-shot)",
+        "score": "1.4",
+        "variant": "SmolLM-135M-Instruct"
+      }
+    ]
+  }
+}

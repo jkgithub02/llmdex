@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# The vault is its own git repository (R7.6 - it must survive this app being deleted).
+/vault/
+
+# scratch
+/models.json
+
+# secrets - never committed
+.env
+
+# working notes and agent instructions - local only
+/docs/
+/.superpowers/
+/CLAUDE.md
