@@ -45,6 +45,12 @@ def ingest_model(
     llm: OptionalLLMDep,
     tavily: OptionalTavilyDep,
 ) -> ModelDoc:
+    """Fetch, derive, and write a document. Atomic: it completes or it fails (R1.5).
+
+    A model entering the vault for the first time is summarised on the way in, so
+    nobody has to ask for the first one. That step cannot fail this endpoint: see
+    :func:`~app.features.summary.router.summarise_after_first_ingest`.
+    """
     try:
         return service.ingest_model(
             body.model_id, store, body.context, fetcher=fetcher, llm=llm, tavily=tavily
@@ -55,11 +61,13 @@ def ingest_model(
 
 @router.get("/models", response_model=list[ModelDoc], tags=["models"])
 def list_models(store: StoreDep) -> list[ModelDoc]:
+    """R6.6 - has the upstream card moved since we read it?"""
     return service.list_models(store)
 
 
 @router.get("/models/{model_id:path}/drift", response_model=DriftReport, tags=["models"])
 def model_drift(model_id: str, store: StoreDep) -> DriftReport:
+    """R6.6 - has the upstream card moved since we read it?"""
     try:
         return service.drift_report(model_id, store)
     except NotFound as exc:
@@ -70,6 +78,7 @@ def model_drift(model_id: str, store: StoreDep) -> DriftReport:
 
 @router.get("/models/{model_id:path}", response_model=ModelDoc, tags=["models"])
 def get_model(model_id: str, store: StoreDep) -> ModelDoc:
+    """Every field, including the null ones (R6.3)."""
     try:
         return service.read_model(model_id, store)
     except NotFound as exc:
@@ -78,6 +87,12 @@ def get_model(model_id: str, store: StoreDep) -> ModelDoc:
 
 @router.delete("/models/{model_id:path}", status_code=204, tags=["models"])
 def delete_model(model_id: str, store: StoreDep) -> None:
+    """Remove a model from the vault.
+
+    204 rather than the deleted document: there is nothing left to return, and a
+    body would invite a caller to treat it as still being there. The removal is
+    a commit in the vault repository, so this is undoable outside the app (R4.7).
+    """
     try:
         service.delete_model(model_id, store)
     except NotFound as exc:

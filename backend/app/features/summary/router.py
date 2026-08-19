@@ -31,6 +31,12 @@ def summarise_model(
     llm: LLMDep,
     tavily: TavilyDep,
 ) -> ModelDoc:
+    """Read the card, search the web, write an account of the model.
+
+    Unlike extraction this replaces what was there: regenerating is the point of
+    the button, and ``generated_on`` records which run produced the text on
+    screen.
+    """
     try:
         return service.summarise_model(
             model_id, store, fetch_card=fetch_card, llm=llm, tavily=tavily

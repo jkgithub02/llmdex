@@ -8,7 +8,7 @@
 /**
  * A verified quote and where it was found in the card.
  *
- * Constructed only after :mod:`backend.extraction.ground` has matched the quote
+ * Constructed only after :mod:`app.core.grounding` has matched the quote
  * against the source, which is why every field is required. ``text`` is sliced
  * out of the card rather than copied from the model's response -- the model
  * locates, it does not supply (R3.1).

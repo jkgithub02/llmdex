@@ -24,6 +24,11 @@ def extract_model(
     fetch_card: CardFetcherDep,
     settings: LLMDep,
 ) -> ModelDoc:
+    """Read the card, ask the model to locate facts in it, store what verifies.
+
+    A run that verifies nothing is a success: most cards state none of this, and
+    an empty result with its rejections is information (R3.2).
+    """
     try:
         return service.extract_model(model_id, store, fetch_card=fetch_card, settings=settings)
     except NotFound as exc:

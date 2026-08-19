@@ -10,9 +10,9 @@ import type { RejectedValue } from './rejectedValue';
 /**
  * R3.4 - the results table of one card, as its own block.
  *
- * Separate from :class:`Extracted` because a separate agent reads it. Both
- * blocks carry the revision of the card their own spans were found in, and a
- * re-run of one cannot overwrite the other.
+ * Separate from :class:`~app.features.extraction.schemas.Extracted` because a
+ * separate agent reads it. Both blocks carry the revision of the card their
+ * own spans were found in, and a re-run of one cannot overwrite the other.
  */
 export interface ExtractedBenchmarks {
   card_revision: string;

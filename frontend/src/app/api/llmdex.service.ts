@@ -208,7 +208,7 @@ export class LlmdexService {
    *
    * A model entering the vault for the first time is summarised on the way in, so
    * nobody has to ask for the first one. That step cannot fail this endpoint: see
-   * :func:`~backend.summary.router.summarise_after_first_ingest`.
+   * :func:`~app.features.summary.router.summarise_after_first_ingest`.
    * @summary Ingest Model
    */
   ingestModelIngestPost<TData = ModelDoc>(
@@ -248,6 +248,7 @@ export class LlmdexService {
   }
 
   /**
+   * R6.6 - has the upstream card moved since we read it?
    * @summary List Models
    */
   listModelsModelsGet<TData = ModelDoc[]>(options?: HttpClientBodyOptions): Observable<TData>;
