@@ -293,8 +293,20 @@ def _all_spans(extracted) -> list:
         ]
     if extracted.serving:
         spans += list(extracted.serving.engines.values())
-    for row in extracted.benchmarks:
-        spans += [row.name, row.score] + ([row.unit] if row.unit else [])
+    return spans
+
+
+def _all_benchmark_spans(block) -> list:
+    """The results table's spans, which live in their own block now.
+
+    Split out of ``Extracted`` when the benchmarks agent was separated. Kept
+    covered here because this is where most of a card's spans are -- Nemotron's
+    table alone is 28 rows -- and R3.1 has to hold for every one of them.
+    """
+    spans = []
+    for row in block.rows:
+        spans += [row.name, row.score]
+        spans += [span for span in (row.unit, row.variant) if span is not None]
     return spans
 
 
@@ -309,13 +321,23 @@ def _live_extraction(model_id: str):
 
 
 def test_every_stored_span_is_a_slice_of_the_real_card():
-    """R3.1 end to end. True by construction, kept as a regression on that construction."""
-    card, result = _live_extraction(NVFP4_REPO)
+    """R3.1 end to end, across both extracted blocks.
 
-    spans = _all_spans(result)
+    True by construction, kept as a regression on that construction. Both passes
+    are checked against the same card: the prose extractor's quotes and the
+    benchmarks agent's table cells are verified the same way, because a column
+    header attributing a score to the wrong checkpoint is exactly as wrong as an
+    invented number.
+    """
+    settings = llm_settings()
+    card, result = _live_extraction(NVFP4_REPO)
+    table = extract_benchmarks(card, card_revision="live", settings=settings)
+
+    spans = _all_spans(result) + _all_benchmark_spans(table)
+    assert spans, "this card states quantization and publishes a table; zero spans is a failure"
     for span in spans:
         assert card[span.start : span.end] == span.text, f"span does not match the card: {span}"
-    print(f"verified {len(spans)} spans, {len(result.rejected)} rejected")
+    print(f"verified {len(spans)} spans ({len(result.rejected) + len(table.rejected)} rejected)")
 
 
 def test_extraction_actually_finds_what_the_card_plainly_states():
