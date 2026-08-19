@@ -10,7 +10,7 @@ import { extractedFields } from '../fields';
   selector: 'app-details-tab',
   imports: [AgentTrace, StateBadge],
   template: `
-    <app-agent-trace [only]="model().model_id" agent="prose" />
+    <app-agent-trace [only]="modelId()" agent="prose" />
     @for (
       checkpoint of model().checkpoints ?? [];
       track checkpoint.repo + checkpoint.quantization
@@ -152,6 +152,7 @@ import { extractedFields } from '../fields';
 })
 export class DetailsTab {
   readonly model = input.required<ModelDoc>();
+  readonly modelId = input.required<string>();
   readonly busy = input.required<boolean>();
   readonly extracting = input.required<boolean>();
   readonly rerun = output<string>();

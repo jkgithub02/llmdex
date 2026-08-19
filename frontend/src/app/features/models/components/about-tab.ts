@@ -12,7 +12,7 @@ import { sourceHost, summarySections } from '../summary';
     <section class="pane">
       <!-- The agent's thinking sits with what it wrote. Above the tabs it was a
            wall of two interleaved traces on every tab. -->
-      <app-agent-trace [only]="model().model_id" agent="about" />
+      <app-agent-trace [only]="modelId()" agent="about" />
       @if (model().summary; as summary) {
         <p class="overview">{{ summary.overview }}</p>
 
@@ -162,6 +162,7 @@ import { sourceHost, summarySections } from '../summary';
 })
 export class AboutTab {
   readonly model = input.required<ModelDoc>();
+  readonly modelId = input.required<string>();
   readonly busy = input.required<boolean>();
   readonly summarising = input.required<boolean>();
   readonly rerun = output<string>();

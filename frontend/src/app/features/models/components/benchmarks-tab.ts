@@ -14,7 +14,7 @@ import { sourceHost } from '../summary';
   selector: 'app-benchmarks-tab',
   imports: [AgentTrace, StateBadge],
   template: `
-    <app-agent-trace [only]="model().model_id" agent="benchmarks" />
+    <app-agent-trace [only]="modelId()" agent="benchmarks" />
     @for (
       checkpoint of model().checkpoints ?? [];
       track checkpoint.repo + checkpoint.quantization
@@ -284,6 +284,7 @@ import { sourceHost } from '../summary';
 })
 export class BenchmarksTab {
   readonly model = input.required<ModelDoc>();
+  readonly modelId = input.required<string>();
   readonly busy = input.required<boolean>();
   readonly rerun = output<string>();
 

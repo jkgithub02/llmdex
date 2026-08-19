@@ -15,12 +15,9 @@ import { SpecTab } from './spec-tab';
 
 type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's name on the wire
 
-/**
- * The shell (R6.3 / R6.4): a Pokedex-style hero over a light sheet of tabbed
- * detail. Each tab owns its own template, styles and helpers; this component
- * owns only what every tab shares -- loading, the agent-driven mutations, and
- * the error banner.
- */
+// The shell (R6.3 / R6.4): a Pokedex-style hero over a light sheet of tabbed
+// detail. Each tab owns its own template, styles and helpers; this owns only
+// what every tab shares -- loading, the agent-driven mutations, the error banner.
 @Component({
   selector: 'app-model-detail',
   imports: [RouterLink, LayerStrip, AboutTab, BenchmarksTab, SpecTab, DetailsTab],
@@ -72,28 +69,32 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
             @case ('about') {
               <app-about-tab
                 [model]="model"
+                [modelId]="modelId()"
                 [busy]="busy()"
                 [summarising]="summarising()"
                 (rerun)="rerun($event)"
                 (summarise)="summarise($event)"
               />
             }
-
             @case ('spec') {
               <app-spec-tab [model]="model" />
             }
-
             @case ('prose') {
               <app-details-tab
                 [model]="model"
+                [modelId]="modelId()"
                 [busy]="busy()"
                 [extracting]="extracting()"
                 (rerun)="rerun($event)"
               />
             }
-
             @case ('benchmarks') {
-              <app-benchmarks-tab [model]="model" [busy]="busy()" (rerun)="rerun($event)" />
+              <app-benchmarks-tab
+                [model]="model"
+                [modelId]="modelId()"
+                [busy]="busy()"
+                (rerun)="rerun($event)"
+              />
             }
           }
         </div>
@@ -242,7 +243,7 @@ export class ModelDetail {
     queueMicrotask(() => this.load());
   }
 
-  /** The checkpoint the hero describes: model properties, not per-checkpoint ones. */
+  // The checkpoint the hero describes: model properties, not per-checkpoint ones.
   protected readonly primary = computed<Checkpoint | undefined>(() => this.doc()?.checkpoints?.[0]);
 
   protected readonly pills = computed(() =>
@@ -281,8 +282,8 @@ export class ModelDetail {
     });
   }
 
-  /** Re-run a tab's agent, then reload. Explicit injector: run from a click
-   *  handler, effect() outside an injection context throws NG0203 at runtime. */
+  // Re-run a tab's agent, then reload. Explicit injector: run from a click handler --
+  // effect() outside an injection context throws NG0203 at runtime.
   protected rerun(agent: string): void {
     this.stream.start(this.modelId(), [agent]);
     const finished = effect(
