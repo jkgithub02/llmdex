@@ -1,5 +1,5 @@
-import type { Checkpoint } from '../api/model/checkpoint';
-import type { Span } from '../api/model/span';
+import type { Checkpoint } from '../../api/model/checkpoint';
+import type { Span } from '../../api/model/span';
 import { derivedFields, extractedFields } from './fields';
 
 /**

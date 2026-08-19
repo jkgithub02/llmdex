@@ -5,8 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type VRAMAssumptionsKvDtype = typeof VRAMAssumptionsKvDtype[keyof typeof VRAMAssumptionsKvDtype];
-
+export type VRAMAssumptionsKvDtype =
+  (typeof VRAMAssumptionsKvDtype)[keyof typeof VRAMAssumptionsKvDtype];
 
 export const VRAMAssumptionsKvDtype = {
   fp32: 'fp32',

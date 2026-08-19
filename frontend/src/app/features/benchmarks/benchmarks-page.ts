@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 
-import { LlmdexService } from '../api/llmdex.service';
-import type { Benchmark } from '../api/model/benchmark';
+import { LlmdexService } from '../../api/llmdex.service';
+import type { Benchmark } from '../../api/model/benchmark';
 
 /**
  * R5.x - the benchmark documents in the vault.

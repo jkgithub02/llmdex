@@ -5,8 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type BenchmarkDirection = typeof BenchmarkDirection[keyof typeof BenchmarkDirection] | null;
-
+export type BenchmarkDirection =
+  (typeof BenchmarkDirection)[keyof typeof BenchmarkDirection] | null;
 
 export const BenchmarkDirection = {
   higher_is_better: 'higher_is_better',

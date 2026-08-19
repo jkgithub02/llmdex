@@ -5,8 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type LayerCompositionFamily = typeof LayerCompositionFamily[keyof typeof LayerCompositionFamily];
-
+export type LayerCompositionFamily =
+  (typeof LayerCompositionFamily)[keyof typeof LayerCompositionFamily];
 
 export const LayerCompositionFamily = {
   transformer: 'transformer',

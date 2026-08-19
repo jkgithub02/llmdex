@@ -1,4 +1,4 @@
-import type { Summary } from '../api/model/summary';
+import type { Summary } from '../../api/model/summary';
 import { sourceHost, summarySections } from './summary';
 
 /**

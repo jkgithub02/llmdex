@@ -9,12 +9,12 @@
  * the ones worth a test.
  */
 
-import type { Checkpoint } from '../api/model/checkpoint';
-import type { HeadDim } from '../api/model/headDim';
-import type { LayerComposition } from '../api/model/layerComposition';
-import type { Span } from '../api/model/span';
-import { formatBytes, formatCount } from '../format';
-import type { Field } from '../provenance';
+import type { Checkpoint } from '../../api/model/checkpoint';
+import type { HeadDim } from '../../api/model/headDim';
+import type { LayerComposition } from '../../api/model/layerComposition';
+import type { Span } from '../../api/model/span';
+import { formatBytes, formatCount } from '../../shared/format';
+import type { Field } from '../../shared/provenance';
 
 /**
  * R2.7 / R6.3 - every derived field, including the ones that came back null.

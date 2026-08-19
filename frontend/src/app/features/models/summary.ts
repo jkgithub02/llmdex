@@ -9,7 +9,7 @@
  * one.
  */
 
-import type { Summary } from '../api/model/summary';
+import type { Summary } from '../../api/model/summary';
 
 export interface SummarySection {
   label: string;

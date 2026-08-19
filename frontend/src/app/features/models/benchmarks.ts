@@ -22,8 +22,8 @@
  * would let the chart imply the card reported fewer results than it did (R6.3).
  */
 
-import type { Checkpoint } from '../api/model/checkpoint';
-import type { FieldState } from '../provenance';
+import type { Checkpoint } from '../../api/model/checkpoint';
+import type { FieldState } from '../../shared/provenance';
 
 export interface BenchmarkRow {
   /** The column header this score sat under, verbatim. Null for a single-column table. */

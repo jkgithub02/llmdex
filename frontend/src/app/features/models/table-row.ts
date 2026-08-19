@@ -8,9 +8,9 @@
  * given (R6.3).
  */
 
-import type { ModelDoc } from '../api/model/modelDoc';
-import { formatBytes, formatCount } from '../format';
-import { architectureTone, type Tone } from './architecture';
+import type { ModelDoc } from '../../api/model/modelDoc';
+import { formatBytes, formatCount } from '../../shared/format';
+import { architectureTone, type Tone } from '../../shared/architecture';
 
 export interface TableRow {
   modelId: string;

@@ -6,4 +6,4 @@
  */
 import type { Span } from './span';
 
-export type ExtractedServingEngines = {[key: string]: Span};
+export type ExtractedServingEngines = { [key: string]: Span };

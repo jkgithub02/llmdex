@@ -1,17 +1,17 @@
 import { Component, Injector, computed, effect, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { AgentStream } from '../agents/agent-stream';
-import { AgentTrace } from '../agents/agent-trace';
-import { LlmdexService } from '../api/llmdex.service';
-import type { Checkpoint } from '../api/model/checkpoint';
-import type { ModelDoc } from '../api/model/modelDoc';
-import { errorMessage, formatCount } from '../format';
-import { StateBadge } from '../state-badge';
-import { architecturePills, architectureTone } from './architecture';
+import { AgentStream } from '../../shared/agent-stream';
+import { AgentTrace } from '../../shared/agent-trace';
+import { LlmdexService } from '../../api/llmdex.service';
+import type { Checkpoint } from '../../api/model/checkpoint';
+import type { ModelDoc } from '../../api/model/modelDoc';
+import { errorMessage, formatCount } from '../../shared/format';
+import { StateBadge } from '../../shared/state-badge';
+import { architecturePills, architectureTone } from '../../shared/architecture';
 import { benchmarkGroups } from './benchmarks';
 import { derivedFields, extractedFields } from './fields';
-import { LayerStrip } from './layer-strip';
+import { LayerStrip } from '../../shared/layer-strip';
 import { sourceHost, summarySections } from './summary';
 
 /** `prose` keeps its id because that is the agent's name on the wire. */

@@ -1,5 +1,5 @@
-import type { Checkpoint } from '../api/model/checkpoint';
-import type { Span } from '../api/model/span';
+import type { Checkpoint } from '../../api/model/checkpoint';
+import type { Span } from '../../api/model/span';
 import { benchmarkGroups } from './benchmarks';
 
 /**
@@ -66,9 +66,7 @@ describe('benchmarkGroups', () => {
   it('keeps a low-scoring benchmark low rather than filling its panel', () => {
     // Scaling to the task's own maximum would put every top score at full
     // width, so 9.28 out of 100 would look like a perfect result.
-    const groups = benchmarkGroups(
-      checkpoint([{ name: span('t3-bench'), score: span('9.28') }]),
-    );
+    const groups = benchmarkGroups(checkpoint([{ name: span('t3-bench'), score: span('9.28') }]));
 
     expect(groups[0].domain).toBe(100);
     expect(groups[0].rows[0].percent).toBeCloseTo(9.28, 2);

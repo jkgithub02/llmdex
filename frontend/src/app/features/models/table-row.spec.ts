@@ -1,4 +1,4 @@
-import type { ModelDoc } from '../api/model/modelDoc';
+import type { ModelDoc } from '../../api/model/modelDoc';
 import { tableRow } from './table-row';
 
 /**
