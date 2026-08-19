@@ -2,14 +2,14 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-import { AgentStream } from '../../shared/agent-stream';
-import { LlmdexService } from '../../api/llmdex.service';
-import type { ModelDoc } from '../../api/model/modelDoc';
-import { errorMessage, formatBytes, formatCount, routeFor } from '../../shared/format';
-import { StateBadge } from '../../shared/state-badge';
-import { architecturePills, architectureTone } from '../../shared/architecture';
-import { LayerStrip } from '../../shared/layer-strip';
-import { tableRow } from './table-row';
+import { AgentStream } from '../../../shared/agent-stream';
+import { LlmdexService } from '../../../api/llmdex.service';
+import type { ModelDoc } from '../../../api/model/modelDoc';
+import { errorMessage, formatBytes, formatCount, routeFor } from '../../../shared/format';
+import { StateBadge } from '../../../shared/state-badge';
+import { architecturePills, architectureTone } from '../../../shared/architecture';
+import { LayerStrip } from '../../../shared/layer-strip';
+import { tableRow } from '../table-row';
 
 /**
  * R6.2 - everything in the vault, plus the box that fills it.

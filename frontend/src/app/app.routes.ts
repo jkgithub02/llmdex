@@ -5,12 +5,14 @@ export const routes: Routes = [
   { path: '', redirectTo: 'models', pathMatch: 'full' },
   {
     path: 'models',
-    loadComponent: () => import('./features/models/models-page').then((m) => m.ModelsPage),
+    loadComponent: () =>
+      import('./features/models/components/models-page').then((m) => m.ModelsPage),
   },
   {
     // A Hugging Face ID is `vendor/name`, so it occupies two segments.
     path: 'models/:vendor/:name',
-    loadComponent: () => import('./features/models/model-detail').then((m) => m.ModelDetail),
+    loadComponent: () =>
+      import('./features/models/components/model-detail').then((m) => m.ModelDetail),
   },
   {
     path: 'benchmarks',
