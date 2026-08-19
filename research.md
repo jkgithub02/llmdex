@@ -335,6 +335,28 @@ Two defects, both reproducible:
   filled with the tool's own name. Renaming the parameter fixes it completely.
   This is a naming rule for any tool schema sent to this endpoint. **[V]**
 
+### What a tool-using run emits, in order
+
+Measured through `pydantic-ai` `run_stream_events` on a run needing two tools.
+Any UI over a streamed agent run depends on these, and each is a bug if assumed
+otherwise. **[V]**
+
+- **Part indices reset on every model request.** Index `0` was the thinking
+  part in round one and the answer text in round two. An index is not a stable
+  key across a run; `{round}:{index}` is.
+- **Thinking, tool calls and answer text interleave.** The order was: think →
+  (empty text part) → two tool calls → two tool results → answer. Grouping
+  parts into a thinking section, a tools section and an answer section
+  misrepresents what the model did.
+- **An empty `TextPart` opens and closes with no deltas** before the tool
+  calls, every run. Rendering it produces an empty bubble.
+- **`FinalResultEvent` fires twice**, once on that empty part. It is not a
+  usable "the answer is starting" signal.
+- `FunctionToolCallEvent` / `FunctionToolResultEvent` carry `index=None`;
+  results pair to calls by `tool_call_id`.
+- Tool call arguments arrive fragmented across `ToolCallPartDelta`s. The
+  assembled call is available once, at `FunctionToolCallEvent`.
+
 ---
 
 ## 7. Spec defects found
