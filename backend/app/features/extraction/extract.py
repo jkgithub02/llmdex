@@ -16,18 +16,14 @@ import httpx
 from app.core.config import LLMSettings
 from app.core.grounding import GroundedCard, _locate
 from app.core.llm import complete
-from app.core.schemas import (
-    Extracted,
-    ExtractedQuantization,
-    ExtractedServing,
-    RejectedValue,
-)
+from app.core.schemas import RejectedValue
 from app.features.extraction.prompts import (
     QUANTIZATION_FIELDS,
     RESPONSE_SCHEMA,
     SERVING_ENGINES,
     SYSTEM_PROMPT,
 )
+from app.features.extraction.schemas import Extracted, ExtractedQuantization, ExtractedServing
 
 
 def extract(

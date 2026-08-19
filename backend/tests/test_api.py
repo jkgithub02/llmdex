@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.schemas import Checkpoint, ModelDoc
+from app.core.document import Checkpoint, ModelDoc
 from app.core.store import Store
 from app.features.models.fetch import GatedRepo, RepoNotFound, RepoSnapshot
 from app.main import app, get_fetcher, get_store

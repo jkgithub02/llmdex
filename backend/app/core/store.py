@@ -21,7 +21,7 @@ from typing import Any
 
 import yaml
 
-from app.core.schemas import (
+from app.core.document import (
     Benchmark,
     Checkpoint,
     Extracted,

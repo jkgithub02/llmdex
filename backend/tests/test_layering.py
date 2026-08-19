@@ -31,6 +31,7 @@ import ast
 from pathlib import Path
 
 FEATURES = Path(__file__).resolve().parents[1] / "app" / "features"
+CORE = Path(__file__).resolve().parents[1] / "app" / "core"
 
 
 def _feature_imports(path: Path) -> list[str]:
@@ -73,3 +74,24 @@ def test_no_feature_imports_another_feature():
         if foreign:
             offenders[rel] = foreign
     assert offenders == {}
+
+
+# `core` is infrastructure every feature may import. The reverse is allowed in
+# exactly one module, because the vault stores one document holding every
+# feature's block and something has to assemble it.
+ALLOWED = {"document.py"}
+
+
+def test_only_document_may_import_a_feature():
+    offenders = {
+        path.name: imports
+        for path in CORE.glob("*.py")
+        if path.name not in ALLOWED and (imports := _feature_imports(path))
+    }
+    assert offenders == {}
+
+
+def test_document_is_the_module_that_assembles_the_vault_document():
+    """A guard on the guard: if document.py stops importing features, the
+    exemption above is dead and should be deleted rather than left standing."""
+    assert _feature_imports(CORE / "document.py")

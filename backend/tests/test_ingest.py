@@ -12,8 +12,9 @@ from pathlib import Path
 
 import pytest
 
-from app.core.schemas import Manual, Quantization
+from app.core.document import Manual
 from app.core.store import Store
+from app.features.extraction.schemas import Quantization
 from app.features.models.fetch import GatedRepo, RepoNotFound, RepoSnapshot
 from app.features.models.ingest import ingest
 

@@ -11,12 +11,10 @@ there is no path here by which a language model can invent a value.
 
 from datetime import UTC, datetime
 
-from app.core.schemas import Checkpoint, ModelDoc
+from app.core.document import DEFAULT_CONTEXT, Checkpoint, ModelDoc
 from app.core.store import Store
 from app.features.models.derive import derive, group_gguf_files
 from app.features.models.fetch import RepoSnapshot
-
-DEFAULT_CONTEXT = 32768
 
 
 def _vendor_of(model_id: str) -> str | None:

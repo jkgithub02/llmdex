@@ -18,8 +18,9 @@ import httpx
 from app.core.config import LLMSettings
 from app.core.grounding import GroundedCard, _locate
 from app.core.llm import complete
-from app.core.schemas import ExtractedBenchmark, ExtractedBenchmarks, RejectedValue
+from app.core.schemas import RejectedValue
 from app.features.benchmarks.prompts import RESPONSE_SCHEMA, SYSTEM_PROMPT
+from app.features.benchmarks.schemas import ExtractedBenchmark, ExtractedBenchmarks
 
 
 def extract_benchmarks(

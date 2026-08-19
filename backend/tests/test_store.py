@@ -10,19 +10,11 @@ import threading
 
 import pytest
 
-from app.core.schemas import (
-    Checkpoint,
-    Extracted,
-    ExtractedQuantization,
-    Manual,
-    Measured,
-    ModelDoc,
-    Quantization,
-    Serving,
-    Span,
-    Summary,
-)
+from app.core.document import Checkpoint, Manual, ModelDoc
+from app.core.schemas import Measured, Span
 from app.core.store import DocumentConflict, Store, slug_for
+from app.features.extraction.schemas import Extracted, ExtractedQuantization, Quantization, Serving
+from app.features.summary.schemas import Summary
 
 
 @pytest.fixture

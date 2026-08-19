@@ -13,18 +13,17 @@ from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
 
 from app.common.deps import StoreDep
+from app.core.document import DriftReport, IngestRequest, ModelDoc
 from app.core.http import http_error, normalise_model_id
-from app.core.schemas import ModelDoc
 from app.features.models.fetch import (
     IngestError,
     RepoSnapshot,
     fetch_revision,
     fetch_snapshot,
 )
-from app.features.models.ingest import DEFAULT_CONTEXT, ingest
+from app.features.models.ingest import ingest
 from app.features.summary.router import (
     OptionalLLMDep,
     OptionalTavilyDep,
@@ -40,25 +39,6 @@ def get_fetcher() -> Callable[[str], RepoSnapshot]:
 
 
 FetcherDep = Annotated[Callable[[str], RepoSnapshot], Depends(get_fetcher)]
-
-
-class IngestRequest(BaseModel):
-    model_id: str = Field(
-        description="A Hugging Face model ID or a full URL, e.g. `Qwen/Qwen3-8B`.",
-        examples=["Qwen/Qwen3-8B"],
-    )
-    context: int = Field(
-        default=DEFAULT_CONTEXT,
-        gt=0,
-        description="Context length the VRAM estimate is computed at (R2.5).",
-    )
-
-
-class DriftReport(BaseModel):
-    model_id: str
-    stored_revision: str | None
-    upstream_revision: str | None
-    drifted: bool
 
 
 @router.post("/ingest", response_model=ModelDoc, status_code=201, tags=["ingest"])

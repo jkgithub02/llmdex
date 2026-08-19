@@ -12,8 +12,8 @@ import threading
 from collections.abc import Callable, Iterator
 
 from app.core.config import LLMSettings, TavilySettings
+from app.core.document import ModelDoc
 from app.core.events import AgentEvent
-from app.core.schemas import ModelDoc
 from app.core.store import Store
 from app.features.benchmarks import agent as benchmarks_agent
 from app.features.extraction import agent as extraction_agent

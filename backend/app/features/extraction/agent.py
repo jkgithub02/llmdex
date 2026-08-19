@@ -9,13 +9,15 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 
 from app.core.config import LLMSettings, TavilySettings
+from app.core.document import ModelDoc
 from app.core.events import AgentEvent
 from app.core.grounding import GroundedCard
 from app.core.llm import stream_json
-from app.core.schemas import Extracted, ModelDoc, RejectedValue
+from app.core.schemas import RejectedValue
 from app.core.store import Store
 from app.features.extraction.extract import _quantization, _serving
 from app.features.extraction.prompts import RESPONSE_SCHEMA, SYSTEM_PROMPT
+from app.features.extraction.schemas import Extracted
 
 NAME = "prose"
 

@@ -16,10 +16,11 @@ from datetime import UTC, datetime
 import httpx
 
 from app.core.config import LLMSettings, TavilySettings
+from app.core.document import Derived
 from app.core.llm import complete
-from app.core.schemas import Derived, Summary
 from app.core.search import SearchResult, search
 from app.features.summary.prompts import RESPONSE_SCHEMA, SYSTEM_PROMPT
+from app.features.summary.schemas import Summary
 
 
 def generate_summary(

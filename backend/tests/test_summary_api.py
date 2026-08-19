@@ -10,8 +10,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import LLMSettings, TavilyNotConfigured, TavilySettings
+from app.core.document import Checkpoint, ModelDoc
 from app.core.llm import LLMError
-from app.core.schemas import Checkpoint, ModelDoc, Summary
 from app.core.search import SearchError
 from app.core.store import Store
 from app.features.summary.router import (
@@ -21,6 +21,7 @@ from app.features.summary.router import (
     get_optional_tavily_settings,
     get_tavily_settings,
 )
+from app.features.summary.schemas import Summary
 from app.main import app, get_store
 
 CARD = "# One\n\nA small model for testing.\n"

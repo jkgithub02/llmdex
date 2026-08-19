@@ -17,9 +17,8 @@ reason this module is not fifty lines:
 import re
 from typing import Any
 
-from app.core.schemas import (
-    DEFAULT_OVERHEAD_BYTES,
-    KV_DTYPE_BYTES,
+from app.core.schemas import DEFAULT_OVERHEAD_BYTES, KV_DTYPE_BYTES
+from app.features.models.schemas import (
     Derived,
     HeadDim,
     HeadDimMismatch,

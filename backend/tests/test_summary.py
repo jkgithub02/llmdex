@@ -11,9 +11,10 @@ import pytest
 
 from app.core.config import LLMSettings, TavilySettings
 from app.core.llm import LLMError
-from app.core.schemas import Derived, ParamCounts, Summary
 from app.core.search import SearchError, SearchResult
+from app.features.models.schemas import Derived, ParamCounts
 from app.features.summary.generate import generate_summary
+from app.features.summary.schemas import Summary
 
 LLM = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model")
 TAVILY = TavilySettings(api_key="tvly-test")

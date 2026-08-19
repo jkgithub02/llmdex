@@ -9,13 +9,14 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 
 from app.core.config import LLMSettings, TavilySettings
+from app.core.document import ModelDoc
 from app.core.events import AgentEvent
 from app.core.llm import stream_json
-from app.core.schemas import ModelDoc, Summary
 from app.core.search import search
 from app.core.store import Store
 from app.features.summary.generate import _prompt
 from app.features.summary.prompts import RESPONSE_SCHEMA, SYSTEM_PROMPT
+from app.features.summary.schemas import Summary
 
 NAME = "about"
 

@@ -10,8 +10,8 @@ import subprocess
 import pytest
 
 from app.core.config import LLMSettings, TavilySettings
+from app.core.document import Checkpoint, ModelDoc
 from app.core.events import AgentEvent
-from app.core.schemas import Checkpoint, ModelDoc
 from app.core.store import Store
 from app.features.extraction import agent as prose
 from app.features.summary import agent as about

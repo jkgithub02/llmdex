@@ -12,9 +12,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.common.deps import StoreDep
 from app.core.config import LLMSettings, llm_settings
+from app.core.document import ModelDoc
 from app.core.http import http_error, normalise_model_id
 from app.core.llm import LLMError
-from app.core.schemas import ModelDoc
 from app.features.extraction.extract import extract as extract_from_card
 from app.features.models.fetch import IngestError, fetch_snapshot
 
