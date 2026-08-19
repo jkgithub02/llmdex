@@ -6,11 +6,14 @@ a feature depending on a sibling feature rather than on the core. They answer
 questions that are not the models feature's to own -- how a fetch failure maps to
 a status code, and what a model ID looks like once normalised -- so they live
 here, where anything may import them.
+
+The exceptions they map come from ``app.common.exceptions`` rather than from the
+models feature, so this module depends on nothing below it.
 """
 
 from fastapi import HTTPException
 
-from app.models.fetch import (
+from app.common.exceptions import (
     AccessUndetermined,
     GatedRepo,
     IngestError,

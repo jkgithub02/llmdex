@@ -10,8 +10,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.common.deps import StoreDep
 from app.core.config import LLMSettings, llm_settings
-from app.core.deps import StoreDep
 from app.core.http import http_error, normalise_model_id
 from app.core.schemas import ModelDoc
 from app.extraction.extract import extract as extract_from_card

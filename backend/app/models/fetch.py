@@ -15,6 +15,28 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, Field
 
+from app.common.exceptions import (
+    AccessUndetermined,
+    GatedRepo,
+    IngestError,
+    PrivateRepo,
+    RepoNotFound,
+)
+
+# Re-exported so `from app.features.models.fetch import RepoNotFound` keeps
+# working: these are raised here, they simply are not defined here.
+__all__ = [
+    "AccessUndetermined",
+    "GatedRepo",
+    "IngestError",
+    "PrivateRepo",
+    "RepoNotFound",
+    "RepoSnapshot",
+    "fetch_revision",
+    "fetch_snapshot",
+    "fetch_tensor_headers",
+]
+
 from app.models.derive import packed_quantization_bits
 from app.models.tensors import header_length, parse_header
 
@@ -26,33 +48,6 @@ TIMEOUT = 60.0
 #: 128-expert layer runs to a few hundred kilobytes) and a longer one is fetched
 #: exactly rather than guessed around.
 HEADER_WINDOW = 1 << 20
-
-
-class IngestError(RuntimeError):
-    """Base for every ingest failure that is the repository's fault, not ours."""
-
-
-class RepoNotFound(IngestError):
-    """No such repository on the Hub."""
-
-
-class GatedRepo(IngestError):
-    """The repository exists but requires accepting terms."""
-
-
-class PrivateRepo(IngestError):
-    """The repository exists but is not visible with these credentials."""
-
-
-class AccessUndetermined(IngestError):
-    """Hugging Face refused to say whether the repository exists.
-
-    Anonymous requests for an unknown repo get ``401 Invalid username or
-    password`` -- the same answer a private repo gives, deliberately, so that the
-    Hub does not leak which private repositories exist. R1.6 asks us to name the
-    failure; the honest name here is that we cannot tell yet, and the fix is a
-    token.
-    """
 
 
 class RepoSnapshot(BaseModel):

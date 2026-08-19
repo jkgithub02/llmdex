@@ -15,7 +15,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from app.core.deps import StoreDep
+from app.common.deps import StoreDep
 from app.core.http import http_error, normalise_model_id
 from app.core.schemas import ModelDoc
 from app.models.fetch import (
