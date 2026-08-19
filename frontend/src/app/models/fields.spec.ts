@@ -20,9 +20,35 @@ describe('derivedFields', () => {
   it('shows every field even when the checkpoint has nothing derived', () => {
     const fields = derivedFields(checkpoint());
 
-    expect(fields.length).toBe(15);
+    expect(fields.length).toBe(16);
     expect(fields.every((f) => f.value === null)).toBe(true);
     expect(fields.every((f) => f.state === 'absent')).toBe(true);
+  });
+
+  it('names a draft head shipped alongside the model, and never adds it in', () => {
+    // R2.2 - NVFP4 Nemotron ships an MTP speculative-decoding head in the same
+    // files. It is really on disk, so it is shown; it is not the model you
+    // prompt, so it is not part of the total.
+    const fields = derivedFields(
+      checkpoint({
+        derived: {
+          params: { total: 31_577_940_288, auxiliary: 1_335_325_952, auxiliary_module: 'mtp' },
+        },
+      }),
+    );
+    const row = fields.find((f) => f.label.startsWith('parameters (draft head'))!;
+
+    expect(row.label).toContain('mtp');
+    expect(row.value).toBe('1.34B');
+    expect(fields.find((f) => f.label === 'parameters (total)')!.value).toBe('31.58B');
+  });
+
+  it('says a model has no draft head rather than hiding the row', () => {
+    const fields = derivedFields(checkpoint({ derived: { params: { total: 100 } } }));
+    const row = fields.find((f) => f.label.startsWith('parameters (draft head'))!;
+
+    expect(row.value).toBeNull();
+    expect(row.state).toBe('absent');
   });
 
   it('leads with what kind of model it is, and keeps model_type as its own row', () => {
@@ -187,7 +213,7 @@ describe('extractedFields', () => {
     expect(fields.find((f) => f.label === 'quantization method')!.source).toBe('top of card');
   });
 
-  it('adds a row per serving engine and per reported benchmark', () => {
+  it('adds a row per serving engine', () => {
     const fields = extractedFields(
       checkpoint({
         extracted: {
@@ -195,14 +221,12 @@ describe('extractedFields', () => {
           extracted_on: '2026-08-17',
           model: 'vllm/Qwen3.5-122B',
           serving: { engines: { vllm: span('vLLM >= 0.8', 'Deployment') } },
-          benchmarks: [{ name: span('MMLU', 'Evaluation'), score: span('52.80', 'Evaluation') }],
         },
       }),
     );
 
+    // The results table is its own block now, read by its own agent.
     expect(fields.find((f) => f.label === 'serving · vllm')!.value).toBe('vLLM >= 0.8');
-    // R3.4 - the score stays the string the card printed. "52.80" is not 52.8.
-    expect(fields.find((f) => f.label === 'benchmark · MMLU')!.value).toBe('52.80');
   });
 });
 

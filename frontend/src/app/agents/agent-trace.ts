@@ -15,14 +15,15 @@ import { AgentStream } from './agent-stream';
  *
  * The reasoning is shown and then thrown away -- it is not stored on the
  * document, so this panel is the only place it ever exists. Each agent gets its
- * own pane because they run concurrently and their output interleaves.
+ * own pane because they run concurrently and their output interleaves, and each
+ * pane lives in the tab that shows what that agent wrote.
  */
 @Component({
   selector: 'app-agent-trace',
   template: `
-    @if (mine() && stream.agents().length) {
+    @if (mine() && panes().length) {
       <section class="trace">
-        @for (agent of stream.agents(); track agent.name) {
+        @for (agent of panes(); track agent.name) {
           <article class="pane" [class.failed]="agent.error">
             <header>
               <span class="name">{{ agent.name }}</span>
@@ -99,9 +100,21 @@ export class AgentTrace {
    */
   readonly only = input<string | null>(null);
 
+  /**
+   * Show only this agent. A tab shows what one agent wrote, so it shows that
+   * agent's thinking and not its neighbour's. Unset means every agent running.
+   */
+  readonly agent = input<string | null>(null);
+
   protected readonly mine = computed(() => {
     const only = this.only();
     return !only || this.stream.modelId() === only;
+  });
+
+  protected readonly panes = computed(() => {
+    const wanted = this.agent();
+    const agents = this.stream.agents();
+    return wanted ? agents.filter((a) => a.name === wanted) : agents;
   });
   private readonly scrollers = viewChildren<ElementRef<HTMLElement>>('scroller');
 

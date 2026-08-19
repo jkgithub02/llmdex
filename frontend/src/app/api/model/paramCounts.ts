@@ -18,5 +18,7 @@ export interface ParamCounts {
   total?: number | null;
   active?: number | null;
   is_moe?: boolean;
+  auxiliary?: number | null;
+  auxiliary_module?: string | null;
   unreliable_reason?: string | null;
 }

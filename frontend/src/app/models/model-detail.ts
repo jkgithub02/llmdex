@@ -9,11 +9,13 @@ import type { ModelDoc } from '../api/model/modelDoc';
 import { errorMessage, formatCount } from '../format';
 import { StateBadge } from '../state-badge';
 import { architecturePills, architectureTone } from './architecture';
+import { benchmarkGroups } from './benchmarks';
 import { derivedFields, extractedFields } from './fields';
 import { LayerStrip } from './layer-strip';
 import { sourceHost, summarySections } from './summary';
 
-type Tab = 'about' | 'spec' | 'prose' | 'measured';
+/** `prose` keeps its id because that is the agent's name on the wire. */
+type Tab = 'about' | 'spec' | 'prose' | 'benchmarks';
 
 /**
  * R6.3 / R6.4 - every field, including the unavailable ones, each labelled with
@@ -21,9 +23,9 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
  *
  * The four states are the product. A derived number came from `config.json`; an
  * extracted phrase was copied out of the card and names the section it came
- * from; "absent" means we looked and it was not stated; "unmeasured" means no
- * vendor publishes it and nobody has run it here yet. Flattening those into one
- * blank cell is the failure this view exists to prevent.
+ * from; "absent" means we looked and it was not stated; "not run yet" means
+ * nobody has produced it. Flattening those into one blank cell is the failure
+ * this view exists to prevent.
  *
  * The layout follows a Pokedex entry: a hero coloured by what kind of model
  * this is, then a light sheet of tabbed detail. The colour and the layer strip
@@ -69,7 +71,6 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
         </header>
 
         <div class="sheet">
-          <app-agent-trace [only]="modelId()" />
           <nav class="tabs" role="tablist">
             @for (t of tabs; track t.id) {
               <button
@@ -86,6 +87,9 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
           @switch (tab()) {
             @case ('about') {
               <section class="pane">
+                <!-- The agent's thinking sits with what it wrote. Above the tabs
+                     it was a wall of two interleaved traces on every tab. -->
+                <app-agent-trace [only]="modelId()" agent="about" />
                 @if (model.summary; as summary) {
                   <p class="overview">{{ summary.overview }}</p>
 
@@ -175,6 +179,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
             }
 
             @case ('prose') {
+              <app-agent-trace [only]="modelId()" agent="prose" />
               @for (
                 checkpoint of model.checkpoints ?? [];
                 track checkpoint.repo + checkpoint.quantization
@@ -223,30 +228,127 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
               }
             }
 
-            @case ('measured') {
+            @case ('benchmarks') {
+              <app-agent-trace [only]="modelId()" agent="benchmarks" />
               @for (
                 checkpoint of model.checkpoints ?? [];
                 track checkpoint.repo + checkpoint.quantization
               ) {
                 <section class="pane">
-                  <p class="hint">nothing here comes from a vendor</p>
-                  @if (checkpoint.measured?.length) {
-                    @for (entry of checkpoint.measured; track $index) {
-                      <p class="mono">
-                        {{ entry.hardware }} · {{ entry.serving }} — TTFT
-                        {{ entry.ttft_ms ?? '—' }} ms
-                      </p>
-                    }
-                  } @else {
-                    <div class="field wide">
-                      <span class="key">latency, throughput, peak VRAM</span>
-                      <span class="val null">unavailable</span>
-                      <app-state-badge state="unmeasured" />
-                      <p class="why">
-                        Properties of your deployment, not the model. No vendor publishes them.
-                      </p>
-                    </div>
+                  <!-- R5.5 - shown, not tucked into a tooltip. Bars side by side
+                       imply a comparability vendor-reported numbers do not have:
+                       different harnesses, shot counts and scaffolds, none of
+                       which anyone is required to disclose. -->
+                  <p class="hint">
+                    copied from the card — different harnesses, not strictly comparable
+                  </p>
+                  <!-- Provenance once for the figure, not once per bar. Every
+                       score in it is the same kind of fact, and repeating the
+                       badge and the section under all 76 of them was three
+                       lines of chrome per number. -->
+                  @if (checkpoint.extracted_benchmarks; as read) {
+                    <p class="prov">
+                      <app-state-badge state="extracted" />
+                      every score copied verbatim by <code>{{ read.model }}</code> on
+                      {{ read.extracted_on }} from card
+                      <code>{{ read.card_revision.slice(0, 7) }}</code>
+                      @if (read.rejected?.length) {
+                        · {{ read.rejected!.length }} value(s) discarded, not found in the card
+                      }
+                    </p>
                   }
+
+                  @if (benchmarkGroups(checkpoint); as groups) {
+                    @if (groups.length) {
+                      <!-- Small multiples: one panel per task, one bar per column
+                           the card published. Identity is the label beside each
+                           bar, never a hue — a table can compare eight
+                           checkpoints, which is past the point where colour
+                           classes stay distinguishable.
+
+                           Which column is *this* repo is deliberately not
+                           decided here: the header text and a repo name are
+                           close but not equal, and a wrong attribution is worse
+                           than none. -->
+                      <div class="figure">
+                        @for (group of groups; track $index) {
+                          <figure class="panel">
+                            <!-- Each panel says what its bars are drawn
+                                 against. Two panels on one card can be scored
+                                 out of 100 and out of 1000, and without the
+                                 scale a full bar in each looks like the same
+                                 result. -->
+                            <figcaption>
+                              {{ group.task }}
+                              <span class="scale mono">/{{ group.domain }}</span>
+                            </figcaption>
+                            @for (row of group.rows; track $index) {
+                              <div
+                                class="brow"
+                                [title]="
+                                  (row.variant ?? 'as reported') +
+                                  ' — ' +
+                                  row.text +
+                                  (row.source ? ' · § ' + row.source : '')
+                                "
+                              >
+                                <span class="bl" [class.unnamed]="!row.variant">{{
+                                  row.variant ?? 'as reported'
+                                }}</span>
+                                <span class="track">
+                                  <!-- A score we could not read as a number keeps
+                                       its place and loses its bar (R6.3). -->
+                                  @if (row.percent !== null) {
+                                    <span class="fill" [style.width.%]="row.percent"></span>
+                                  } @else {
+                                    <span class="noplot">not a number we can plot</span>
+                                  }
+                                </span>
+                                <span class="bv mono">{{ row.text }}</span>
+                                <!-- Only where it differs from the line above:
+                                     a confirmed score is a different kind of
+                                     fact from a copied one, and R4.5a will not
+                                     have it without the URL it was reported
+                                     at. Copied rows stay chrome-free. -->
+                                @if (row.state !== 'extracted') {
+                                  <span class="bsrc">
+                                    <app-state-badge [state]="row.state" />
+                                    @if (row.sourceUrl) {
+                                      <a
+                                        [href]="row.sourceUrl"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        >{{ sourceHost(row.sourceUrl) }}</a
+                                      >
+                                    }
+                                  </span>
+                                }
+                              </div>
+                            }
+                          </figure>
+                        }
+                      </div>
+                    } @else {
+                      <div class="field wide">
+                        <span class="key">reported benchmark scores</span>
+                        <span class="val null">unavailable</span>
+                        <app-state-badge
+                          [state]="checkpoint.extracted_benchmarks ? 'absent' : 'unmeasured'"
+                        />
+                        <p class="why">
+                          @if (checkpoint.extracted_benchmarks) {
+                            We read the card. It publishes no results table.
+                          } @else {
+                            Nobody has read this card's results table yet.
+                          }
+                        </p>
+                      </div>
+                    }
+                  }
+
+                  <button class="ghost" (click)="rerun('benchmarks')" [disabled]="busy()">
+                    Re-run
+                  </button>
                 </section>
               }
             }
@@ -414,6 +516,103 @@ type Tab = 'about' | 'spec' | 'prose' | 'measured';
       margin-bottom: 0.3rem;
     }
 
+    /* Small multiples: a panel per task, a bar per column the card compared.
+       The bars are CSS — a chart library for horizontal bars is not worth a
+       dependency — and every bar in the figure shares one scale, so the lengths
+       mean the same thing everywhere. One hue for all of them: length already
+       carries the magnitude, and a second encoding of the same number would
+       spend the only free channel saying it twice. */
+    .figure {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+      gap: var(--space-4) var(--space-6);
+    }
+    .panel {
+      margin: 0;
+      min-width: 0;
+    }
+    figcaption {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-2);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding-bottom: var(--space-1, 0.25rem);
+      border-bottom: 1px solid var(--sheet-border);
+      margin-bottom: var(--space-2);
+      overflow-wrap: anywhere;
+    }
+    /* brow, not bar: ".page .bar" in styles.scss is the global loading
+       indicator, and a global rule reaches inside a component whatever its own
+       styles are scoped to. It turned every span in the figure into a green
+       2px sliding block. */
+    .scale {
+      font-size: 0.68rem;
+      font-weight: 400;
+      color: var(--sheet-faint);
+      white-space: nowrap;
+    }
+    .brow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: baseline;
+      /* 2px of surface between adjacent marks. */
+      gap: 0 var(--space-2);
+      padding-bottom: 2px;
+    }
+    .bl {
+      font-size: 0.72rem;
+      color: var(--sheet-muted);
+      overflow-wrap: anywhere;
+    }
+    .bl.unnamed {
+      font-style: italic;
+      color: var(--sheet-faint);
+    }
+    .track {
+      grid-column: 1;
+      height: 0.4rem;
+      border-radius: 999px;
+      background: var(--sheet-sunken);
+      overflow: hidden;
+      align-self: center;
+    }
+    .fill {
+      display: block;
+      height: 100%;
+      background: var(--tone);
+      border-radius: 999px;
+    }
+    .noplot {
+      display: block;
+      font-size: 0.68rem;
+      font-style: italic;
+      line-height: 0.4rem;
+      color: var(--sheet-faint);
+      white-space: nowrap;
+    }
+    .bv {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: center;
+      font-size: 0.8rem;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .bsrc {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: 0.7rem;
+    }
+    .bsrc a {
+      color: var(--tone);
+      text-decoration: underline;
+    }
+
     .ck-head {
       display: flex;
       align-items: center;
@@ -556,8 +755,8 @@ export class ModelDetail {
   protected readonly tabs: { id: Tab; label: string }[] = [
     { id: 'about', label: 'About' },
     { id: 'spec', label: 'Spec' },
-    { id: 'prose', label: 'Prose' },
-    { id: 'measured', label: 'Measured' },
+    { id: 'prose', label: 'Details' },
+    { id: 'benchmarks', label: 'Benchmarks' },
   ];
 
   constructor() {
@@ -567,6 +766,7 @@ export class ModelDetail {
   /** The field tables and summary sections, as plain functions the template calls. */
   protected readonly derivedFields = derivedFields;
   protected readonly extractedFields = extractedFields;
+  protected readonly benchmarkGroups = benchmarkGroups;
   protected readonly summarySections = summarySections;
   protected readonly sourceHost = sourceHost;
 

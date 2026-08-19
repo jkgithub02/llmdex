@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { AgentStream } from '../agents/agent-stream';
-import { AgentTrace } from '../agents/agent-trace';
 import { LlmdexService } from '../api/llmdex.service';
 import type { ModelDoc } from '../api/model/modelDoc';
 import { errorMessage, formatBytes, formatCount, routeFor } from '../format';
@@ -23,7 +22,7 @@ const VIEW_KEY = 'llmdex.models.view';
 
 @Component({
   selector: 'app-models-page',
-  imports: [FormsModule, RouterLink, StateBadge, LayerStrip, AgentTrace],
+  imports: [FormsModule, RouterLink, StateBadge, LayerStrip],
   host: { class: 'page' },
   template: `
     <header class="head">
@@ -61,7 +60,6 @@ const VIEW_KEY = 'llmdex.models.view';
     @if (busy()) {
       <div class="bar"><span></span></div>
     }
-    <app-agent-trace />
     @if (error(); as message) {
       <p class="error" role="alert">{{ message }}</p>
     }
@@ -613,7 +611,7 @@ export class ModelsPage {
         // overwrite a summary somebody regenerated on purpose (R6.5) -- the
         // same rule summarise_after_first_ingest keeps on the backend.
         if (!alreadyKnown) {
-          this.stream.start(ingested, ['about', 'prose']);
+          this.stream.start(ingested, ['about', 'prose', 'benchmarks']);
         }
       },
       error: (err) => {

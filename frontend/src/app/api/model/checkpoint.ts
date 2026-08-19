@@ -7,6 +7,7 @@
 import type { BenchmarkScore } from './benchmarkScore';
 import type { Derived } from './derived';
 import type { Extracted } from './extracted';
+import type { ExtractedBenchmarks } from './extractedBenchmarks';
 import type { Manual } from './manual';
 import type { Measured } from './measured';
 
@@ -20,6 +21,7 @@ export interface Checkpoint {
   ingested?: string | null;
   derived?: Derived | null;
   extracted?: Extracted | null;
+  extracted_benchmarks?: ExtractedBenchmarks | null;
   manual?: Manual;
   benchmarks?: BenchmarkScore[];
   measured?: Measured[];

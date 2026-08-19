@@ -7,42 +7,39 @@
  * fact, and "the card does not say" is different again from "nobody has
  * measured it yet". Most catalogues flatten all four into a blank cell.
  *
- * Each state carries a glyph as well as a colour, because colour alone must
- * never be the only thing distinguishing them.
+ * Each state is named in words, because colour alone must never be the only
+ * thing distinguishing them.
  */
 export type FieldState = 'derived' | 'extracted' | 'manual' | 'absent' | 'unmeasured';
 
 export interface StateStyle {
   label: string;
-  glyph: string;
   hint: string;
 }
 
 export const STATE: Record<FieldState, StateStyle> = {
   derived: {
-    label: 'derived',
-    glyph: '=',
+    label: 'computed',
     hint: 'Computed from config.json and the file listing. Never guessed.',
   },
   extracted: {
-    label: 'extracted',
-    glyph: '"',
+    label: 'quoted',
     hint: 'Copied verbatim from the model card. Hover for the section it came from.',
   },
   manual: {
-    label: 'by hand',
-    glyph: '✎',
+    label: 'reviewed',
     hint: 'Entered by a person. Survives re-ingest.',
   },
   absent: {
-    label: 'absent',
-    glyph: '∅',
+    label: 'not stated',
     hint: 'We looked. The card does not state it.',
   },
   unmeasured: {
-    label: 'unmeasured',
-    glyph: '~',
-    hint: 'A property of your deployment. No vendor publishes it; nobody has run it here.',
+    label: 'not run yet',
+    // Was worded for deployment latency, which was the only thing wearing this
+    // state while the Measured tab existed. It now marks anything nobody has
+    // produced yet, which is a different fact from the card not stating it.
+    hint: 'Nobody has produced this yet. Different from the card not stating it.',
   },
 };
 

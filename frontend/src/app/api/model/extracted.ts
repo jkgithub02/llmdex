@@ -4,7 +4,6 @@
  * llmdex
  * OpenAPI spec version: 0.1.0
  */
-import type { ExtractedBenchmark } from './extractedBenchmark';
 import type { ExtractedQuantization } from './extractedQuantization';
 import type { ExtractedServing } from './extractedServing';
 import type { RejectedValue } from './rejectedValue';
@@ -22,6 +21,5 @@ export interface Extracted {
   model: string;
   quantization?: ExtractedQuantization | null;
   serving?: ExtractedServing | null;
-  benchmarks?: ExtractedBenchmark[];
   rejected?: RejectedValue[];
 }

@@ -45,6 +45,14 @@ export function derivedFields(checkpoint: Checkpoint): Field[] {
       state: 'derived',
       unreliable: derived?.params?.unreliable_reason ?? null,
     },
+    // R2.2 - a speculative-decoding head ships in the same files and is real
+    // weight on disk, but it is not the model you prompt, so it is named on its
+    // own row and never folded into the total above.
+    {
+      label: draftLabel(derived?.params?.auxiliary_module),
+      value: formatCount(derived?.params?.auxiliary),
+      state: 'derived',
+    },
     { label: 'context length', value: formatCount(derived?.context_length), state: 'derived' },
     { label: 'hidden size', value: formatCount(derived?.hidden_size), state: 'derived' },
     { label: 'layers', value: formatCount(derived?.num_hidden_layers), state: 'derived' },
@@ -67,6 +75,11 @@ export function derivedFields(checkpoint: Checkpoint): Field[] {
     },
   ];
   return rows.map((row) => (row.value === null ? { ...row, state: 'absent' } : row));
+}
+
+/** The module the draft head lives in, when the checkpoint declares one. */
+function draftLabel(module: string | null | undefined): string {
+  return module ? `parameters (draft head · ${module})` : 'parameters (draft head)';
 }
 
 /** R2.6a - the counts as published, never a ratio we assumed. */
@@ -114,9 +127,6 @@ export function extractedFields(checkpoint: Checkpoint): Field[] {
   ];
   for (const [engine, span] of Object.entries(extracted?.serving?.engines ?? {})) {
     rows.push(fromSpan(`serving · ${engine}`, span));
-  }
-  for (const row of extracted?.benchmarks ?? []) {
-    rows.push(fromSpan(`benchmark · ${row.name.text}`, row.score));
   }
   return rows;
 }
