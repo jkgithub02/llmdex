@@ -5,8 +5,8 @@ CLAUDE.md passes by construction here, because a Span's text is sliced out of th
 card -- so the tests that matter are the ones where the model misbehaves.
 """
 
-from backend.core.schemas import RejectedValue, Span
-from backend.extraction.ground import GroundedCard, normalise
+from app.core.schemas import RejectedValue, Span
+from app.extraction.ground import GroundedCard, normalise
 
 CARD = """# Model Card
 

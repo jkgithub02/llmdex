@@ -8,8 +8,8 @@ confirmed against the live API before this was written.
 import httpx
 import pytest
 
-from backend.core.config import TavilyNotConfigured, TavilySettings, tavily_settings
-from backend.search.tavily import SearchError, search
+from app.core.config import TavilyNotConfigured, TavilySettings, tavily_settings
+from app.search.tavily import SearchError, search
 
 SETTINGS = TavilySettings(api_key="tvly-test")
 

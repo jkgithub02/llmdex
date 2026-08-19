@@ -11,7 +11,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /srv
 
 # Dependencies first, so editing source does not re-resolve the lockfile.
 COPY pyproject.toml uv.lock ./
@@ -20,7 +20,7 @@ RUN uv sync --frozen --no-install-project --no-dev
 COPY backend ./backend
 RUN uv sync --frozen --no-dev
 
-ENV PATH="/app/.venv/bin:$PATH" \
+ENV PATH="/srv/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     LLMDEX_VAULT=/vault
 
@@ -29,4 +29,4 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8001
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

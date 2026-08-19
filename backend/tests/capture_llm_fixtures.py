@@ -12,11 +12,11 @@ actually says, including the formatting quirks nobody would think to fake.
 import json
 from pathlib import Path
 
-from backend.core.config import llm_settings
-from backend.extraction import benchmarks as bench
-from backend.extraction.extract import RESPONSE_SCHEMA, SYSTEM_PROMPT
-from backend.extraction.llm import complete
-from backend.models.fetch import fetch_snapshot
+from app.core.config import llm_settings
+from app.extraction import benchmarks as bench
+from app.extraction.extract import RESPONSE_SCHEMA, SYSTEM_PROMPT
+from app.extraction.llm import complete
+from app.models.fetch import fetch_snapshot
 
 FIXTURES = Path(__file__).parent / "fixtures" / "llm"
 MODELS = [

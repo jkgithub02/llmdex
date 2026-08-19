@@ -9,11 +9,11 @@ produces nothing rather than a half-summary.
 import httpx
 import pytest
 
-from backend.core.config import LLMSettings, TavilySettings
-from backend.core.schemas import Derived, ParamCounts, Summary
-from backend.extraction.llm import LLMError
-from backend.search.tavily import SearchError, SearchResult
-from backend.summary.generate import generate_summary
+from app.core.config import LLMSettings, TavilySettings
+from app.core.schemas import Derived, ParamCounts, Summary
+from app.extraction.llm import LLMError
+from app.search.tavily import SearchError, SearchResult
+from app.summary.generate import generate_summary
 
 LLM = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model")
 TAVILY = TavilySettings(api_key="tvly-test")
@@ -58,8 +58,8 @@ def _fakes(answer=ANSWER, results=RESULTS):
 
 def test_the_summary_carries_what_the_model_wrote(monkeypatch):
     complete, search = _fakes()
-    monkeypatch.setattr("backend.summary.generate.complete", complete)
-    monkeypatch.setattr("backend.summary.generate.search", search)
+    monkeypatch.setattr("app.summary.generate.complete", complete)
+    monkeypatch.setattr("app.summary.generate.search", search)
 
     summary = generate_summary("Qwen/Qwen3-8B", CARD, DERIVED, llm=LLM, tavily=TAVILY)
 
@@ -75,8 +75,8 @@ def test_provenance_is_stamped_by_us_not_asked_of_the_model(monkeypatch):
     the code knows exactly, so they are never taken from the answer (R7.4)."""
     answer = {**ANSWER, "generated_by": "some-other-model", "generated_on": "1999-01-01"}
     complete, search = _fakes(answer=answer)
-    monkeypatch.setattr("backend.summary.generate.complete", complete)
-    monkeypatch.setattr("backend.summary.generate.search", search)
+    monkeypatch.setattr("app.summary.generate.complete", complete)
+    monkeypatch.setattr("app.summary.generate.search", search)
 
     summary = generate_summary(
         "Qwen/Qwen3-8B", CARD, DERIVED, llm=LLM, tavily=TAVILY, today="2026-08-17"
@@ -89,8 +89,8 @@ def test_provenance_is_stamped_by_us_not_asked_of_the_model(monkeypatch):
 def test_sources_are_the_urls_the_search_returned(monkeypatch):
     """R4.5a's habit: a claim the card did not support needs somewhere to check it."""
     complete, search = _fakes()
-    monkeypatch.setattr("backend.summary.generate.complete", complete)
-    monkeypatch.setattr("backend.summary.generate.search", search)
+    monkeypatch.setattr("app.summary.generate.complete", complete)
+    monkeypatch.setattr("app.summary.generate.search", search)
 
     summary = generate_summary("Qwen/Qwen3-8B", CARD, DERIVED, llm=LLM, tavily=TAVILY)
 
@@ -105,8 +105,8 @@ def test_the_prompt_carries_the_card_the_derived_facts_and_the_search(monkeypatc
         seen["schema"] = schema
         return ANSWER
 
-    monkeypatch.setattr("backend.summary.generate.complete", complete)
-    monkeypatch.setattr("backend.summary.generate.search", _fakes()[1])
+    monkeypatch.setattr("app.summary.generate.complete", complete)
+    monkeypatch.setattr("app.summary.generate.search", _fakes()[1])
 
     generate_summary("Qwen/Qwen3-8B", CARD, DERIVED, llm=LLM, tavily=TAVILY)
 
@@ -126,8 +126,8 @@ def test_the_prompt_carries_the_card_the_derived_facts_and_the_search(monkeypatc
 def test_a_model_nobody_has_written_about_still_summarises(monkeypatch):
     """Zero search results is not an error: generation proceeds on the card alone."""
     complete, search = _fakes(results=[])
-    monkeypatch.setattr("backend.summary.generate.complete", complete)
-    monkeypatch.setattr("backend.summary.generate.search", search)
+    monkeypatch.setattr("app.summary.generate.complete", complete)
+    monkeypatch.setattr("app.summary.generate.search", search)
 
     summary = generate_summary("Qwen/Qwen3-8B", CARD, DERIVED, llm=LLM, tavily=TAVILY)
 
@@ -141,8 +141,8 @@ def test_a_failed_search_produces_no_summary(monkeypatch):
     def search(query, **kwargs):
         raise SearchError("search endpoint returned 401")
 
-    monkeypatch.setattr("backend.summary.generate.complete", _fakes()[0])
-    monkeypatch.setattr("backend.summary.generate.search", search)
+    monkeypatch.setattr("app.summary.generate.complete", _fakes()[0])
+    monkeypatch.setattr("app.summary.generate.search", search)
 
     with pytest.raises(SearchError):
         generate_summary("Qwen/Qwen3-8B", CARD, DERIVED, llm=LLM, tavily=TAVILY)
@@ -152,8 +152,8 @@ def test_a_failed_completion_produces_no_summary(monkeypatch):
     def complete(messages, schema, **kwargs):
         raise LLMError("unreachable")
 
-    monkeypatch.setattr("backend.summary.generate.complete", complete)
-    monkeypatch.setattr("backend.summary.generate.search", _fakes()[1])
+    monkeypatch.setattr("app.summary.generate.complete", complete)
+    monkeypatch.setattr("app.summary.generate.search", _fakes()[1])
 
     with pytest.raises(LLMError):
         generate_summary("Qwen/Qwen3-8B", CARD, DERIVED, llm=LLM, tavily=TAVILY)
@@ -185,8 +185,8 @@ def test_the_client_is_reused_across_both_calls(monkeypatch):
         seen["search_client"] = kwargs.get("client")
         return RESULTS
 
-    monkeypatch.setattr("backend.summary.generate.complete", complete)
-    monkeypatch.setattr("backend.summary.generate.search", search)
+    monkeypatch.setattr("app.summary.generate.complete", complete)
+    monkeypatch.setattr("app.summary.generate.search", search)
 
     with httpx.Client() as client:
         generate_summary("Qwen/Qwen3-8B", CARD, DERIVED, llm=LLM, tavily=TAVILY, client=client)

@@ -2,9 +2,9 @@
 
 import threading
 
-from backend.agents import runner
-from backend.agents.events import AgentEvent
-from backend.core.config import LLMSettings, TavilySettings
+from app.agents import runner
+from app.agents.events import AgentEvent
+from app.core.config import LLMSettings, TavilySettings
 
 LLM = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model")
 TAVILY = TavilySettings(api_key="tvly-test")

@@ -10,7 +10,7 @@ import threading
 
 import pytest
 
-from backend.core.schemas import (
+from app.core.schemas import (
     Checkpoint,
     Extracted,
     ExtractedQuantization,
@@ -22,7 +22,7 @@ from backend.core.schemas import (
     Span,
     Summary,
 )
-from backend.core.store import DocumentConflict, Store, slug_for
+from app.core.store import DocumentConflict, Store, slug_for
 
 
 @pytest.fixture

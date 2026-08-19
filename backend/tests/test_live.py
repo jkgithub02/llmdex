@@ -21,24 +21,24 @@ from pathlib import Path
 import httpx
 import pytest
 
-from backend.core.config import (
+from app.core.config import (
     LLMNotConfigured,
     TavilyNotConfigured,
     llm_settings,
     tavily_settings,
 )
-from backend.extraction.benchmarks import extract_benchmarks
-from backend.extraction.extract import SERVING_ENGINES, extract
-from backend.extraction.llm import stream_json
-from backend.models.derive import derive
-from backend.models.fetch import fetch_snapshot
-from backend.search.tavily import search
-from backend.summary.generate import generate_summary
+from app.extraction.benchmarks import extract_benchmarks
+from app.extraction.extract import SERVING_ENGINES, extract
+from app.extraction.llm import stream_json
+from app.models.derive import derive
+from app.models.fetch import fetch_snapshot
+from app.search.tavily import search
+from app.summary.generate import generate_summary
 
 pytestmark = pytest.mark.live
 
 # backend/tests/test_live.py -> repo root, where pyproject.toml and the package live.
-# uvicorn is launched from here so `backend.main:app` resolves.
+# uvicorn is launched from here so `app.main:app` resolves.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 MODELS = {
@@ -77,7 +77,7 @@ def live_server(tmp_path_factory):
             sys.executable,
             "-m",
             "uvicorn",
-            "backend.main:app",
+            "app.main:app",
             "--host",
             "127.0.0.1",
             "--port",

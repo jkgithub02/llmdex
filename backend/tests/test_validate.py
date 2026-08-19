@@ -4,7 +4,7 @@ The vault is hand-edited, so the schema is only a contract if something checks
 it. The exit code is the contract: zero means every document parsed.
 """
 
-from backend.validate import main
+from app.validate import main
 
 GOOD = "---\nmodel_id: a/one\n---\n"
 NO_MODEL_ID = "---\nname: a document with no model_id\n---\n"

@@ -7,7 +7,7 @@ required: a span with no offsets is not a span, it is a guess.
 import pytest
 from pydantic import ValidationError
 
-from backend.core.schemas import Checkpoint, Extracted, RejectedValue, Span
+from app.core.schemas import Checkpoint, Extracted, RejectedValue, Span
 
 
 def test_a_span_requires_its_offsets():

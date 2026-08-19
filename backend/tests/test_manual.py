@@ -9,7 +9,7 @@ is an error rather than a silent deletion.
 import pytest
 from pydantic import ValidationError
 
-from backend.core.schemas import Manual, Quantization, Serving
+from app.core.schemas import Manual, Quantization, Serving
 
 
 def test_quantization_without_a_source_is_rejected():

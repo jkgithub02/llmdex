@@ -9,13 +9,13 @@ import subprocess
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.core.config import LLMSettings, TavilyNotConfigured, TavilySettings
-from backend.core.schemas import Checkpoint, ModelDoc, Summary
-from backend.core.store import Store
-from backend.extraction.llm import LLMError
-from backend.main import app, get_store
-from backend.search.tavily import SearchError
-from backend.summary.router import (
+from app.core.config import LLMSettings, TavilyNotConfigured, TavilySettings
+from app.core.schemas import Checkpoint, ModelDoc, Summary
+from app.core.store import Store
+from app.extraction.llm import LLMError
+from app.main import app, get_store
+from app.search.tavily import SearchError
+from app.summary.router import (
     get_card_fetcher,
     get_llm_settings,
     get_optional_llm_settings,
@@ -67,8 +67,8 @@ def client(vault):
 @pytest.fixture
 def endpoints(monkeypatch):
     """The real generate runs; only its two network calls are stubbed."""
-    monkeypatch.setattr("backend.summary.generate.complete", lambda *a, **kw: ANSWER)
-    monkeypatch.setattr("backend.summary.generate.search", lambda *a, **kw: [])
+    monkeypatch.setattr("app.summary.generate.complete", lambda *a, **kw: ANSWER)
+    monkeypatch.setattr("app.summary.generate.search", lambda *a, **kw: [])
 
 
 def test_summarising_writes_the_block(client, endpoints):
@@ -86,9 +86,9 @@ def test_summarising_an_unknown_model_is_a_404(client, endpoints):
 
 
 def test_a_failed_completion_is_a_502_and_writes_nothing(client, vault, monkeypatch):
-    monkeypatch.setattr("backend.summary.generate.search", lambda *a, **kw: [])
+    monkeypatch.setattr("app.summary.generate.search", lambda *a, **kw: [])
     monkeypatch.setattr(
-        "backend.summary.generate.complete",
+        "app.summary.generate.complete",
         lambda *a, **kw: (_ for _ in ()).throw(LLMError("unreachable")),
     )
 
@@ -100,7 +100,7 @@ def test_a_failed_completion_is_a_502_and_writes_nothing(client, vault, monkeypa
 
 def test_a_failed_search_is_a_502_and_writes_nothing(client, vault, monkeypatch):
     monkeypatch.setattr(
-        "backend.summary.generate.search",
+        "app.summary.generate.search",
         lambda *a, **kw: (_ for _ in ()).throw(SearchError("search endpoint returned 401")),
     )
 
@@ -145,8 +145,8 @@ def test_regenerating_replaces_the_previous_summary(client, vault, endpoints):
 
 def test_a_first_ingest_generates_a_summary(vault, monkeypatch, endpoints):
     """The user should not have to ask for the first one."""
-    from backend.models.router import get_fetcher
-    from backend.tests.test_api import snapshot
+    from app.models.router import get_fetcher
+    from tests.test_api import snapshot
 
     app.dependency_overrides[get_store] = lambda: vault
     app.dependency_overrides[get_fetcher] = lambda: lambda model_id: snapshot("qwen3-8b")
@@ -164,13 +164,11 @@ def test_a_first_ingest_generates_a_summary(vault, monkeypatch, endpoints):
 def test_a_re_ingest_does_not_generate_again(vault, monkeypatch, endpoints):
     """A card refresh must not silently spend tokens, and must not overwrite a
     summary somebody regenerated on purpose."""
-    from backend.models.router import get_fetcher
-    from backend.tests.test_api import snapshot
+    from app.models.router import get_fetcher
+    from tests.test_api import snapshot
 
     calls = []
-    monkeypatch.setattr(
-        "backend.summary.generate.complete", lambda *a, **kw: calls.append(1) or ANSWER
-    )
+    monkeypatch.setattr("app.summary.generate.complete", lambda *a, **kw: calls.append(1) or ANSWER)
 
     app.dependency_overrides[get_store] = lambda: vault
     app.dependency_overrides[get_fetcher] = lambda: lambda model_id: snapshot("qwen3-8b")
@@ -189,11 +187,11 @@ def test_a_re_ingest_does_not_generate_again(vault, monkeypatch, endpoints):
 def test_ingest_survives_a_summary_that_cannot_be_generated(vault, monkeypatch):
     """R1.5 - ingest is atomic and owns the document. Whether some other endpoint
     was reachable is not allowed to decide if a model can enter the vault."""
-    from backend.models.router import get_fetcher
-    from backend.tests.test_api import snapshot
+    from app.models.router import get_fetcher
+    from tests.test_api import snapshot
 
     monkeypatch.setattr(
-        "backend.summary.generate.search",
+        "app.summary.generate.search",
         lambda *a, **kw: (_ for _ in ()).throw(SearchError("unreachable")),
     )
 
@@ -212,8 +210,8 @@ def test_ingest_survives_a_summary_that_cannot_be_generated(vault, monkeypatch):
 
 def test_ingest_survives_summarisation_being_unconfigured(vault, monkeypatch):
     """A deployment with no search key still ingests; it just has no summaries."""
-    from backend.models.router import get_fetcher
-    from backend.tests.test_api import snapshot
+    from app.models.router import get_fetcher
+    from tests.test_api import snapshot
 
     monkeypatch.delenv("LLMDEX_TAVILY_API_KEY", raising=False)
     monkeypatch.delenv("LLMDEX_LLM_BASE_URL", raising=False)
