@@ -313,6 +313,30 @@ was produced — treat "Angular is heavier than Jinja" as qualitative.
 
 ---
 
+## 6e. The extraction endpoint's tool-calling behaviour
+
+Probed 2026-08-20 against `LLMDEX_LLM_BASE_URL`
+(`vllm/Qwen/Qwen3.5-122B-A10B-GPTQ-Int4`), at the raw HTTP level and through
+pydantic-ai. Relevant to the chat design; nothing here changes the existing
+extraction path, which sends `response_format` and no tools.
+
+- Tool calling works with `tool_choice: "auto"`, streaming and non-streaming.
+  Streaming deltas fragment and accumulate by `index` in the usual way. **[V]**
+- `run_stream_events` separates `ThinkingPartDelta` from `TextPartDelta` —
+  consistent with §6's earlier finding that this endpoint streams
+  `delta.reasoning` apart from `delta.content`. **[V]**
+
+Two defects, both reproducible:
+
+- **Forced `tool_choice` is broken.** Pinning a specific function returned
+  `finish_reason: stop` and arguments naming the *tool* rather than filling its
+  parameters. Use `"auto"` only. **[V]**
+- **A tool parameter named `name` collides with the function name** and gets
+  filled with the tool's own name. Renaming the parameter fixes it completely.
+  This is a naming rule for any tool schema sent to this endpoint. **[V]**
+
+---
+
 ## 7. Spec defects found
 
 | Where | Defect | Resolution |
