@@ -97,15 +97,36 @@ def kv_cache(
         return KVCache(method="unknown", unreliable_reason=comp.unreliable_reason)
 
     if _is_mla(config):
-        n_layers = config.get("num_hidden_layers")
+        # comp.attention, not num_hidden_layers. Every other branch here charges
+        # the attention layers; this one charged all of them, so a model that is
+        # both MLA and hybrid paid KV on layers that hold a recurrent state
+        # instead. Kimi K3 keeps full attention on 24 of 93 layers and its KV
+        # cache was 3.9x too large, presented as reliable.
         rank = config.get("kv_lora_rank")
         rope = config.get("qk_rope_head_dim")
-        if n_layers is None or rope is None:
+        if comp.attention is None or rope is None:
             return KVCache(
                 method="mla",
-                unreliable_reason="MLA config is missing num_hidden_layers or qk_rope_head_dim",
+                unreliable_reason="MLA config is missing its layer count or qk_rope_head_dim",
             )
-        total = (rank + rope) * n_layers * context * kv_dtype_bytes * batch
+        total = (rank + rope) * comp.attention * context * kv_dtype_bytes * batch
+        if comp.recurrent > 0:
+            # MLA *and* hybrid. The attention half is right, but the recurrent
+            # half is not mamba and none of the fields that size a mamba state
+            # are here -- Kimi's KDA publishes only linear_attn_config.head_dim.
+            # Returning the attention figure alone would understate by however
+            # much that state costs, which is the same defect as the 3.9x
+            # overstatement it replaced, pointing the other way (R2.6, R2.7).
+            return KVCache(
+                bytes=total,
+                method="mla",
+                attention_bytes=total,
+                unreliable_reason=(
+                    f"{comp.attention} attention layers sized by MLA, but the "
+                    f"{comp.recurrent} linear-attention layers hold a recurrent "
+                    "state this config does not describe; the total is a lower bound"
+                ),
+            )
         return KVCache(bytes=total, method="mla", attention_bytes=total)
 
     if comp.recurrent > 0:

@@ -441,6 +441,48 @@ not the presence of a caveat.
 
 ---
 
+## 6h. Kimi K3: a hybrid that is also MLA
+
+The first model in the vault that is multimodal-wrapped *and* architecturally
+unusual. Three findings, two of them corrections to earlier diagnoses of my
+own. **[V]**
+
+**MLA was detected all along.** The nested `text_config` is unwrapped before
+the detectors run, so `kv_lora_rank` was visible and the MLA branch fired. An
+earlier claim here that MLA "was not detected" was wrong: the reported
+3,510,632,448 bytes matches the MLA formula exactly.
+
+**The real defect was the layer count.** `kv_cache()` charged MLA to
+`num_hidden_layers` while every other branch charges `comp.attention`. Kimi
+keeps full attention on 24 of 93 layers -- the other 69 are Kimi Delta
+Attention, holding a recurrent state rather than a per-token cache -- so the
+figure was **3.9x too large and carried no unreliability marker**.
+
+**`linear_attn_config` is a third hybrid dialect.** Nemotron-H declares
+composition as a per-layer pattern string, Jamba as periodic offsets, Kimi as
+`linear_attn_config.full_attn_layers` -- an explicit list of which layers keep
+attention. Detected now; Kimi reads `MoE hybrid (linear attention)`, 24
+attention / 69 recurrent.
+
+Charging only the attention layers fixes the overstatement and creates a
+smaller understatement: nothing here sizes a KDA state, and none of the mamba
+fields are present. So the total is returned **marked as a lower bound** rather
+than presented as complete. An unmarked understatement is the same defect as
+the overstatement it replaced, facing the other way.
+
+**`num_experts_per_token` vs `num_experts_per_tok`.** Kimi writes it out; most
+vendors abbreviate. Only the short spelling was read, so active params were
+silently null on a model whose config states them plainly. Both are read now.
+
+Kimi's params stay null regardless, and correctly: the checkpoint is
+`mxfp4-pack-quantized`, so both the Hub total and the tensor shapes count
+packed containers and quantization scales. Active is derived as `total minus
+dormant experts`, so without a trustworthy total there is nothing to subtract
+from. Computing it from the config instead would mean modelling every matrix in
+the network -- which is estimating, and R2.3 forbids it.
+
+---
+
 ## 7. Spec defects found
 
 | Where | Defect | Resolution |

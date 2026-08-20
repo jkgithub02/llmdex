@@ -7,6 +7,9 @@ from app.features.models.schemas import ParamCounts
 from app.features.models.tensors import count_parameters
 
 _MOE_EXPERT_KEYS = ("num_local_experts", "num_experts", "n_routed_experts")
+# Kimi writes it out; almost everyone else abbreviates. Reading one spelling
+# leaves active params null on a model whose config states them plainly.
+_MOE_PER_TOKEN_KEYS = ("num_experts_per_tok", "num_experts_per_token")
 
 
 def packed_quantization_bits(config: dict[str, Any]) -> int | None:
@@ -73,7 +76,7 @@ def param_counts(
         tally = count_parameters(
             headers,
             bits=bits,
-            experts_per_tok=config.get("num_experts_per_tok"),
+            experts_per_tok=_first(config, *_MOE_PER_TOKEN_KEYS),
             has_draft_head=bool(config.get("num_nextn_predict_layers")),
         )
         if tally.total is not None:
@@ -102,7 +105,7 @@ def param_counts(
     if not is_moe or safetensors_total is None:
         return ParamCounts(total=safetensors_total, is_moe=bool(is_moe))
 
-    per_tok = config.get("num_experts_per_tok")
+    per_tok = _first(config, *_MOE_PER_TOKEN_KEYS)
     hidden = config.get("hidden_size")
     inter = _first(config, "moe_intermediate_size", "intermediate_size")
     layers = _moe_layer_count(config)

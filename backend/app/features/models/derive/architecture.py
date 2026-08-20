@@ -125,6 +125,39 @@ def layer_composition(config: dict[str, Any]) -> LayerComposition:
             recurrent_kind="mamba",
         )
 
+    # Kimi's dialect: an explicit list of which layers keep full attention, the
+    # rest being Kimi Delta Attention with a constant-size recurrent state. A
+    # third way of saying the same thing as Nemotron-H's pattern string and
+    # Jamba's periodic offsets, which is why each is parsed on its own terms.
+    linear = config.get("linear_attn_config")
+    if isinstance(linear, dict) and linear:
+        full = linear.get("full_attn_layers")
+        if n_layers is None:
+            return LayerComposition(
+                family="hybrid",
+                unreliable_reason="linear_attn_config present but num_hidden_layers is absent",
+            )
+        if not isinstance(full, list) or not full:
+            return LayerComposition(
+                family="hybrid",
+                unreliable_reason="linear_attn_config present but full_attn_layers is absent",
+            )
+        attention = len(set(full))
+        if attention > n_layers:
+            return LayerComposition(
+                family="hybrid",
+                unreliable_reason=(
+                    f"linear_attn_config lists {attention} full-attention layers "
+                    f"but num_hidden_layers is {n_layers}"
+                ),
+            )
+        return LayerComposition(
+            family="hybrid",
+            attention=attention,
+            recurrent=n_layers - attention,
+            recurrent_kind=_LINEAR_ATTENTION,
+        )
+
     interval = config.get("full_attention_interval")
     if interval:
         if n_layers is None:

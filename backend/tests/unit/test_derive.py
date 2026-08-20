@@ -1044,3 +1044,89 @@ def test_a_feed_forward_block_is_not_a_recurrent_one():
     assert comp.mlp_only == 23
     assert comp.recurrent_kind == "mamba"
     assert comp.attention + comp.recurrent + comp.mlp_only == 52
+
+
+# --- Kimi-style linear attention: a third hybrid dialect (R2.6a) ------------
+#
+# Nemotron-H declares composition as a per-layer pattern string and Jamba as
+# periodic offsets. Kimi K3 declares it as `linear_attn_config.full_attn_layers`
+# -- an explicit list of which layers keep full attention, the rest being Kimi
+# Delta Attention with a constant-size recurrent state.
+
+KIMI_LINEAR = {
+    "model_type": "kimi_linear",
+    "num_hidden_layers": 8,
+    "hidden_size": 512,
+    "num_attention_heads": 8,
+    "num_key_value_heads": 8,
+    "kv_lora_rank": 512,
+    "q_lora_rank": 1536,
+    "qk_rope_head_dim": 64,
+    "qk_nope_head_dim": 128,
+    "v_head_dim": 128,
+    "linear_attn_config": {"full_attn_layers": [4, 8], "head_dim": 128},
+}
+
+
+def test_linear_attn_config_is_a_hybrid_not_a_transformer():
+    """R2.6 - a hybrid must not be reported as a plain transformer."""
+    comp = layer_composition(KIMI_LINEAR)
+
+    assert comp.family != "transformer"
+    assert comp.attention == 2, "only full_attn_layers keep attention"
+    assert comp.recurrent == 6, "the rest are linear-attention layers"
+
+
+def test_mla_kv_is_charged_only_to_the_attention_layers():
+    """The defect this pins: MLA maths ran over num_hidden_layers.
+
+    Kimi K3 has 93 layers of which 24 keep full attention, so charging all 93
+    overstated its KV cache by 3.9x -- a confident wrong number, with no
+    unreliability marker, which is the one outcome that is never acceptable.
+    """
+    cache = kv_cache(KIMI_LINEAR, context=1024, kv_dtype_bytes=2)
+
+    per_layer = (512 + 64) * 1024 * 2
+    assert cache.attention_bytes == per_layer * 2, "2 attention layers, not 8"
+
+
+def test_a_hybrid_mla_model_says_its_total_is_a_lower_bound():
+    """R2.6/R2.7 - charging only the attention layers is right for the half we
+    can size, and silent about the half we cannot. Kimi's linear layers hold a
+    recurrent state the config never describes, so the figure is marked rather
+    than presented as complete. An unmarked understatement is the same defect
+    as the overstatement it replaced, facing the other way."""
+    cache = kv_cache(KIMI_LINEAR, context=1024, kv_dtype_bytes=2)
+
+    assert cache.unreliable_reason is not None
+    assert "lower bound" in cache.unreliable_reason
+
+
+def test_a_plain_mla_model_still_charges_every_layer():
+    """DeepSeek is MLA with no linear layers: all 8 are attention."""
+    plain = {k: v for k, v in KIMI_LINEAR.items() if k != "linear_attn_config"}
+    plain["model_type"] = "deepseek_v2"
+
+    cache = kv_cache(plain, context=1024, kv_dtype_bytes=2)
+
+    assert cache.attention_bytes == (512 + 64) * 1024 * 2 * 8
+
+
+def test_experts_per_token_is_read_under_either_spelling():
+    """Kimi K3 writes `num_experts_per_token`; most others write `_per_tok`.
+
+    Reading only one spelling makes active params silently unavailable on a
+    model whose config states them plainly -- a null that looks like "the
+    vendor did not say" when the vendor did.
+    """
+    base = {
+        "num_hidden_layers": 4,
+        "hidden_size": 128,
+        "moe_intermediate_size": 256,
+        "num_experts": 8,
+    }
+    long_spelling = param_counts({**base, "num_experts_per_token": 2}, safetensors_total=10_000_000)
+    short_spelling = param_counts({**base, "num_experts_per_tok": 2}, safetensors_total=10_000_000)
+
+    assert long_spelling.active == short_spelling.active
+    assert long_spelling.active is not None
