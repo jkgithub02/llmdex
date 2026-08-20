@@ -18,7 +18,9 @@ function render(text: string): HTMLElement {
 describe('Markdown', () => {
   it('renders a comparison table as a table', () => {
     const el = render(
-      ['| Benchmark | Pro | Flash |', '| --- | --- | --- |', '| DeepSWE | 62.7 | 54.4 |'].join('\n'),
+      ['| Benchmark | Pro | Flash |', '| --- | --- | --- |', '| DeepSWE | 62.7 | 54.4 |'].join(
+        '\n',
+      ),
     );
 
     expect(el.querySelector('table')).toBeTruthy();

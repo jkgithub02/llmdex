@@ -9,8 +9,8 @@ export interface IngestRequest {
   /** A Hugging Face model ID or a full URL, e.g. `Qwen/Qwen3-8B`. */
   model_id: string;
   /**
-     * Context length the VRAM estimate is computed at (R2.5).
-     * @exclusiveMinimum 0
-     */
+   * Context length the VRAM estimate is computed at (R2.5).
+   * @exclusiveMinimum 0
+   */
   context?: number;
 }
