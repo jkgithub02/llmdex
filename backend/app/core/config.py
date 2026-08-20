@@ -9,7 +9,7 @@ agree on where the vault is without importing each other.
 import os
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.store import Store
 
@@ -93,6 +93,39 @@ def llm_settings() -> LLMSettings:
         api_key=os.environ.get("LLMDEX_LLM_API_KEY") or None,
         **_optional_int("LLMDEX_LLM_MAX_TOKENS", "max_tokens"),
         **_optional_int("LLMDEX_LLM_TIMEOUT", "timeout"),
+    )
+
+
+class ChatSettings(BaseModel):
+    """What bounds one chat run (R9.5, R9.7).
+
+    Unlike the LLM and Tavily settings there is no "not configured" case: a
+    chat with no limits is not a different feature, it is the same feature
+    without brakes, so these have defaults and are only ever overridden.
+    """
+
+    request_limit: int = Field(default=8, ge=2)
+    """R9.7 - model requests per run. Two is the floor: one to call a tool and
+    one to use what it returned. Exceeding it is an error, not a short answer."""
+
+    compact_above_tokens: int = Field(default=24000)
+    """R9.5 - compaction runs once a run's reported usage passes this."""
+
+    keep_recent: int = Field(default=4)
+    """How many recent messages compaction leaves untouched."""
+
+
+def chat_settings() -> ChatSettings:
+    """R9.5 / R9.7 - overridable from the environment, usable without it.
+
+    Shares ``_optional_int`` with the LLM budget for the same reason it exists:
+    an unset variable leaves the default alone, and a malformed one is an error
+    rather than a silent fall back to the default.
+    """
+    return ChatSettings(
+        **_optional_int("LLMDEX_CHAT_REQUEST_LIMIT", "request_limit"),
+        **_optional_int("LLMDEX_CHAT_COMPACT_ABOVE_TOKENS", "compact_above_tokens"),
+        **_optional_int("LLMDEX_CHAT_KEEP_RECENT", "keep_recent"),
     )
 
 
