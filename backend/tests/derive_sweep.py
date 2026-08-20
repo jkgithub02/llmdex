@@ -84,6 +84,9 @@ MODELS = [
     "microsoft/Phi-3.5-vision-instruct",
     "openbmb/MiniCPM-V-2_6",
     "HuggingFaceM4/idefics2-8b",
+    # the model that drove the hybrid/MLA/LFS fixes: a multimodal wrapper around
+    # a linear-attention MoE, sub-byte quantized, with an LFS-tracked 57 MB index
+    "moonshotai/Kimi-K3",
     # quantized checkpoints
     "Qwen/Qwen3-8B-AWQ",
     "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4",
@@ -181,6 +184,23 @@ def _check(model_id: str) -> Result:
     ]
     if hybrid_signals and d.layers.family == "transformer":
         r.wrong.append(f"hybrid signals {hybrid_signals} but layers.family=transformer")
+
+    # A parameter count far below the checkpoint's own element count, stated as
+    # if it were reliable. This is the shape the AWQ bug had: Qwen3-8B-AWQ
+    # reported 2.17B against 8.19B stored elements, 0.27x, with no marker --
+    # and the sweep called it "ok", because it had no check for this at all.
+    # Fewer parameters than stored elements is possible (metadata is excluded)
+    # but not by half.
+    if (
+        d.params.total
+        and snap.safetensors_total
+        and d.params.total < snap.safetensors_total * 0.5
+        and d.params.unreliable_reason is None
+    ):
+        r.wrong.append(
+            f"params.total {d.params.total:,} is far below the checkpoint's "
+            f"{snap.safetensors_total:,} stored elements, with no unreliability marker"
+        )
 
     # A MoE reported as dense, or the reverse.
     moe_signals = [

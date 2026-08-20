@@ -43,11 +43,34 @@ _SCALE_SUFFIXES = (
     "_zero_point",
     "_offset",
     "g_idx",
+    # AWQ and GPTQ spell their quantization metadata this way. `_scale` above
+    # does not match the plural, so both were being counted as weights.
+    "qzeros",
+    "scales",
 )
 
-# Byte containers. A sub-byte checkpoint packs several weights into each of
-# these; at eight bits or more they hold exactly one.
-_CONTAINER_DTYPES = frozenset({"U8", "I8", "UINT8", "INT8"})
+# How wide each container dtype is. A sub-byte checkpoint packs
+# `container_bits // weight_bits` weights into one stored element, so the width
+# has to come from the dtype rather than being assumed.
+#
+# The assumption cost 8x: AWQ and GPTQ pack into I32 and only byte containers
+# were recognised, so Qwen3-8B-AWQ reported 2.17B parameters against its
+# unquantized twin's 8.19B -- with no unreliability marker. Kimi's mxfp4 uses
+# U8, which is why it was right when these were not.
+_CONTAINER_BITS = {
+    "U8": 8,
+    "I8": 8,
+    "UINT8": 8,
+    "INT8": 8,
+    "I16": 16,
+    "U16": 16,
+    "INT16": 16,
+    "UINT16": 16,
+    "I32": 32,
+    "U32": 32,
+    "INT32": 32,
+    "UINT32": 32,
+}
 
 # `layers.1.mixer.experts.7.up_proj.weight` -- the index is what makes this a
 # routed expert. `shared_experts.up_proj.weight` has no index and fires for
@@ -119,15 +142,16 @@ def count_parameters(
     # module -> expert index -> parameters, so one module's expert bank is never
     # confused with another's. A draft head carries its own copy of one.
     experts: dict[str, dict[str, int]] = {}
-    packing = 8 // bits if bits and 0 < bits < 8 else 1
+    sub_byte = bool(bits) and 0 < bits < 8
 
     for header in headers:
         for name, entry in header.items():
             if name == "__metadata__" or name.endswith(_SCALE_SUFFIXES):
                 continue
             count = _numel(entry["shape"])
-            if entry["dtype"] in _CONTAINER_DTYPES:
-                count *= packing
+            container = _CONTAINER_BITS.get(entry["dtype"]) if sub_byte else None
+            if container:
+                count *= container // bits
             module = name.split(".")[0]
             per_module[module] = per_module.get(module, 0) + count
             found = _ROUTED_EXPERT.search(name)

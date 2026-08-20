@@ -96,6 +96,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
                   [model]="model"
                   [modelId]="modelId()"
                   [busy]="busy()"
+                  [generating]="reading()"
                   (rerun)="rerun($event)"
                 />
               }
@@ -349,6 +350,7 @@ export class ModelDetail {
   }
 
   protected readonly extracting = computed(() => this.extractingHere() || this.agentBusy('prose'));
+  protected readonly reading = computed(() => this.agentBusy('benchmarks'));
   protected readonly summarising = computed(
     () => this.summarisingHere() || this.agentBusy('about'),
   );

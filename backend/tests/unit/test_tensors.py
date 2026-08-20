@@ -161,3 +161,47 @@ class TestParseHeader:
 
         with pytest.raises(ValueError, match="truncated"):
             parse_header(blob)
+
+
+# --- 32-bit containers: AWQ and GPTQ (research.md 6i) ----------------------
+
+
+def test_a_32_bit_container_holds_eight_four_bit_weights():
+    """AWQ and GPTQ pack into I32, not U8.
+
+    Qwen3-8B-AWQ reported 2,174,235,648 parameters for a model whose
+    unquantized twin reports 8,190,735,360 -- 0.27x, with no unreliability
+    marker. The packing factor was hard-coded to 8//bits, which is right for a
+    byte container and eight times wrong for a word.
+    """
+    header = {
+        "model.layers.0.mlp.down_proj.qweight": {"dtype": "I32", "shape": [12288, 512]},
+    }
+
+    tally = count_parameters([header], bits=4, experts_per_tok=None)
+
+    # [12288, 512] I32 at 4 bits is [12288, 4096] logical.
+    assert tally.total == 12288 * 4096
+
+
+def test_a_byte_container_still_holds_two():
+    """Kimi's mxfp4 uses U8, which is why it was right when AWQ was not."""
+    header = {"model.layers.0.mlp.down_proj.weight_packed": {"dtype": "U8", "shape": [4096, 2048]}}
+
+    tally = count_parameters([header], bits=4, experts_per_tok=None)
+
+    assert tally.total == 4096 * 4096
+
+
+def test_quantization_zero_points_are_not_parameters():
+    """`qzeros` is metadata, exactly like `scales`. Counting it inflates the
+    total with numbers that are not weights."""
+    header = {
+        "model.layers.0.mlp.down_proj.qweight": {"dtype": "I32", "shape": [4096, 512]},
+        "model.layers.0.mlp.down_proj.qzeros": {"dtype": "I32", "shape": [32, 512]},
+        "model.layers.0.mlp.down_proj.scales": {"dtype": "BF16", "shape": [32, 4096]},
+    }
+
+    tally = count_parameters([header], bits=4, experts_per_tok=None)
+
+    assert tally.total == 4096 * 4096

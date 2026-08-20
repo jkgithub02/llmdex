@@ -96,9 +96,18 @@ import { RerunButton } from '../../../shared/rerun-button';
               <span class="val null">unavailable</span>
               <app-state-badge
                 [state]="checkpoint.extracted_benchmarks ? 'absent' : 'unmeasured'"
+                [class.hidden]="generating()"
               />
               <p class="why">
-                @if (checkpoint.extracted_benchmarks) {
+                <!-- Three states, not two. While the agent is running the block
+                     is still absent, and saying "nobody has read this card yet"
+                     contradicts the trace directly above saying we are reading
+                     it -- which is what made a working run look like an empty
+                     tab. -->
+                @if (generating()) {
+                  Reading this card's results table. It is the slowest of the agents on a long card,
+                  because every cell is checked back against the card before it is kept.
+                } @else if (checkpoint.extracted_benchmarks) {
                   We read the card. It publishes no results table.
                 } @else {
                   Nobody has read this card's results table yet.
@@ -288,6 +297,8 @@ export class BenchmarksTab {
   readonly model = input.required<ModelDoc>();
   readonly modelId = input.required<string>();
   readonly busy = input.required<boolean>();
+  /** The benchmarks agent is working, whoever started it. */
+  readonly generating = input(false);
   readonly rerun = output<string>();
 
   protected readonly benchmarkGroups = benchmarkGroups;
