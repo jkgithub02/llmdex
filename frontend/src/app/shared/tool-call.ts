@@ -148,12 +148,20 @@ export class ToolCall {
     return value ? JSON.stringify(value, null, 2) : this.args() || '(none)';
   });
 
-  /** First line of the result, so the collapsed row still says something. */
+  /**
+   * First line of the result, plus how much more there is.
+   *
+   * A bare first line misreports a multi-line answer: `list_models` returning
+   * four models showed one truncated row, which reads as the tool having found
+   * one. The count is what tells you to expand.
+   */
   protected readonly preview = computed(() => {
     const body = this.result();
     if (this.state() === 'error') return body ?? 'failed';
     if (!body) return '';
-    const [first] = body.split('\n');
-    return first.length > 90 ? `${first.slice(0, 89)}…` : first;
+    const lines = body.split('\n').filter((l) => l.trim());
+    const first = lines[0] ?? '';
+    const head = first.length > 80 ? `${first.slice(0, 79)}…` : first;
+    return lines.length > 1 ? `${head}  (+${lines.length - 1} more)` : head;
   });
 }

@@ -59,3 +59,20 @@ describe('ToolCall', () => {
     expect(dot?.getAttribute('data-state')).toBe('running');
   });
 });
+
+describe('ToolCall result preview', () => {
+  it('says how many more lines there are', () => {
+    // A bare first line made list_models' four results look like one.
+    const fixture = toolCall('{}', ['a/one | 8B', 'b/two | 30B', 'c/three | 27B'].join('\n'));
+
+    expect(text(fixture)).toContain('a/one | 8B');
+    expect(text(fixture)).toContain('(+2 more)');
+  });
+
+  it('says nothing extra for a single-line result', () => {
+    const fixture = toolCall('{}', 'NVFP4 via PTQ');
+
+    expect(text(fixture)).toContain('NVFP4 via PTQ');
+    expect(text(fixture)).not.toContain('more)');
+  });
+});
