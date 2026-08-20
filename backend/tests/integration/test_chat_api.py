@@ -25,8 +25,18 @@ LLM = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model")
 TAVILY = TavilySettings(api_key="tvly-test")
 
 
+RECEIVED: list[list] = []
+"""Every message list the scripted model was handed, newest last.
+
+Recorded so a test can assert what actually reached the model, rather than
+inferring it from what came back. `test_a_second_turn_sees_the_first_turn`
+is the only reader; it clears this first.
+"""
+
+
 def scripted(messages, info):
     """Call the tool the first time, answer from its result the second."""
+    RECEIVED.append(messages)
     if not any(getattr(part, "tool_name", None) for msg in messages for part in msg.parts):
         return ModelResponse(
             parts=[
@@ -157,6 +167,35 @@ def test_the_run_ends_with_the_transcript(client):
     assert final, "the run must end with a finished frame"
     assert isinstance(final[0]["messages"], list)
     assert final[0]["messages"], "the transcript must not be empty"
+
+
+def test_a_second_turn_sees_the_first_turn(client):
+    """R9.4 - the round trip, not just the frame's shape.
+
+    The test above only asserts the closing frame carries a non-empty list. It
+    would pass just as happily if that list were the wrong messages, or only
+    the newest ones -- and every conversation would silently start from nothing
+    on turn two, which no single-turn test can see. This posts the transcript
+    back the way the client will and asserts the model actually receives it.
+    """
+    first = client.post("/models/a/one/chat", json={"message": "quantization?", "history": []})
+    transcript = next(p for k, p in _frames(first.text) if p.get("phase") == "finished")["messages"]
+
+    RECEIVED.clear()
+    second = client.post(
+        "/models/a/one/chat",
+        json={"message": "and the vLLM version?", "history": transcript},
+    )
+
+    assert second.status_code == 200
+    assert RECEIVED, "the model was never called on the second turn"
+
+    delivered = "\n".join(
+        str(getattr(part, "content", "")) for message in RECEIVED[0] for part in message.parts
+    )
+    assert "quantization?" in delivered, "turn one's question did not survive the round trip"
+    assert "NVFP4" in delivered, "turn one's tool result did not survive the round trip"
+    assert "and the vLLM version?" in delivered, "the new question never reached the model"
 
 
 def test_an_unknown_model_is_refused_before_the_stream_opens(client):
