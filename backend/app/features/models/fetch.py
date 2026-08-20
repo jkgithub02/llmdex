@@ -37,7 +37,7 @@ __all__ = [
     "fetch_tensor_headers",
 ]
 
-from app.features.models.derive import packed_quantization_bits
+from app.features.models.derive import decoder_config, packed_quantization_bits
 from app.features.models.tensors import header_length, parse_header
 
 HF_BASE = "https://huggingface.co"
@@ -135,7 +135,13 @@ def fetch_snapshot(model_id: str, client: httpx.Client | None = None) -> RepoSna
         # Only for a checkpoint whose reported total counts packed containers
         # rather than parameters. Everywhere else the Hub's number is right and
         # this would be two range requests per shard spent to confirm it.
-        if packed_quantization_bits(snapshot.config or {}) is not None:
+        #
+        # Through decoder_config, because a multimodal wrapper nests its
+        # quantization_config under text_config. Reading the raw config here
+        # while derive reads the unwrapped one is how Kimi K3 ended up with no
+        # parameter count at all: this skipped the headers, and derive then
+        # found a 4-bit checkpoint with nothing to unpack it with.
+        if packed_quantization_bits(decoder_config(snapshot.config or {})) is not None:
             snapshot.tensor_headers = fetch_tensor_headers(client, model_id)
         return snapshot
     finally:
@@ -152,7 +158,13 @@ def _optional_text(client: httpx.Client, model_id: str, filename: str) -> str | 
     exactly like an honest GGUF-only repo while being nothing of the kind.
     Anything that is not a 200 or a 404 is raised (R1.6).
     """
-    r = client.get(f"{HF_BASE}/{model_id}/raw/main/{filename}", headers=_headers())
+    # resolve/, not raw/: `raw` serves the git blob, and for an LFS-tracked file
+    # that is a 133-byte pointer rather than the content. Kimi K3's 57 MB
+    # safetensors index is LFS-tracked, so this returned
+    # "version https://git-lfs.github.com/spec/v1 ..." and the caller reported
+    # a valid file as unparseable. `resolve` serves content for both kinds, and
+    # is already what _range uses for exactly this reason.
+    r = client.get(f"{HF_BASE}/{model_id}/resolve/main/{filename}", headers=_headers())
     if r.status_code == 200:
         return r.text
     if r.status_code == 404:

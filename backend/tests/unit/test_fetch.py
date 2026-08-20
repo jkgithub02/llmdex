@@ -19,6 +19,7 @@ import struct
 import httpx
 import pytest
 
+from app.features.models import fetch
 from app.features.models.fetch import (
     AccessUndetermined,
     GatedRepo,
@@ -273,3 +274,63 @@ def test_a_refused_shard_is_raised_not_skipped(monkeypatch):
     with pytest.raises(Exception) as exc, transport(handler) as client:
         fetch_snapshot("a/b", client=client)
     assert "503" in str(exc.value)
+
+
+def test_a_nested_quantization_config_still_triggers_a_header_read():
+    """The gate must read the decoder config, not the raw one.
+
+    Kimi K3 is a multimodal wrapper: its `quantization_config` lives under
+    `text_config`. Checking the top level found nothing, so the tensor headers
+    were never fetched -- and then derive, which *does* unwrap, saw a 4-bit
+    checkpoint with no headers to unpack and reported no parameter count at
+    all. Two readers of the same config disagreeing is what produced a null.
+    """
+    from app.features.models.derive._config import decoder_config
+    from app.features.models.derive.params import packed_quantization_bits
+
+    nested = {
+        "model_type": "kimi_k3",
+        "text_config": {
+            "model_type": "kimi_linear",
+            "num_hidden_layers": 93,
+            "quantization_config": {
+                "config_groups": {
+                    "group_0": {
+                        "format": "mxfp4-pack-quantized",
+                        "weights": {"num_bits": 4},
+                    }
+                }
+            },
+        },
+    }
+
+    assert packed_quantization_bits(nested) is None, "the raw config says nothing"
+    assert packed_quantization_bits(decoder_config(nested)) == 4, "the decoder config does"
+
+
+def test_an_lfs_tracked_file_is_read_as_content_not_as_a_pointer(monkeypatch):
+    """`raw/` serves the git blob, which for an LFS file is a 133-byte pointer.
+
+    Kimi K3's model.safetensors.index.json is 57 MB and LFS-tracked, so `raw/`
+    returned `version https://git-lfs.github.com/spec/v1 ...` and ingest failed
+    with "present but is not valid JSON". Any large or LFS-tracked JSON hits
+    this -- including a config.json, where it would fail the whole ingest.
+    `resolve/` serves the content, for LFS and plain files alike.
+    """
+    import httpx
+
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if "/resolve/" in str(request.url):
+            return httpx.Response(200, json={"weight_map": {"a": "model-00001.safetensors"}})
+        return httpx.Response(
+            200, text="version https://git-lfs.github.com/spec/v1\noid sha256:abc\nsize 59764096\n"
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=True)
+    got = fetch._optional_json(client, "a/one", "model.safetensors.index.json")
+
+    assert got == {"weight_map": {"a": "model-00001.safetensors"}}
+    assert all("/raw/" not in url for url in seen), f"still using raw/: {seen}"

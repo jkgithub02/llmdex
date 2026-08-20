@@ -474,12 +474,28 @@ the overstatement it replaced, facing the other way.
 vendors abbreviate. Only the short spelling was read, so active params were
 silently null on a model whose config states them plainly. Both are read now.
 
-Kimi's params stay null regardless, and correctly: the checkpoint is
-`mxfp4-pack-quantized`, so both the Hub total and the tensor shapes count
-packed containers and quantization scales. Active is derived as `total minus
-dormant experts`, so without a trustworthy total there is nothing to subtract
-from. Computing it from the config instead would mean modelling every matrix in
-the network -- which is estimating, and R2.3 forbids it.
+**The null parameter count was two bugs, not a principled refusal.** The
+reasoning above -- that an mxfp4 checkpoint has no trustworthy total -- is only
+true when the tensor headers are missing, and they were missing for two
+avoidable reasons:
+
+1. `fetch.py` gated the header read on `packed_quantization_bits(raw_config)`
+   while `derive` reads the *unwrapped* config. Kimi nests its
+   `quantization_config` under `text_config`, so fetch saw no quantization and
+   skipped the headers; derive then saw a 4-bit checkpoint with nothing to
+   unpack it with. The same asymmetry as the MLA finding: two readers of one
+   config disagreeing.
+2. `_optional_text` fetched through the Hub's `raw/` endpoint, which serves the
+   **git blob**. For an LFS-tracked file that is a 133-byte pointer, not the
+   content. Kimi's `model.safetensors.index.json` is 57 MB and LFS-tracked, so
+   a valid file was reported as "present but is not valid JSON". `resolve/`
+   serves content for both kinds and is what `_range` already used.
+
+The second is the wider bug: **any LFS-tracked JSON was unreadable**, and for a
+`config.json` it would have failed the whole ingest. With both fixed, Kimi
+reads 96 shard headers and reports 2,779,931,837,184 total / 105,811,378,944
+active, no unreliability marker -- consistent with the 2.8T MoE its vendor
+describes.
 
 ---
 
