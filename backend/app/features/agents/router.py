@@ -32,6 +32,16 @@ def stream_agents(
     agents: Annotated[
         str, Query(description="comma-separated agent names")
     ] = "about,prose,benchmarks",
+    attach: Annotated[
+        bool,
+        Query(
+            description=(
+                "Only follow a run already in flight. With it, a model that has "
+                "nothing running answers with an empty, immediately-closed "
+                "stream instead of starting one."
+            )
+        ),
+    ] = False,
 ) -> StreamingResponse:
     """Run the named agents and narrate them as server-sent events.
 
@@ -43,6 +53,14 @@ def stream_agents(
     doc = store.read(model_id)
     if doc is None:
         raise HTTPException(status_code=404, detail=f"{model_id} is not in the store")
+
+    # Opening a page must never start work. A card whose blocks are absent
+    # because an agent failed last week looks exactly like one whose agents are
+    # running right now, and the difference is whether spending tokens was
+    # asked for.
+    live_run = live.current(model_id)
+    if attach and live_run is None:
+        return _sse(iter(()))
 
     names = [name.strip() for name in agents.split(",") if name.strip()]
     unknown = [name for name in names if name not in AGENTS]
@@ -62,7 +80,6 @@ def stream_agents(
     # both pay twice and have two sets of agents writing the same blocks.
     # The run replays what it has already said, so arriving late still shows
     # the whole trace.
-    live_run = live.current(model_id)
     if live_run is not None:
         source = live_run.follow()
     else:
@@ -81,8 +98,13 @@ def stream_agents(
     # The trace is ephemeral but the document is the durable artifact -- a user
     # who navigates away mid-run should still get their summary rather than
     # lose a paid-for LLM call. Do not "fix" this by adding cancellation.
+    return _sse(frames())
+
+
+def _sse(frames: Iterator[str]) -> StreamingResponse:
+    """The event-stream response, with the headers a proxy needs to leave alone."""
     return StreamingResponse(
-        frames(),
+        frames,
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

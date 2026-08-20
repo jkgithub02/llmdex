@@ -5,9 +5,11 @@ import type { ModelDoc } from '../../../api/model/modelDoc';
 import { sourceHost, summarySections } from '../summary';
 
 /** The About tab: the web-researched summary, and where it starts from nothing. */
+import { RerunButton } from '../../../shared/rerun-button';
+
 @Component({
   selector: 'app-about-tab',
-  imports: [AgentTrace],
+  imports: [RerunButton, AgentTrace],
   template: `
     <section class="pane">
       <!-- The agent's thinking sits with what it wrote. Above the tabs it was a
@@ -47,9 +49,12 @@ import { sourceHost, summarySections } from '../summary';
           }
         </p>
 
-        <button class="ghost" (click)="rerun.emit('about')" [disabled]="busy()">
-          {{ summarising() ? 'Rewriting…' : 'Regenerate' }}
-        </button>
+        <app-rerun-button
+          agent="about"
+          label="Regenerate"
+          [busy]="busy()"
+          (rerun)="rerun.emit($event)"
+        />
       } @else if (!summarising()) {
         <div class="cta">
           <p>Nobody has summarised this model yet.</p>

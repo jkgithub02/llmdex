@@ -57,13 +57,28 @@ export class AgentStream {
     return existing ? states.map((s) => (s.name === name ? next : s)) : [...states, next];
   }
 
-  start(modelId: string, agents: string[]): void {
+  /**
+   * Follow a run already in flight, without starting one.
+   *
+   * Ingest returns the card and leaves the agents running, so a page opened
+   * straight after lands mid-run. `attach` is the difference between showing
+   * that run and paying for a second one -- and on a card whose blocks are
+   * absent because an agent failed last week, between showing nothing and
+   * silently spending tokens.
+   */
+  attach(modelId: string): void {
+    this.start(modelId, ['about', 'prose', 'benchmarks'], true);
+  }
+
+  start(modelId: string, agents: string[], attach = false): void {
     this.stop();
     this.state.set([]);
     this.subject.set(modelId);
     this.active.set(true);
 
-    const url = `/api/models/${modelId}/agents/stream?agents=${agents.join(',')}`;
+    const url =
+      `/api/models/${modelId}/agents/stream?agents=${agents.join(',')}` +
+      (attach ? '&attach=true' : '');
     const source = new EventSource(url);
     this.source = source;
 

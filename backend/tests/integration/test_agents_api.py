@@ -102,3 +102,41 @@ def test_a_model_with_no_card_is_a_422(vault, fake_agent):
         assert response.status_code == 422
     finally:
         app.dependency_overrides.clear()
+
+
+def test_attach_on_a_model_with_nothing_running_starts_nothing(client, monkeypatch):
+    """Opening a page must never spend tokens.
+
+    A card whose blocks are absent because an agent failed last week looks
+    exactly like one whose agents are running now. `attach` is how the client
+    says "show me a run if there is one", and the answer for "there isn't" is
+    an empty stream, not a new run.
+    """
+    started: list[list[str]] = []
+
+    def spy(names, *a, **kw):
+        started.append(list(names))
+        return iter(())
+
+    monkeypatch.setattr("app.features.agents.router.run_agents", spy)
+
+    response = client.get("/models/a/one/agents/stream?attach=true")
+
+    assert response.status_code == 200
+    assert started == [], "attach must not start agents"
+    assert response.text.strip() == ""
+
+
+def test_without_attach_the_stream_still_starts_a_run(client, monkeypatch):
+    """The Re-run buttons depend on this: asking for a stream is asking to run."""
+    started: list[list[str]] = []
+
+    def spy(names, *a, **kw):
+        started.append(list(names))
+        return iter(())
+
+    monkeypatch.setattr("app.features.agents.router.run_agents", spy)
+
+    client.get("/models/a/one/agents/stream?agents=about")
+
+    assert started == [["about"]]

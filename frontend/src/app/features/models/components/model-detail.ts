@@ -333,8 +333,25 @@ export class ModelDetail {
   protected readonly doc = signal<ModelDoc | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly errorLabel = signal('Extraction failed.');
-  protected readonly extracting = signal(false);
-  protected readonly summarising = signal(false);
+
+  // Set by this page's own buttons. The tabs are told about *any* run, local
+  // or not, so a card whose agents ingest left running shows the same
+  // "generating" state as one somebody pressed a button on -- from the
+  // reader's side there is no difference worth drawing.
+  private readonly extractingHere = signal(false);
+  private readonly summarisingHere = signal(false);
+
+  /** Whether one named agent is working, wherever the run was started. */
+  private agentBusy(name: string): boolean {
+    if (!this.stream.running() || this.stream.modelId() !== this.modelId()) return false;
+    const agent = this.stream.agents().find((a) => a.name === name);
+    return !!agent && agent.phase !== 'done' && !agent.error;
+  }
+
+  protected readonly extracting = computed(() => this.extractingHere() || this.agentBusy('prose'));
+  protected readonly summarising = computed(
+    () => this.summarisingHere() || this.agentBusy('about'),
+  );
   protected readonly tab = signal<Tab>('about');
   protected readonly chatOpen = signal(true);
   protected readonly modelId = computed(() => `${this.vendor()}/${this.name()}`);
@@ -354,6 +371,23 @@ export class ModelDetail {
       this.modelId();
       this.chat.reset();
     });
+
+    // As each agent finishes, its block is in the store; re-read so the tab
+    // fills in without waiting for the whole run.
+    let settled = '';
+    effect(() => {
+      const done = this.stream
+        .agents()
+        .filter((a) => a.phase === 'done' || a.error)
+        .map((a) => a.name)
+        .sort()
+        .join(',');
+      if (done && done !== settled) {
+        settled = done;
+        this.load();
+      }
+    });
+
     queueMicrotask(() => this.load());
   }
 
@@ -371,7 +405,10 @@ export class ModelDetail {
 
   protected load(): void {
     this.api.getModelModelsModelIdGet(this.modelId()).subscribe({
-      next: (doc) => this.doc.set(doc),
+      next: (doc) => {
+        this.doc.set(doc);
+        this.followAnyRun(doc);
+      },
       error: (err) => {
         this.errorLabel.set('Could not load this model.');
         this.error.set(errorMessage(err));
@@ -379,18 +416,33 @@ export class ModelDetail {
     });
   }
 
+  /**
+   * Show a run this page did not start.
+   *
+   * Ingest answers with the card and leaves the agents running, so arriving
+   * here straight after lands mid-run. `attach` never starts one: a card whose
+   * blocks are absent because an agent failed last week looks identical to one
+   * being worked on right now, and opening a page must not spend tokens.
+   */
+  private followAnyRun(doc: ModelDoc): void {
+    if (this.stream.running()) return;
+    const checkpoint = doc.checkpoints?.[0];
+    const missing = !doc.summary || !checkpoint?.extracted || !checkpoint?.extracted_benchmarks;
+    if (missing) this.stream.attach(this.modelId());
+  }
+
   // R6.x - regenerating replaces what is on screen; `generated_on` says which run wrote it.
   protected summarise(modelId: string): void {
-    this.summarising.set(true);
+    this.summarisingHere.set(true);
     this.error.set(null);
     this.errorLabel.set('Summary failed.');
     this.api.summariseModelModelsModelIdSummarizePost(modelId).subscribe({
       next: (doc) => {
-        this.summarising.set(false);
+        this.summarisingHere.set(false);
         this.doc.set(doc);
       },
       error: (err) => {
-        this.summarising.set(false);
+        this.summarisingHere.set(false);
         this.error.set(errorMessage(err));
       },
     });

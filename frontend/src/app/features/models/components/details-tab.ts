@@ -6,9 +6,11 @@ import type { ModelDoc } from '../../../api/model/modelDoc';
 import { extractedFields } from '../fields';
 
 /** The Details tab: every extracted field, copied from the card — never generated (R3.x). */
+import { RerunButton } from '../../../shared/rerun-button';
+
 @Component({
   selector: 'app-details-tab',
-  imports: [AgentTrace, StateBadge],
+  imports: [RerunButton, AgentTrace, StateBadge],
   template: `
     <app-agent-trace [only]="modelId()" agent="prose" />
     @for (
@@ -23,9 +25,12 @@ import { extractedFields } from '../fields';
             card
             <code>{{ extracted.card_revision.slice(0, 7) }}</code>
           </p>
-          <button class="ghost" (click)="rerun.emit('prose')" [disabled]="busy()">
-            {{ extracting() ? 'Reading the card…' : 'Re-run' }}
-          </button>
+          <app-rerun-button
+            agent="prose"
+            label="Re-extract"
+            [busy]="busy()"
+            (rerun)="rerun.emit($event)"
+          />
           <div class="grid">
             @for (field of extractedFields(checkpoint); track field.label) {
               <div class="field">
