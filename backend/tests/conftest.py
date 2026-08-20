@@ -16,3 +16,8 @@ from pydantic_ai import models
 def _no_real_model_requests():
     models.ALLOW_MODEL_REQUESTS = False
     yield
+
+
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
