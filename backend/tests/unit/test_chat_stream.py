@@ -64,10 +64,74 @@ def test_indices_that_reset_between_rounds_get_distinct_part_ids():
             part=ToolCallPart(tool_name="grep_card", args={"query": "x"}, tool_call_id="c1")
         )
     )
+    frames(
+        FunctionToolResultEvent(
+            part=ToolReturnPart(tool_name="grep_card", content="found", tool_call_id="c1")
+        )
+    )
     second = frames(PartStartEvent(index=0, part=TextPart(content="")))
 
     assert first.part_id != second.part_id
     assert (first.part_id, second.part_id) == ("0:0", "1:0")
+
+
+def test_round_boundary_survives_interleaved_calls_and_results():
+    """A round can have >1 tool call; the round must not advance until every
+    result is in, even if a later call's PartStartEvent lands between an
+    earlier call's call-event and its own result-event."""
+    frames = Frames()
+    frames(PartStartEvent(index=2, part=ToolCallPart(tool_name="a", tool_call_id="c1")))
+    frames(FunctionToolCallEvent(part=ToolCallPart(tool_name="a", tool_call_id="c1")))
+    frames(PartStartEvent(index=3, part=ToolCallPart(tool_name="b", tool_call_id="c2")))
+    frames(FunctionToolCallEvent(part=ToolCallPart(tool_name="b", tool_call_id="c2")))
+    frames(
+        FunctionToolResultEvent(part=ToolReturnPart(tool_name="a", content="ra", tool_call_id="c1"))
+    )
+    frames(
+        FunctionToolResultEvent(part=ToolReturnPart(tool_name="b", content="rb", tool_call_id="c2"))
+    )
+
+    answer = frames(PartStartEvent(index=0, part=TextPart(content="")))
+
+    assert answer.part_id == "1:0"
+
+
+def test_the_full_measured_sequence_from_research_md_6e():
+    """research.md 6e, collapsed to one part-start/delta/end per part. Two
+    tool-call parts in round zero, then the reset text part in round one."""
+    frames = Frames()
+
+    thinking_start = frames(PartStartEvent(index=0, part=ThinkingPart(content="")))
+    frames(PartDeltaEvent(index=0, delta=ThinkingPartDelta(content_delta="hm")))
+    frames(PartEndEvent(index=0, part=ThinkingPart(content="hm")))
+
+    empty_text_start = frames(PartStartEvent(index=1, part=TextPart(content="")))
+    frames(PartEndEvent(index=1, part=TextPart(content="")))
+
+    frames(PartStartEvent(index=2, part=ToolCallPart(tool_name="a", tool_call_id="c1")))
+    frames(PartDeltaEvent(index=2, delta=ToolCallPartDelta(args_delta="{}")))
+    frames(PartEndEvent(index=2, part=ToolCallPart(tool_name="a", tool_call_id="c1")))
+
+    frames(PartStartEvent(index=3, part=ToolCallPart(tool_name="b", tool_call_id="c2")))
+    frames(PartDeltaEvent(index=3, delta=ToolCallPartDelta(args_delta="{}")))
+    frames(PartEndEvent(index=3, part=ToolCallPart(tool_name="b", tool_call_id="c2")))
+
+    frames(FunctionToolCallEvent(part=ToolCallPart(tool_name="a", tool_call_id="c1")))
+    frames(FunctionToolCallEvent(part=ToolCallPart(tool_name="b", tool_call_id="c2")))
+    frames(
+        FunctionToolResultEvent(part=ToolReturnPart(tool_name="a", content="ra", tool_call_id="c1"))
+    )
+    frames(
+        FunctionToolResultEvent(part=ToolReturnPart(tool_name="b", content="rb", tool_call_id="c2"))
+    )
+
+    answer_start = frames(PartStartEvent(index=0, part=TextPart(content="")))
+
+    assert (thinking_start.part_id, empty_text_start.part_id, answer_start.part_id) == (
+        "0:0",
+        "0:1",
+        "1:0",
+    )
 
 
 def test_tool_call_deltas_are_not_forwarded():

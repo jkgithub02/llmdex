@@ -6,7 +6,13 @@ one and the answer text in round two. The round counter is the state that makes
 `{round}:{index}` unique, and it lives here in Python where it is tested,
 rather than in the TypeScript reducer.
 
-A tool call marks the end of a round: the next model request starts fresh.
+The round boundary is armed on `FunctionToolResultEvent`, not on the call. A
+round's `FunctionToolCallEvent`s are all emitted before any of that round's
+`FunctionToolResultEvent`s (pydantic-ai validates every call in the batch
+before running any of them), and the next model request's parts only start
+once every result is in. Arming on the call instead would over-advance the
+round mid-batch for a run with more than one tool call, if that batch's call
+and result events ever interleave.
 """
 
 import json
@@ -79,7 +85,6 @@ class Frames:
             return AgentEvent(agent=AGENT, kind="part_end", part_id=self._part_id(event.index))
 
         if isinstance(event, FunctionToolCallEvent):
-            self._round_had_tool_call = True
             args = event.part.args
             return AgentEvent(
                 agent=AGENT,
@@ -92,6 +97,7 @@ class Frames:
             )
 
         if isinstance(event, FunctionToolResultEvent):
+            self._round_had_tool_call = True
             part = event.part
             return AgentEvent(
                 agent=AGENT,
