@@ -281,12 +281,54 @@ produce them.
 **W8.2** The system WON'T run performance benchmarks. `measured` fields are
 filled by hand from separately-run tooling.
 
-**W8.3** The system WON'T provide semantic search or a chat interface over the
-store. Revisit once the store holds enough documents that filtering stops
-being sufficient.
+**W8.3** The system WON'T provide semantic search over the store. A read-only
+chat interface is specified in §9; it was out of scope for v1 and was brought
+in by decision rather than by the store outgrowing its filters.
 
 **W8.4** The system WON'T support multi-user accounts, roles, or concurrent
 editing. Single-team, single-repository.
 
 **W8.5** The system WON'T track hosted API models or pricing. Open-weight
 checkpoints only.
+
+---
+
+## 9. Chat
+
+**R9.1** The chat MUST be read-only. It MUST NOT write to the vault, mutate a
+document, or trigger an agent that does.
+
+**R9.2** The chat MUST be scoped to one model at entry, and MUST be able to
+read any other document in the vault through a tool call.
+
+**R9.3** The agent's opening context MUST be the model's vault document plus
+the raw card's section headings. The card body MUST NOT be pasted in whole; it
+is reached by tool call.
+
+**R9.4** The server MUST NOT hold conversation state. The client sends the
+transcript; the server rebuilds the seed context from the store on every turn,
+so a re-ingested document is visible mid-conversation.
+
+**R9.5** When the transcript approaches the context limit, older turns MUST be
+compacted by summarisation. Raw tool results MUST be dropped rather than
+paraphrased, and the summary MUST record which tool produced each retained
+claim so the agent can re-read the source.
+
+**R9.6** The chat MUST stream: answer text, the model's thinking, and every
+tool call with its result. A tool call MUST be visible to the user, not hidden
+behind the answer.
+
+**R9.7** The tool-call loop MUST be bounded. Exhausting the bound is an error,
+never a truncated answer.
+
+**R9.8** The model's chain of thought MUST be shown, collapsed by default once
+complete, and expandable. It MUST be visually distinct from the answer and MUST
+NOT be concatenated into it.
+
+**R9.9** A tool call MUST render as one line naming the tool and its arguments,
+expandable to the full arguments and the full result. Its state — running,
+succeeded, failed — MUST be visible without expanding.
+
+**R9.10** An assistant turn MUST render its parts in the order they were
+produced. Thinking, tool calls and answer text interleave; grouping them into
+fixed sections would misrepresent what the model did.
