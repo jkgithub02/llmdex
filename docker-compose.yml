@@ -18,7 +18,10 @@ services:
       # The store. Committed to on every write (R4.7).
       - ./vault:/vault
       # Source, so an edit restarts the reloader instead of rebuilding the image.
-      - ./backend:/app/backend
+      # /srv/backend, not /app/backend: the image's WORKDIR is /srv and the
+      # project is installed from /srv/backend, so a mount anywhere else is a
+      # directory nothing imports.
+      - ./backend:/srv/backend
     environment:
       LLMDEX_VAULT: /vault
     env_file:
@@ -27,16 +30,19 @@ services:
       # answers 503 saying what to set rather than guessing an endpoint.
       - path: .env
         required: false
+    # Only --reload is added here; the module path stays whatever the image's
+    # CMD says. Repeating it was how this drifted -- the package moved to
+    # `app` at backend/app and this line still said `backend.main`.
     command:
       - uvicorn
-      - backend.main:app
+      - app.main:app
       - --host
       - 0.0.0.0
       - --port
       - "8001"
       - --reload
       - --reload-dir
-      - /app/backend
+      - /srv/backend
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
       interval: 5s
