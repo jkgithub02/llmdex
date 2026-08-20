@@ -67,9 +67,18 @@ def client(vault):
 
 @pytest.fixture
 def endpoints(monkeypatch):
-    """The real generate runs; only its two network calls are stubbed."""
+    """The real generate runs; only its two network calls are stubbed.
+
+    Both seams are stubbed because there are two paths to a summary: the
+    /summarize endpoint calls `generate.complete`, and ingest goes through the
+    summary *agent*, which streams via `agent.stream_json`. Patching one and
+    testing the other is how a first-ingest test can pass while first ingest
+    does nothing.
+    """
     monkeypatch.setattr("app.features.summary.generate.complete", lambda *a, **kw: ANSWER)
     monkeypatch.setattr("app.features.summary.generate.search", lambda *a, **kw: [])
+    monkeypatch.setattr("app.features.summary.agent.stream_json", lambda *a, **kw: ANSWER)
+    monkeypatch.setattr("app.features.summary.agent.search", lambda *a, **kw: [])
 
 
 def test_summarising_writes_the_block(client, endpoints):
@@ -170,7 +179,7 @@ def test_a_re_ingest_does_not_generate_again(vault, monkeypatch, endpoints):
 
     calls = []
     monkeypatch.setattr(
-        "app.features.summary.generate.complete", lambda *a, **kw: calls.append(1) or ANSWER
+        "app.features.summary.agent.stream_json", lambda *a, **kw: calls.append(1) or ANSWER
     )
 
     app.dependency_overrides[get_store] = lambda: vault

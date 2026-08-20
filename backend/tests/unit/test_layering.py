@@ -11,7 +11,7 @@ reach into a sibling feature's router or fetcher to wire dependency injection.
 The shared DI providers (the card fetcher, the LLM/Tavily settings providers,
 `fetch_snapshot`) now live in `common/deps.py` beside `StoreDep`, and the one
 function that genuinely needs both models and summary
-(`summarise_after_first_ingest`) lives in `common/summarise.py`. No router
+(`enrich_after_first_ingest`) lives in `common/enrich.py`. No router
 needs a sibling feature any more.
 
 An earlier version of this file also exempted `benchmarks/agent.py` and
@@ -102,7 +102,7 @@ COMMON = Path(__file__).resolve().parents[2] / "app" / "common"
 # a third entry to silence a failure is how the guard stops guarding: the test
 # for whether something belongs here is whether assembling features is its
 # whole job, not whether it happens to need one.
-COMMON_COMPOSITION = {"deps.py", "summarise.py"}
+COMMON_COMPOSITION = {"deps.py", "enrich.py"}
 
 
 def test_only_the_named_module_in_common_may_import_a_feature():

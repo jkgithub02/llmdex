@@ -47,9 +47,9 @@ def ingest_model(
 ) -> ModelDoc:
     """Fetch, derive, and write a document. Atomic: it completes or it fails (R1.5).
 
-    A model entering the vault for the first time is summarised on the way in, so
+    A model entering the vault for the first time gets every agent on the way in, so
     nobody has to ask for the first one. That step cannot fail this endpoint: see
-    :func:`~app.features.summary.router.summarise_after_first_ingest`.
+    :func:`~app.common.enrich.enrich_after_first_ingest`.
     """
     try:
         return service.ingest_model(

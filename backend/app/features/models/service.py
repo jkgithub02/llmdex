@@ -12,8 +12,8 @@ Two properties this module exists to preserve:
 
 from collections.abc import Callable
 
+from app.common.enrich import enrich_after_first_ingest
 from app.common.exceptions import NotFound
-from app.common.summarise import summarise_after_first_ingest
 from app.core.config import LLMSettings, TavilySettings
 from app.core.document import ModelDoc
 from app.core.http import normalise_model_id
@@ -34,14 +34,14 @@ def ingest_model(
 ) -> ModelDoc:
     """Fetch, derive, and write a document. Atomic: it completes or it fails (R1.5).
 
-    A model entering the vault for the first time is summarised on the way in;
+    A model entering the vault for the first time gets every agent on the way in;
     that step cannot fail this call, see
-    :func:`~app.common.summarise.summarise_after_first_ingest`.
+    :func:`~app.common.enrich.enrich_after_first_ingest`.
     """
     model_id = normalise_model_id(model_id)
     snapshot = fetcher(model_id)
     doc = ingest(snapshot, store, context=context)
-    return summarise_after_first_ingest(doc, store, snapshot.readme, llm=llm, tavily=tavily)
+    return enrich_after_first_ingest(doc, store, snapshot.readme, llm=llm, tavily=tavily)
 
 
 def list_models(store: Store) -> list[ModelDoc]:

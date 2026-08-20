@@ -6,7 +6,7 @@ mapping from a domain exception to an ``HTTPException``.
 
 The one exception is the first ingest of a model, which generates a summary
 without being asked -- see
-:func:`~app.common.summarise.summarise_after_first_ingest`, which lives in
+:func:`~app.common.enrich.enrich_after_first_ingest`, which lives in
 ``common`` because it is called from the models feature, not from here.
 """
 
