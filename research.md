@@ -389,6 +389,58 @@ otherwise. **[V]**
 
 ---
 
+## 6f. Cards that are HTML, not markdown
+
+Kimi K3's results table is `<table>`/`<td>`, not pipes -- 361 `<td>` cells and
+zero markdown table rows. Two things follow, found by running extraction
+against it. **[V]**
+
+- **The model reads HTML tables fine.** It returned 271 well-formed rows. The
+  first diagnosis -- "the extractor cannot see the table" -- was wrong.
+- **Grounding rejected all 271**, 270 of them `not_contiguous`. The card writes
+  a cell as `<td>Kimi K3<br><sup>(max)</td>`; the model quotes what the cell
+  *renders* as, `"Kimi K3\n(max)"`, and the raw text has markup between the two
+  halves. R3.1's verbatim check was working exactly as specified and refusing
+  every row anyway.
+
+`normalise()` now treats a tag as a single space. A space rather than nothing:
+deleting tags would join `<td>93.5</td><td>92.6</td>` into `93.592.6` and let a
+model quote a number the card never states. Separating is safe; welding is the
+failure mode. After the change: 269 rows, 1 rejected, every stored span still a
+verbatim slice.
+
+A consequence worth knowing: a span from an HTML card carries its markup, so
+the stored `variant` reads `Kimi K3<br><sup>(max)`. That is correct -- it is
+what the card says at those offsets -- and is a question for the renderer, not
+for extraction.
+
+## 6g. Derivation, measured against 54 real repos
+
+`backend/tests/derive_sweep.py`, run 2026-08-20 against a deliberately awkward
+spread: dense, MoE, MLA, hybrid/SSM, multimodal wrappers, quantized
+checkpoints, GGUF-only shelves, and three models that are not decoder LMs at
+all. **[V]**
+
+```
+reached derive       45/54   (9 gated, refused cleanly with an actionable message)
+defensible           45/45   (100%)
+confidently wrong     0
+crashes               0
+```
+
+"Defensible" means every field is either supported by the config or null with a
+reason. The distinction the sweep is built around is that a null is the system
+working (R2.7) and only a *confident wrong number* is a defect.
+
+MLA is handled correctly and the arithmetic was checked, not assumed:
+DeepSeek-V2-Lite and V3 both match the MLA formula exactly, where GQA maths
+would have overstated the KV cache by **7.1x and 24.9x**. An earlier version of
+the sweep flagged all three DeepSeeks as defective for having no
+"unreliable" marker -- the check was wrong, not the code. Verify arithmetic,
+not the presence of a caveat.
+
+---
+
 ## 7. Spec defects found
 
 | Where | Defect | Resolution |

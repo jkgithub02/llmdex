@@ -193,3 +193,52 @@ def test_a_quote_of_only_zero_width_characters_is_empty_not_a_match():
 
     assert isinstance(result, RejectedValue)
     assert result.reason == "empty"
+
+
+# --- HTML markup between the halves of a value (research.md 6f) -------------
+
+
+def test_a_value_split_by_a_br_tag_is_still_one_value():
+    """Kimi K3's card is HTML: `<td>Kimi K3<br>(max)</td>`.
+
+    The model reads the rendered cell -- "Kimi K3\\n(max)" -- and every one of
+    271 extracted rows was rejected as `not_contiguous`, because the raw card
+    has a tag between the two halves. A tag is markup, not content: dropping it
+    is the same kind of normalisation as unescaping an entity, and the match
+    stays exact on what the reader actually sees.
+    """
+    card = GroundedCard('<td align="center">Kimi K3<br>(max)</td>')
+
+    span = card.find("Kimi K3\n(max)", field="variant")
+
+    assert isinstance(span, Span), getattr(span, "reason", span)
+    assert "Kimi K3" in span.text
+    assert "(max)" in span.text
+
+
+def test_a_score_inside_a_table_cell_is_locatable():
+    card = GroundedCard(
+        '<tr><td style="text-align: center">GPQA Diamond</td>'
+        '<td style="vertical-align: middle">93.5</td></tr>'
+    )
+
+    assert isinstance(card.find("GPQA Diamond", field="name"), Span)
+    assert isinstance(card.find("93.5", field="score"), Span)
+
+
+def test_markup_cannot_be_quoted_as_content():
+    """Dropping tags must not let a model quote the tags themselves."""
+    card = GroundedCard("<td>93.5</td>")
+
+    assert not isinstance(card.find("<td>", field="score"), Span)
+
+
+def test_a_tag_does_not_weld_two_unrelated_cells_together():
+    """The tag is skipped, not treated as absent from the layout.
+
+    `<td>93.5</td><td>92.6</td>` must not answer to "93.592.6" -- that would
+    invent a value the card never states, which is the whole failure mode.
+    """
+    card = GroundedCard("<td>93.5</td><td>92.6</td>")
+
+    assert not isinstance(card.find("93.592.6", field="score"), Span)

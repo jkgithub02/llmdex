@@ -10,9 +10,11 @@ import { sourceHost } from '../summary';
  * The Benchmarks tab: every reported score, grouped into small multiples (R5.5),
  * shown rather than tucked into a tooltip.
  */
+import { RerunButton } from '../../../shared/rerun-button';
+
 @Component({
   selector: 'app-benchmarks-tab',
-  imports: [AgentTrace, StateBadge],
+  imports: [RerunButton, AgentTrace, StateBadge],
   template: `
     <app-agent-trace [only]="modelId()" agent="benchmarks" />
     @for (
@@ -106,7 +108,7 @@ import { sourceHost } from '../summary';
           }
         }
 
-        <button class="ghost" (click)="rerun.emit('benchmarks')" [disabled]="busy()">Re-run</button>
+        <app-rerun-button agent="benchmarks" [busy]="busy()" (rerun)="rerun.emit($event)" />
       </section>
     }
   `,

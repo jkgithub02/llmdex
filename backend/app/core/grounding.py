@@ -27,6 +27,9 @@ import unicodedata
 from app.core.schemas import RejectedValue, Span
 
 ENTITY = re.compile(r"&(?:#\d+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
+# An HTML tag or comment. Requires a letter or `/` after `<` so that prose
+# like "a < b" is left alone.
+TAG = re.compile(r"<!--.*?-->|</?[a-zA-Z][^>]*>", re.DOTALL)
 HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*$", re.MULTILINE)
 # Built from code points rather than literal characters or \u escapes: both
 # forms of zero-width text are unreliable to carry through tooling untouched.
@@ -44,6 +47,16 @@ def normalise(text: str) -> tuple[str, list[tuple[int, int]]]:
     identically to both sides of every comparison: HTML entities unescaped,
     zero-width characters dropped, whitespace runs collapsed to one space, and
     NFKC applied.
+
+    HTML tags become a single space rather than disappearing. Cards that render
+    their results table in HTML put markup inside a value -- Kimi K3's is
+    ``<td>Kimi K3<br>(max)</td>`` -- and a model quoting the rendered cell says
+    "Kimi K3\n(max)", which is not contiguous in the raw text. A tag is markup,
+    not content, so skipping it is the same move as unescaping an entity.
+
+    A *space* and not nothing, because deleting the tag would join
+    ``<td>93.5</td><td>92.6</td>`` into "93.592.6" and let a model quote a
+    number the card never states. Separating is safe; welding is not.
 
     ponytail: NFKC is applied per character rather than to the whole string, so
     that one output character always traces to one input span. Whole-string NFKC
@@ -63,6 +76,15 @@ def normalise(text: str) -> tuple[str, list[tuple[int, int]]]:
                 out.append(char)
                 offsets.append((i, entity.end()))
             i = entity.end()
+            continue
+
+        tag = TAG.match(text, i)
+        if tag:
+            # Collapses with any adjacent whitespace, as a space would.
+            if out and out[-1] != " ":
+                out.append(" ")
+                offsets.append((i, tag.end()))
+            i = tag.end()
             continue
 
         char = text[i]
