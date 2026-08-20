@@ -9,15 +9,18 @@ it is written for that reader rather than for us.
 """
 
 from pydantic_ai import Agent, RunContext
+from pydantic_ai.capabilities import ProcessHistory
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
-from app.core.config import LLMSettings, TavilySettings
+from app.core.config import ChatSettings, LLMSettings, TavilySettings
 from app.features.chat import context, prompts, tools
 from app.features.chat.deps import ChatDeps
 
 
-def build_agent(llm: LLMSettings, tavily: TavilySettings | None) -> Agent[ChatDeps, str]:
+def build_agent(
+    llm: LLMSettings, tavily: TavilySettings | None, chat: ChatSettings
+) -> Agent[ChatDeps, str]:
     """One agent for one request.
 
     `tool_choice` is never forced: this endpoint returns a malformed call when
@@ -37,11 +40,14 @@ def build_agent(llm: LLMSettings, tavily: TavilySettings | None) -> Agent[ChatDe
 
         extra.append(tavily_search_tool(tavily.api_key))
 
+    summariser = Agent(model, instructions=prompts.COMPACT)
+
     agent = Agent(
         model,
         deps_type=ChatDeps,
         instructions=prompts.SYSTEM,
         tools=extra,
+        capabilities=[ProcessHistory(context.compactor(summariser, chat))],
     )
 
     @agent.instructions

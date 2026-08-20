@@ -6,11 +6,12 @@ from pydantic_ai.tools import RunContext
 from pydantic_ai.toolsets import CombinedToolset
 from pydantic_ai.usage import RunUsage
 
-from app.core.config import LLMSettings, TavilySettings
+from app.core.config import ChatSettings, LLMSettings, TavilySettings
 from app.features.chat.agent import build_agent
 
 LLM = LLMSettings(base_url="https://example.test/v1", model="vllm/some-model")
 TAVILY = TavilySettings(api_key="tvly-test")
+CHAT = ChatSettings()
 
 VAULT_TOOLS = {
     "read_card_section",
@@ -39,7 +40,7 @@ async def _tool_names(agent) -> dict:
 
 @pytest.mark.anyio
 async def test_the_vault_tools_are_registered():
-    agent = build_agent(LLM, None)
+    agent = build_agent(LLM, None, CHAT)
 
     assert VAULT_TOOLS <= (await _tool_names(agent)).keys()
 
@@ -47,14 +48,14 @@ async def test_the_vault_tools_are_registered():
 @pytest.mark.anyio
 async def test_tavily_is_absent_when_no_key_is_configured():
     """An unavailable tool the model can see is one it will try and apologise for."""
-    names = (await _tool_names(build_agent(LLM, None))).keys()
+    names = (await _tool_names(build_agent(LLM, None, CHAT))).keys()
 
     assert not any("tavily" in name or "search" in name for name in names)
 
 
 @pytest.mark.anyio
 async def test_tavily_is_present_when_a_key_is_configured():
-    names = (await _tool_names(build_agent(LLM, TAVILY))).keys()
+    names = (await _tool_names(build_agent(LLM, TAVILY, CHAT))).keys()
 
     assert any("tavily" in name or "search" in name for name in names)
 
@@ -62,7 +63,7 @@ async def test_tavily_is_present_when_a_key_is_configured():
 @pytest.mark.anyio
 async def test_no_tool_declares_a_parameter_called_name():
     """research.md 6e - this endpoint fills such a parameter with the tool's own name."""
-    tools = await _tool_names(build_agent(LLM, TAVILY))
+    tools = await _tool_names(build_agent(LLM, TAVILY, CHAT))
 
     for name, tool in tools.items():
         properties = (tool.tool_def.parameters_json_schema or {}).get("properties", {})
