@@ -11,7 +11,7 @@ document corrected mid-conversation takes effect on the next turn.
 from collections.abc import Callable
 
 import yaml
-from pydantic_ai import Agent
+from pydantic_ai import Agent, RunContext
 from pydantic_ai.messages import ModelMessage, ToolCallPart, ToolReturnPart
 
 from app.core.config import ChatSettings
@@ -70,7 +70,9 @@ def compactor(summariser: Agent, settings: ChatSettings) -> Callable:
     produced a claim and the agent re-reads the source when it needs the value.
     """
 
-    async def process(ctx, messages: list[ModelMessage]) -> list[ModelMessage]:
+    async def process(
+        ctx: RunContext[ChatDeps], messages: list[ModelMessage]
+    ) -> list[ModelMessage]:
         if ctx.usage.total_tokens < settings.compact_above_tokens:
             return messages
 
