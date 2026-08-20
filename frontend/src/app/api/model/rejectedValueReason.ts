@@ -5,7 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type RejectedValueReason = (typeof RejectedValueReason)[keyof typeof RejectedValueReason];
+export type RejectedValueReason = typeof RejectedValueReason[keyof typeof RejectedValueReason];
+
 
 export const RejectedValueReason = {
   no_match: 'no_match',

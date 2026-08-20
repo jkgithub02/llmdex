@@ -6,8 +6,8 @@
  */
 
 export type StreamAgentsModelsModelIdAgentsStreamGetParams = {
-  /**
-   * comma-separated agent names
-   */
-  agents?: string;
+/**
+ * comma-separated agent names
+ */
+agents?: string;
 };

@@ -5,8 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type BenchmarkScoreProvenance =
-  (typeof BenchmarkScoreProvenance)[keyof typeof BenchmarkScoreProvenance];
+export type BenchmarkScoreProvenance = typeof BenchmarkScoreProvenance[keyof typeof BenchmarkScoreProvenance];
+
 
 export const BenchmarkScoreProvenance = {
   vendor: 'vendor',

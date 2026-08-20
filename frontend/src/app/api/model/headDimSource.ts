@@ -5,7 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type HeadDimSource = (typeof HeadDimSource)[keyof typeof HeadDimSource] | null;
+export type HeadDimSource = typeof HeadDimSource[keyof typeof HeadDimSource] | null;
+
 
 export const HeadDimSource = {
   explicit: 'explicit',

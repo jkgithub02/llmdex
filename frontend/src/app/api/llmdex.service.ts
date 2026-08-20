@@ -4,27 +4,44 @@
  * llmdex
  * OpenAPI spec version: 0.1.0
  */
-import { HttpClient, HttpHeaders, HttpResponse as AngularHttpResponse } from '@angular/common/http';
-import type { HttpContext, HttpEvent, HttpParams } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpHeaders,
+  HttpResponse as AngularHttpResponse
+} from '@angular/common/http';
+import type {
+  HttpContext,
+  HttpEvent,
+  HttpParams
+} from '@angular/common/http';
 
-import { Injectable, inject } from '@angular/core';
+import {
+  Injectable,
+  inject
+} from '@angular/core';
 
-import { Observable } from 'rxjs';
+import {
+  Observable
+} from 'rxjs';
 
 import type {
   Benchmark,
+  ChatRequest,
   DriftReport,
   Health,
   IngestRequest,
   ModelDoc,
-  StreamAgentsModelsModelIdAgentsStreamGetParams,
+  StreamAgentsModelsModelIdAgentsStreamGetParams
 } from './model';
+
+
 
 interface HttpClientOptions {
   readonly headers?: HttpHeaders | Record<string, string | string[]>;
   readonly context?: HttpContext;
   readonly params?:
-    HttpParams | Record<string, string | number | boolean | Array<string | number | boolean>>;
+        | HttpParams
+      | Record<string, string | number | boolean | Array<string | number | boolean>>;
   readonly reportProgress?: boolean;
   readonly withCredentials?: boolean;
   readonly credentials?: RequestCredentials;
@@ -36,7 +53,7 @@ interface HttpClientOptions {
   readonly referrer?: string;
   readonly integrity?: string;
   readonly referrerPolicy?: ReferrerPolicy;
-  readonly transferCache?: { includeHeaders?: string[] } | boolean;
+  readonly transferCache?: {includeHeaders?: string[]} | boolean;
   readonly timeout?: number;
 }
 
@@ -95,7 +112,9 @@ function filterParams(
       const filtered = value.filter(
         (item) =>
           item != null &&
-          (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'),
+          (typeof item === 'string' ||
+            typeof item === 'number' ||
+            typeof item === 'boolean'),
       ) as Array<string | number | boolean>;
       if (filtered.length) {
         filteredParams[key] = filtered;
@@ -108,7 +127,9 @@ function filterParams(
       filteredParams[key] = preserveRequiredNullables ? null : '';
     } else if (
       value != null &&
-      (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+      (typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean')
     ) {
       filteredParams[key] = value;
     }
@@ -116,453 +137,470 @@ function filterParams(
   return filteredParams;
 }
 
+
+
+
+
 @Injectable({ providedIn: 'root' })
 export class LlmdexService {
   private readonly http = inject(HttpClient);
-  /**
-   * @summary Health
-   */
-  healthHealthGet<TData = Health>(options?: HttpClientBodyOptions): Observable<TData>;
-  healthHealthGet<TData = Health>(options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+/**
+ * @summary Health
+ */
+ healthHealthGet<TData = Health>( options?: HttpClientBodyOptions): Observable<TData>;
+ healthHealthGet<TData = Health>( options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ healthHealthGet<TData = Health>( options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
   healthHealthGet<TData = Health>(
-    options?: HttpClientResponseOptions,
-  ): Observable<AngularHttpResponse<TData>>;
-  healthHealthGet<TData = Health>(
-    options?: HttpClientObserveOptions,
-  ): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+     options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
-      return this.http.get<TData>(`/api/health`, {
+      return this.http.get<TData>(
+      `/api/health`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
-      });
+      }
+    );
     }
 
     if (options?.observe === 'response') {
-      return this.http.get<TData>(`/api/health`, {
+      return this.http.get<TData>(
+      `/api/health`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
-      });
+      }
+    );
     }
 
-    return this.http.get<TData>(`/api/health`, {
-      ...(options as Omit<NonNullable<typeof options>, 'observe'>),
-      observe: 'body',
-    });
+    return this.http.get<TData>(
+      `/api/health`,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
   }
 
-  /**
-   * Run the named agents and narrate them as server-sent events.
-   *
-   * Everything that can be refused is refused before the stream opens: once the
-   * response has begun, a 404 can no longer be sent, and an error buried in the
-   * body is one a client has to know to look for.
-   * @summary Stream Agents
-   */
+/**
+ * Run the named agents and narrate them as server-sent events.
+ *
+ * Everything that can be refused is refused before the stream opens: once the
+ * response has begun, a 404 can no longer be sent, and an error buried in the
+ * body is one a client has to know to look for.
+ * @summary Stream Agents
+ */
+ streamAgentsModelsModelIdAgentsStreamGet<TData = unknown>(modelId: string,
+    params?: StreamAgentsModelsModelIdAgentsStreamGetParams, options?: HttpClientBodyOptions): Observable<TData>;
+ streamAgentsModelsModelIdAgentsStreamGet<TData = unknown>(modelId: string,
+    params?: StreamAgentsModelsModelIdAgentsStreamGetParams, options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ streamAgentsModelsModelIdAgentsStreamGet<TData = unknown>(modelId: string,
+    params?: StreamAgentsModelsModelIdAgentsStreamGetParams, options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
   streamAgentsModelsModelIdAgentsStreamGet<TData = unknown>(
     modelId: string,
-    params?: StreamAgentsModelsModelIdAgentsStreamGetParams,
-    options?: HttpClientBodyOptions,
-  ): Observable<TData>;
-  streamAgentsModelsModelIdAgentsStreamGet<TData = unknown>(
-    modelId: string,
-    params?: StreamAgentsModelsModelIdAgentsStreamGetParams,
-    options?: HttpClientEventOptions,
-  ): Observable<HttpEvent<TData>>;
-  streamAgentsModelsModelIdAgentsStreamGet<TData = unknown>(
-    modelId: string,
-    params?: StreamAgentsModelsModelIdAgentsStreamGetParams,
-    options?: HttpClientResponseOptions,
-  ): Observable<AngularHttpResponse<TData>>;
-  streamAgentsModelsModelIdAgentsStreamGet<TData = unknown>(
-    modelId: string,
-    params?: StreamAgentsModelsModelIdAgentsStreamGetParams,
-    options?: HttpClientObserveOptions,
-  ): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
-    const filteredParams = filterParams({ ...params, ...options?.params }, new Set<string>([]));
+    params?: StreamAgentsModelsModelIdAgentsStreamGetParams, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+    const filteredParams = filterParams({...params, ...options?.params}, new Set<string>([]));
 
     if (options?.observe === 'events') {
-      return this.http.get<TData>(`/api/models/${modelId}/agents/stream`, {
-        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+      return this.http.get<TData>(
+      `/api/models/${modelId}/agents/stream`,{
+    ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
-        params: filteredParams,
-      });
+        params: filteredParams,}
+    );
     }
 
     if (options?.observe === 'response') {
-      return this.http.get<TData>(`/api/models/${modelId}/agents/stream`, {
-        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+      return this.http.get<TData>(
+      `/api/models/${modelId}/agents/stream`,{
+    ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
-        params: filteredParams,
-      });
+        params: filteredParams,}
+    );
     }
 
-    return this.http.get<TData>(`/api/models/${modelId}/agents/stream`, {
-      ...(options as Omit<NonNullable<typeof options>, 'observe'>),
-      observe: 'body',
-      params: filteredParams,
-    });
+    return this.http.get<TData>(
+      `/api/models/${modelId}/agents/stream`,{
+    ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+        params: filteredParams,}
+    );
   }
 
-  /**
-   * Fetch, derive, and write a document. Atomic: it completes or it fails (R1.5).
-   *
-   * A model entering the vault for the first time is summarised on the way in, so
-   * nobody has to ask for the first one. That step cannot fail this endpoint: see
-   * :func:`~app.features.summary.router.summarise_after_first_ingest`.
-   * @summary Ingest Model
-   */
-  ingestModelIngestPost<TData = ModelDoc>(
-    ingestRequest: IngestRequest,
-    options?: HttpClientBodyOptions,
-  ): Observable<TData>;
-  ingestModelIngestPost<TData = ModelDoc>(
-    ingestRequest: IngestRequest,
-    options?: HttpClientEventOptions,
-  ): Observable<HttpEvent<TData>>;
-  ingestModelIngestPost<TData = ModelDoc>(
-    ingestRequest: IngestRequest,
-    options?: HttpClientResponseOptions,
-  ): Observable<AngularHttpResponse<TData>>;
-  ingestModelIngestPost<TData = ModelDoc>(
-    ingestRequest: IngestRequest,
-    options?: HttpClientObserveOptions,
-  ): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+/**
+ * Answer one question about one model, streaming the whole run.
+ * @summary Chat
+ */
+ chatModelsModelIdChatPost<TData = unknown>(modelId: string,
+    chatRequest: ChatRequest, options?: HttpClientBodyOptions): Observable<TData>;
+ chatModelsModelIdChatPost<TData = unknown>(modelId: string,
+    chatRequest: ChatRequest, options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ chatModelsModelIdChatPost<TData = unknown>(modelId: string,
+    chatRequest: ChatRequest, options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
+  chatModelsModelIdChatPost<TData = unknown>(
+    modelId: string,
+    chatRequest: ChatRequest, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
-      return this.http.post<TData>(`/api/ingest`, ingestRequest, {
+      return this.http.post<TData>(
+      `/api/models/${modelId}/chat`,
+      chatRequest,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
-      });
+      }
+    );
     }
 
     if (options?.observe === 'response') {
-      return this.http.post<TData>(`/api/ingest`, ingestRequest, {
+      return this.http.post<TData>(
+      `/api/models/${modelId}/chat`,
+      chatRequest,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
-      });
+      }
+    );
     }
 
-    return this.http.post<TData>(`/api/ingest`, ingestRequest, {
-      ...(options as Omit<NonNullable<typeof options>, 'observe'>),
-      observe: 'body',
-    });
+    return this.http.post<TData>(
+      `/api/models/${modelId}/chat`,
+      chatRequest,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
   }
 
-  /**
-   * R6.6 - has the upstream card moved since we read it?
-   * @summary List Models
-   */
-  listModelsModelsGet<TData = ModelDoc[]>(options?: HttpClientBodyOptions): Observable<TData>;
+/**
+ * Fetch, derive, and write a document. Atomic: it completes or it fails (R1.5).
+ *
+ * A model entering the vault for the first time is summarised on the way in, so
+ * nobody has to ask for the first one. That step cannot fail this endpoint: see
+ * :func:`~app.features.summary.router.summarise_after_first_ingest`.
+ * @summary Ingest Model
+ */
+ ingestModelIngestPost<TData = ModelDoc>(ingestRequest: IngestRequest, options?: HttpClientBodyOptions): Observable<TData>;
+ ingestModelIngestPost<TData = ModelDoc>(ingestRequest: IngestRequest, options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ ingestModelIngestPost<TData = ModelDoc>(ingestRequest: IngestRequest, options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
+  ingestModelIngestPost<TData = ModelDoc>(
+    ingestRequest: IngestRequest, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+    if (options?.observe === 'events') {
+      return this.http.post<TData>(
+      `/api/ingest`,
+      ingestRequest,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'events',
+      }
+    );
+    }
+
+    if (options?.observe === 'response') {
+      return this.http.post<TData>(
+      `/api/ingest`,
+      ingestRequest,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'response',
+      }
+    );
+    }
+
+    return this.http.post<TData>(
+      `/api/ingest`,
+      ingestRequest,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
+  }
+
+/**
+ * R6.6 - has the upstream card moved since we read it?
+ * @summary List Models
+ */
+ listModelsModelsGet<TData = ModelDoc[]>( options?: HttpClientBodyOptions): Observable<TData>;
+ listModelsModelsGet<TData = ModelDoc[]>( options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ listModelsModelsGet<TData = ModelDoc[]>( options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
   listModelsModelsGet<TData = ModelDoc[]>(
-    options?: HttpClientEventOptions,
-  ): Observable<HttpEvent<TData>>;
-  listModelsModelsGet<TData = ModelDoc[]>(
-    options?: HttpClientResponseOptions,
-  ): Observable<AngularHttpResponse<TData>>;
-  listModelsModelsGet<TData = ModelDoc[]>(
-    options?: HttpClientObserveOptions,
-  ): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+     options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
-      return this.http.get<TData>(`/api/models`, {
+      return this.http.get<TData>(
+      `/api/models`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
-      });
+      }
+    );
     }
 
     if (options?.observe === 'response') {
-      return this.http.get<TData>(`/api/models`, {
+      return this.http.get<TData>(
+      `/api/models`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
-      });
+      }
+    );
     }
 
-    return this.http.get<TData>(`/api/models`, {
-      ...(options as Omit<NonNullable<typeof options>, 'observe'>),
-      observe: 'body',
-    });
+    return this.http.get<TData>(
+      `/api/models`,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
   }
 
-  /**
-   * R6.6 - has the upstream card moved since we read it?
-   * @summary Model Drift
-   */
+/**
+ * R6.6 - has the upstream card moved since we read it?
+ * @summary Model Drift
+ */
+ modelDriftModelsModelIdDriftGet<TData = DriftReport>(modelId: string, options?: HttpClientBodyOptions): Observable<TData>;
+ modelDriftModelsModelIdDriftGet<TData = DriftReport>(modelId: string, options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ modelDriftModelsModelIdDriftGet<TData = DriftReport>(modelId: string, options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
   modelDriftModelsModelIdDriftGet<TData = DriftReport>(
-    modelId: string,
-    options?: HttpClientBodyOptions,
-  ): Observable<TData>;
-  modelDriftModelsModelIdDriftGet<TData = DriftReport>(
-    modelId: string,
-    options?: HttpClientEventOptions,
-  ): Observable<HttpEvent<TData>>;
-  modelDriftModelsModelIdDriftGet<TData = DriftReport>(
-    modelId: string,
-    options?: HttpClientResponseOptions,
-  ): Observable<AngularHttpResponse<TData>>;
-  modelDriftModelsModelIdDriftGet<TData = DriftReport>(
-    modelId: string,
-    options?: HttpClientObserveOptions,
-  ): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+    modelId: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
-      return this.http.get<TData>(`/api/models/${modelId}/drift`, {
+      return this.http.get<TData>(
+      `/api/models/${modelId}/drift`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
-      });
+      }
+    );
     }
 
     if (options?.observe === 'response') {
-      return this.http.get<TData>(`/api/models/${modelId}/drift`, {
+      return this.http.get<TData>(
+      `/api/models/${modelId}/drift`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
-      });
+      }
+    );
     }
 
-    return this.http.get<TData>(`/api/models/${modelId}/drift`, {
-      ...(options as Omit<NonNullable<typeof options>, 'observe'>),
-      observe: 'body',
-    });
+    return this.http.get<TData>(
+      `/api/models/${modelId}/drift`,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
   }
 
-  /**
-   * Every field, including the null ones (R6.3).
-   * @summary Get Model
-   */
+/**
+ * Every field, including the null ones (R6.3).
+ * @summary Get Model
+ */
+ getModelModelsModelIdGet<TData = ModelDoc>(modelId: string, options?: HttpClientBodyOptions): Observable<TData>;
+ getModelModelsModelIdGet<TData = ModelDoc>(modelId: string, options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ getModelModelsModelIdGet<TData = ModelDoc>(modelId: string, options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
   getModelModelsModelIdGet<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientBodyOptions,
-  ): Observable<TData>;
-  getModelModelsModelIdGet<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientEventOptions,
-  ): Observable<HttpEvent<TData>>;
-  getModelModelsModelIdGet<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientResponseOptions,
-  ): Observable<AngularHttpResponse<TData>>;
-  getModelModelsModelIdGet<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientObserveOptions,
-  ): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+    modelId: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
-      return this.http.get<TData>(`/api/models/${modelId}`, {
+      return this.http.get<TData>(
+      `/api/models/${modelId}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
-      });
+      }
+    );
     }
 
     if (options?.observe === 'response') {
-      return this.http.get<TData>(`/api/models/${modelId}`, {
+      return this.http.get<TData>(
+      `/api/models/${modelId}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
-      });
+      }
+    );
     }
 
-    return this.http.get<TData>(`/api/models/${modelId}`, {
-      ...(options as Omit<NonNullable<typeof options>, 'observe'>),
-      observe: 'body',
-    });
+    return this.http.get<TData>(
+      `/api/models/${modelId}`,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
   }
 
-  /**
-   * Remove a model from the vault.
-   *
-   * 204 rather than the deleted document: there is nothing left to return, and a
-   * body would invite a caller to treat it as still being there. The removal is
-   * a commit in the vault repository, so this is undoable outside the app (R4.7).
-   * @summary Delete Model
-   */
+/**
+ * Remove a model from the vault.
+ *
+ * 204 rather than the deleted document: there is nothing left to return, and a
+ * body would invite a caller to treat it as still being there. The removal is
+ * a commit in the vault repository, so this is undoable outside the app (R4.7).
+ * @summary Delete Model
+ */
+ deleteModelModelsModelIdDelete<TData = void>(modelId: string, options?: HttpClientBodyOptions): Observable<TData>;
+ deleteModelModelsModelIdDelete<TData = void>(modelId: string, options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ deleteModelModelsModelIdDelete<TData = void>(modelId: string, options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
   deleteModelModelsModelIdDelete<TData = void>(
-    modelId: string,
-    options?: HttpClientBodyOptions,
-  ): Observable<TData>;
-  deleteModelModelsModelIdDelete<TData = void>(
-    modelId: string,
-    options?: HttpClientEventOptions,
-  ): Observable<HttpEvent<TData>>;
-  deleteModelModelsModelIdDelete<TData = void>(
-    modelId: string,
-    options?: HttpClientResponseOptions,
-  ): Observable<AngularHttpResponse<TData>>;
-  deleteModelModelsModelIdDelete<TData = void>(
-    modelId: string,
-    options?: HttpClientObserveOptions,
-  ): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+    modelId: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
-      return this.http.delete<TData>(`/api/models/${modelId}`, {
+      return this.http.delete<TData>(
+      `/api/models/${modelId}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
-      });
+      }
+    );
     }
 
     if (options?.observe === 'response') {
-      return this.http.delete<TData>(`/api/models/${modelId}`, {
+      return this.http.delete<TData>(
+      `/api/models/${modelId}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
-      });
+      }
+    );
     }
 
-    return this.http.delete<TData>(`/api/models/${modelId}`, {
-      ...(options as Omit<NonNullable<typeof options>, 'observe'>),
-      observe: 'body',
-    });
+    return this.http.delete<TData>(
+      `/api/models/${modelId}`,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
   }
 
-  /**
-   * @summary List Benchmarks
-   */
+/**
+ * @summary List Benchmarks
+ */
+ listBenchmarksBenchmarksGet<TData = Benchmark[]>( options?: HttpClientBodyOptions): Observable<TData>;
+ listBenchmarksBenchmarksGet<TData = Benchmark[]>( options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ listBenchmarksBenchmarksGet<TData = Benchmark[]>( options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
   listBenchmarksBenchmarksGet<TData = Benchmark[]>(
-    options?: HttpClientBodyOptions,
-  ): Observable<TData>;
-  listBenchmarksBenchmarksGet<TData = Benchmark[]>(
-    options?: HttpClientEventOptions,
-  ): Observable<HttpEvent<TData>>;
-  listBenchmarksBenchmarksGet<TData = Benchmark[]>(
-    options?: HttpClientResponseOptions,
-  ): Observable<AngularHttpResponse<TData>>;
-  listBenchmarksBenchmarksGet<TData = Benchmark[]>(
-    options?: HttpClientObserveOptions,
-  ): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+     options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
-      return this.http.get<TData>(`/api/benchmarks`, {
+      return this.http.get<TData>(
+      `/api/benchmarks`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
-      });
+      }
+    );
     }
 
     if (options?.observe === 'response') {
-      return this.http.get<TData>(`/api/benchmarks`, {
+      return this.http.get<TData>(
+      `/api/benchmarks`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
-      });
+      }
+    );
     }
 
-    return this.http.get<TData>(`/api/benchmarks`, {
-      ...(options as Omit<NonNullable<typeof options>, 'observe'>),
-      observe: 'body',
-    });
+    return this.http.get<TData>(
+      `/api/benchmarks`,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
   }
 
-  /**
-   * @summary Get Benchmark
-   */
+/**
+ * @summary Get Benchmark
+ */
+ getBenchmarkBenchmarksSlugGet<TData = Benchmark>(slug: string, options?: HttpClientBodyOptions): Observable<TData>;
+ getBenchmarkBenchmarksSlugGet<TData = Benchmark>(slug: string, options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ getBenchmarkBenchmarksSlugGet<TData = Benchmark>(slug: string, options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
   getBenchmarkBenchmarksSlugGet<TData = Benchmark>(
-    slug: string,
-    options?: HttpClientBodyOptions,
-  ): Observable<TData>;
-  getBenchmarkBenchmarksSlugGet<TData = Benchmark>(
-    slug: string,
-    options?: HttpClientEventOptions,
-  ): Observable<HttpEvent<TData>>;
-  getBenchmarkBenchmarksSlugGet<TData = Benchmark>(
-    slug: string,
-    options?: HttpClientResponseOptions,
-  ): Observable<AngularHttpResponse<TData>>;
-  getBenchmarkBenchmarksSlugGet<TData = Benchmark>(
-    slug: string,
-    options?: HttpClientObserveOptions,
-  ): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+    slug: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
-      return this.http.get<TData>(`/api/benchmarks/${slug}`, {
+      return this.http.get<TData>(
+      `/api/benchmarks/${slug}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
-      });
+      }
+    );
     }
 
     if (options?.observe === 'response') {
-      return this.http.get<TData>(`/api/benchmarks/${slug}`, {
+      return this.http.get<TData>(
+      `/api/benchmarks/${slug}`,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
-      });
+      }
+    );
     }
 
-    return this.http.get<TData>(`/api/benchmarks/${slug}`, {
-      ...(options as Omit<NonNullable<typeof options>, 'observe'>),
-      observe: 'body',
-    });
+    return this.http.get<TData>(
+      `/api/benchmarks/${slug}`,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
   }
 
-  /**
-   * Read the card, ask the model to locate facts in it, store what verifies.
-   *
-   * A run that verifies nothing is a success: most cards state none of this, and
-   * an empty result with its rejections is information (R3.2).
-   * @summary Extract Model
-   */
+/**
+ * Read the card, ask the model to locate facts in it, store what verifies.
+ *
+ * A run that verifies nothing is a success: most cards state none of this, and
+ * an empty result with its rejections is information (R3.2).
+ * @summary Extract Model
+ */
+ extractModelModelsModelIdExtractPost<TData = ModelDoc>(modelId: string, options?: HttpClientBodyOptions): Observable<TData>;
+ extractModelModelsModelIdExtractPost<TData = ModelDoc>(modelId: string, options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ extractModelModelsModelIdExtractPost<TData = ModelDoc>(modelId: string, options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
   extractModelModelsModelIdExtractPost<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientBodyOptions,
-  ): Observable<TData>;
-  extractModelModelsModelIdExtractPost<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientEventOptions,
-  ): Observable<HttpEvent<TData>>;
-  extractModelModelsModelIdExtractPost<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientResponseOptions,
-  ): Observable<AngularHttpResponse<TData>>;
-  extractModelModelsModelIdExtractPost<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientObserveOptions,
-  ): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+    modelId: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
-      return this.http.post<TData>(`/api/models/${modelId}/extract`, undefined, {
+      return this.http.post<TData>(
+      `/api/models/${modelId}/extract`,
+      undefined,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
-      });
+      }
+    );
     }
 
     if (options?.observe === 'response') {
-      return this.http.post<TData>(`/api/models/${modelId}/extract`, undefined, {
+      return this.http.post<TData>(
+      `/api/models/${modelId}/extract`,
+      undefined,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
-      });
+      }
+    );
     }
 
-    return this.http.post<TData>(`/api/models/${modelId}/extract`, undefined, {
-      ...(options as Omit<NonNullable<typeof options>, 'observe'>),
-      observe: 'body',
-    });
+    return this.http.post<TData>(
+      `/api/models/${modelId}/extract`,
+      undefined,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
   }
 
-  /**
-   * Read the card, search the web, write an account of the model.
-   *
-   * Unlike extraction this replaces what was there: regenerating is the point of
-   * the button, and ``generated_on`` records which run produced the text on
-   * screen.
-   * @summary Summarise Model
-   */
+/**
+ * Read the card, search the web, write an account of the model.
+ *
+ * Unlike extraction this replaces what was there: regenerating is the point of
+ * the button, and ``generated_on`` records which run produced the text on
+ * screen.
+ * @summary Summarise Model
+ */
+ summariseModelModelsModelIdSummarizePost<TData = ModelDoc>(modelId: string, options?: HttpClientBodyOptions): Observable<TData>;
+ summariseModelModelsModelIdSummarizePost<TData = ModelDoc>(modelId: string, options?: HttpClientEventOptions): Observable<HttpEvent<TData>>;
+ summariseModelModelsModelIdSummarizePost<TData = ModelDoc>(modelId: string, options?: HttpClientResponseOptions): Observable<AngularHttpResponse<TData>>;
   summariseModelModelsModelIdSummarizePost<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientBodyOptions,
-  ): Observable<TData>;
-  summariseModelModelsModelIdSummarizePost<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientEventOptions,
-  ): Observable<HttpEvent<TData>>;
-  summariseModelModelsModelIdSummarizePost<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientResponseOptions,
-  ): Observable<AngularHttpResponse<TData>>;
-  summariseModelModelsModelIdSummarizePost<TData = ModelDoc>(
-    modelId: string,
-    options?: HttpClientObserveOptions,
-  ): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
+    modelId: string, options?: HttpClientObserveOptions): Observable<TData | HttpEvent<TData> | AngularHttpResponse<TData>> {
     if (options?.observe === 'events') {
-      return this.http.post<TData>(`/api/models/${modelId}/summarize`, undefined, {
+      return this.http.post<TData>(
+      `/api/models/${modelId}/summarize`,
+      undefined,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'events',
-      });
+      }
+    );
     }
 
     if (options?.observe === 'response') {
-      return this.http.post<TData>(`/api/models/${modelId}/summarize`, undefined, {
+      return this.http.post<TData>(
+      `/api/models/${modelId}/summarize`,
+      undefined,{
         ...(options as Omit<NonNullable<typeof options>, 'observe'>),
         observe: 'response',
-      });
+      }
+    );
     }
 
-    return this.http.post<TData>(`/api/models/${modelId}/summarize`, undefined, {
-      ...(options as Omit<NonNullable<typeof options>, 'observe'>),
-      observe: 'body',
-    });
+    return this.http.post<TData>(
+      `/api/models/${modelId}/summarize`,
+      undefined,{
+        ...(options as Omit<NonNullable<typeof options>, 'observe'>),
+        observe: 'body',
+      }
+    );
   }
-}
+
+};
+

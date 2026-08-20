@@ -4,6 +4,5 @@
  * llmdex
  * OpenAPI spec version: 0.1.0
  */
-import type { Span } from './span';
 
-export type ExtractedServingEngines = {[key: string]: Span};
+export type ChatRequestHistoryItem = { [key: string]: unknown };

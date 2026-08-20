@@ -9,6 +9,8 @@ export * from './benchmark';
 export * from './benchmarkDirection';
 export * from './benchmarkScore';
 export * from './benchmarkScoreProvenance';
+export * from './chatRequest';
+export * from './chatRequestHistoryItem';
 export * from './checkpoint';
 export * from './derived';
 export * from './driftReport';

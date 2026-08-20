@@ -5,4 +5,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ServingEngines = { [key: string]: string };
+export type ServingEngines = {[key: string]: string};
