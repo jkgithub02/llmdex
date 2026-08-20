@@ -133,7 +133,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
       /* Declared on the host, not on .dock: custom properties inherit down the
          tree, and .split is the dock's sibling -- reading it there resolves to
          nothing and the sheet never shifts. */
-      --dock-w: 26rem;
+      --dock-w: 34rem;
       max-width: 60rem;
       padding-top: var(--space-4);
     }
@@ -153,14 +153,15 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
 
     .dock {
       position: fixed;
-      top: 0;
-      right: 0;
-      bottom: 0;
+      /* Between the header and the footer, never over either. Both are fixed
+         in the viewport-locked shell, so these insets always hold. */
+      top: calc(var(--topbar-h) + var(--space-3));
+      right: var(--space-3);
+      bottom: calc(var(--footer-h) + var(--space-3));
       width: var(--dock-w);
       display: flex;
       flex-direction: column;
-      padding: var(--space-3);
-      transform: translateX(100%);
+      transform: translateX(calc(100% + var(--space-3)));
       transition: transform 160ms ease;
       z-index: 20;
       pointer-events: none;
@@ -200,7 +201,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
       box-shadow: -2px 0 10px rgb(15 23 42 / 0.08);
     }
     .handle.open {
-      right: var(--dock-w);
+      right: calc(var(--dock-w) + var(--space-3));
       writing-mode: horizontal-tb;
       padding: var(--space-2);
       box-shadow: none;
@@ -209,17 +210,16 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
       color: var(--sheet-fg);
     }
 
-    /* Too narrow to sit beside anything: the panel takes the screen, and the
-       sheet stops pretending to shift. */
-    @media (max-width: 1100px) {
+    /* Below this the sheet (60rem) and the dock (34rem) plus gutters no longer
+       both fit, so the dock stops pushing and starts overlaying -- a drawer
+       rather than a split. Shifting anyway would squeeze the sheet off the
+       left edge. */
+    @media (max-width: 1600px) {
       .split.open {
         transform: none;
       }
       :host(.page) {
-        --dock-w: min(100vw, 26rem);
-      }
-      .dock {
-        padding: var(--space-2);
+        --dock-w: min(100vw, 34rem);
       }
     }
 

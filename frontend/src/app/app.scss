@@ -1,11 +1,18 @@
+/* The shell is viewport-locked and `main` is the scroller, rather than the
+   document scrolling under a fixed chrome. That is what lets a docked side
+   panel sit between the header and the footer without either sliding beneath
+   it: both are always exactly where they are. Safe to change -- the router
+   has no scroll restoration configured and nothing calls window.scroll. */
 :host {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100dvh;
 }
 
 main {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .topbar {
@@ -13,7 +20,8 @@ main {
   align-items: center;
   gap: var(--space-8);
   padding: 0 var(--space-6);
-  height: 56px;
+  height: var(--topbar-h);
+  flex: none;
   background: color-mix(in srgb, var(--bg-sunken) 82%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
@@ -62,6 +70,10 @@ nav a.active {
 }
 
 .app-footer {
+  /* Declared, because the docked chat panel positions itself off it. */
+  height: var(--footer-h);
+  box-sizing: border-box;
+  flex: none;
   border-top: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg-sunken) 85%, transparent);
   padding: var(--space-4) var(--space-6);
