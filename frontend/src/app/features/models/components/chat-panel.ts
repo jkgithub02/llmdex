@@ -1,4 +1,14 @@
-import { Component, ElementRef, effect, inject, input, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 
 import { ChatStream } from '../../../shared/chat-stream';
 import { ChatTurn } from './chat-turn';
@@ -14,20 +24,43 @@ import { ChatTurn } from './chat-turn';
   imports: [ChatTurn],
   template: `
     <header class="head">
-      <h2>Ask</h2>
-      @if (chat.turns().length && !chat.streaming()) {
-        <button class="clear" (click)="chat.reset()">clear</button>
-      }
+      <div class="who">
+        <span class="vendor">{{ vendor() }}</span>
+        <h2 [title]="modelId()">{{ shortName() }}</h2>
+      </div>
+
+      <div class="actions">
+        @if (chat.turns().length && !chat.streaming()) {
+          <button class="ghost" (click)="chat.reset()" title="clear this conversation">
+            clear
+          </button>
+        }
+        <button
+          class="close"
+          (click)="closed.emit()"
+          aria-label="close the chat panel"
+          title="close"
+        >
+          ✕
+        </button>
+      </div>
     </header>
 
     <div class="log" #log (scroll)="onScroll()">
       @for (turn of chat.turns(); track $index; let last = $last) {
         <app-chat-turn [turn]="turn" [streaming]="last && chat.streaming()" />
       } @empty {
-        <p class="hint">
-          Ask about this model — its quantization, what it needs to serve, how it compares to others
-          in the vault.
-        </p>
+        <div class="empty">
+          <p class="hint">
+            Grounded in this model's reviewed document and its card. It can read the rest of the
+            vault, and search the web when neither covers the question.
+          </p>
+          <div class="suggestions">
+            @for (s of suggestions; track s) {
+              <button class="chip" (click)="ask(s)">{{ s }}</button>
+            }
+          </div>
+        </div>
       }
 
       @if (chat.error(); as message) {
@@ -62,27 +95,68 @@ import { ChatTurn } from './chat-turn';
     }
     .head {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
-      padding: var(--space-4) var(--space-4) var(--space-2);
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
       border-bottom: 1px solid var(--sheet-border);
+      background: var(--sheet-sunken);
     }
-    .head h2 {
-      margin: 0;
-      font-size: 0.85rem;
+    .who {
+      min-width: 0;
+    }
+    .vendor {
+      display: block;
+      font-size: 0.65rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       color: var(--sheet-faint);
     }
-    .clear {
+    /* The model, not the feature: you always know which card you are asking
+       about, which matters once two tabs are open on two models. */
+    .head h2 {
+      margin: 0.1rem 0 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      line-height: 1.25;
+      color: var(--sheet-fg);
+      overflow-wrap: anywhere;
+    }
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      flex: none;
+    }
+    .ghost {
       background: none;
       border: none;
       color: var(--sheet-faint);
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       padding: 0;
     }
-    .clear:hover {
+    .ghost:hover {
+      color: var(--sheet-fg);
+    }
+    /* Deliberately a real target, not a 12px glyph: the edge handle alone was
+       fiddly to hit. */
+    .close {
+      display: grid;
+      place-items: center;
+      width: 1.75rem;
+      height: 1.75rem;
+      padding: 0;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      background: none;
+      color: var(--sheet-faint);
+      font-size: 0.8rem;
+      line-height: 1;
+    }
+    .close:hover {
+      background: var(--sheet);
+      border-color: var(--sheet-border);
       color: var(--sheet-fg);
     }
     .log {
@@ -98,6 +172,25 @@ import { ChatTurn } from './chat-turn';
     }
     .hint {
       color: var(--sheet-faint);
+      margin: 0 0 var(--space-3);
+    }
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+    .chip {
+      background: var(--sheet-sunken);
+      border: 1px solid var(--sheet-border);
+      border-radius: 999px;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.75rem;
+      color: var(--sheet-muted);
+      text-align: left;
+    }
+    .chip:hover {
+      color: var(--sheet-fg);
+      border-color: var(--sheet-faint);
     }
     .error {
       color: #d33;
@@ -129,6 +222,17 @@ export class ChatPanel {
   protected readonly chat = inject(ChatStream);
 
   readonly modelId = input.required<string>();
+  readonly closed = output<void>();
+
+  /** `vendor/name` -- the header shows them apart. */
+  protected readonly vendor = computed(() => this.modelId().split('/')[0] ?? '');
+  protected readonly shortName = computed(() => this.modelId().split('/').slice(1).join('/'));
+
+  protected readonly suggestions = [
+    'What quantization does it use?',
+    'What does it need to serve?',
+    'How does it compare to the others in the vault?',
+  ];
 
   protected readonly draft = signal('');
   private readonly log = viewChild.required<ElementRef<HTMLElement>>('log');
@@ -161,6 +265,13 @@ export class ChatPanel {
 
   protected send(event: Event): void {
     event.preventDefault();
+    this.submit();
+  }
+
+  /** A suggestion chip is just a question already typed. */
+  protected ask(question: string): void {
+    if (this.chat.streaming()) return;
+    this.draft.set(question);
     this.submit();
   }
 

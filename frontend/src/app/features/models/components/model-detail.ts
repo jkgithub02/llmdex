@@ -109,18 +109,15 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
            an IDE's side panel does. -->
       <aside class="dock" [class.open]="chatOpen()">
         @if (chatOpen()) {
-          <app-chat-panel [modelId]="modelId()" />
+          <app-chat-panel [modelId]="modelId()" (closed)="chatOpen.set(false)" />
         }
       </aside>
 
-      <button
-        class="handle"
-        [class.open]="chatOpen()"
-        (click)="chatOpen.set(!chatOpen())"
-        [attr.aria-expanded]="chatOpen()"
-      >
-        {{ chatOpen() ? '›' : '‹ Ask' }}
-      </button>
+      @if (!chatOpen()) {
+        <button class="handle" (click)="chatOpen.set(true)" [attr.aria-expanded]="false">
+          ‹ Ask
+        </button>
+      }
     } @else if (!error()) {
       <div class="bar"><span></span></div>
     }
@@ -133,7 +130,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
       /* Declared on the host, not on .dock: custom properties inherit down the
          tree, and .split is the dock's sibling -- reading it there resolves to
          nothing and the sheet never shifts. */
-      --dock-w: 34rem;
+      --dock-w: clamp(26rem, 34vw, 44rem);
       max-width: 60rem;
       padding-top: var(--space-4);
     }
@@ -193,18 +190,12 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
       border: 1px solid var(--sheet-border);
       border-right: none;
       border-radius: var(--radius) 0 0 var(--radius);
-      padding: var(--space-3) var(--space-2);
+      padding: var(--space-4) var(--space-2);
       font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.04em;
       writing-mode: vertical-rl;
       box-shadow: -2px 0 10px rgb(15 23 42 / 0.08);
-    }
-    .handle.open {
-      right: calc(var(--dock-w) + var(--space-3));
-      writing-mode: horizontal-tb;
-      padding: var(--space-2);
-      box-shadow: none;
     }
     .handle:hover {
       color: var(--sheet-fg);
@@ -219,7 +210,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
         transform: none;
       }
       :host(.page) {
-        --dock-w: min(100vw, 34rem);
+        --dock-w: min(100vw - var(--space-6), 34rem);
       }
     }
 
