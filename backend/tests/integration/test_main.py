@@ -30,3 +30,8 @@ def test_the_agent_stream_is_registered_before_the_greedy_model_route():
     assert paths.index("/models/{model_id:path}/agents/stream") < paths.index(
         "/models/{model_id:path}"
     )
+
+
+def test_the_chat_route_is_registered_before_the_greedy_model_route():
+    paths = _paths()
+    assert paths.index("/models/{model_id:path}/chat") < paths.index("/models/{model_id:path}")

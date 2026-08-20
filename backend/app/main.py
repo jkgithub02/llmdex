@@ -17,6 +17,7 @@ from app.common.deps import StoreDep, get_store
 from app.core.config import LLMNotConfigured, TavilyNotConfigured
 from app.features.agents.router import router as agents_router
 from app.features.benchmarks.router import router as benchmarks_router
+from app.features.chat.router import router as chat_router
 from app.features.extraction.router import router as extraction_router
 from app.features.models.router import get_fetcher
 from app.features.models.router import router as models_router
@@ -54,10 +55,12 @@ def health(store: StoreDep) -> Health:
     return Health(status="ok", vault=str(store.root), vault_exists=store.root.exists())
 
 
-# agents_router first: it registers a GET on /models/{model_id:path}/agents/stream,
-# and models_router's GET /models/{model_id:path} is a greedy catch-all that would
-# otherwise swallow that path first and 404 before the agents route is ever tried.
+# agents_router and chat_router first: they register routes under
+# /models/{model_id:path}/..., and models_router's /models/{model_id:path} is a
+# greedy catch-all that would otherwise swallow those paths and 404 before the
+# real route is ever tried.
 app.include_router(agents_router)
+app.include_router(chat_router)
 app.include_router(models_router)
 app.include_router(benchmarks_router)
 app.include_router(extraction_router)

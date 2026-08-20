@@ -24,10 +24,12 @@ from typing import Annotated
 from fastapi import Depends
 
 from app.core.config import (
+    ChatSettings,
     LLMNotConfigured,
     LLMSettings,
     TavilyNotConfigured,
     TavilySettings,
+    chat_settings,
     llm_settings,
     store_from_env,
     tavily_settings,
@@ -82,9 +84,14 @@ def get_optional_tavily_settings() -> TavilySettings | None:
         return None
 
 
+def get_chat_settings() -> ChatSettings:
+    return chat_settings()
+
+
 CardFetcher = Callable[[str], tuple[str | None, str | None]]
 CardFetcherDep = Annotated[CardFetcher, Depends(get_card_fetcher)]
 LLMDep = Annotated[LLMSettings, Depends(get_llm_settings)]
 TavilyDep = Annotated[TavilySettings, Depends(get_tavily_settings)]
 OptionalLLMDep = Annotated[LLMSettings | None, Depends(get_optional_llm_settings)]
 OptionalTavilyDep = Annotated[TavilySettings | None, Depends(get_optional_tavily_settings)]
+ChatSettingsDep = Annotated[ChatSettings, Depends(get_chat_settings)]
