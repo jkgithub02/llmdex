@@ -575,3 +575,86 @@ def test_a_card_with_no_table_reports_none_rather_than_something():
 
     assert block.rows == []
     assert block.rejected == []
+
+
+@pytest.mark.live
+def test_chat_calls_a_tool_and_answers_from_it(ingested):
+    """The whole loop against the real endpoint: tools offered, chosen, used.
+
+    Offline this is FunctionModel following a script, which proves the loop but
+    not the endpoint. Here the model decides -- and that is the part no fixture
+    can fake. An endpoint that accepts a `tools` array and never calls one
+    passes every offline test in this suite.
+    """
+    base, _ = ingested
+
+    with httpx.Client(timeout=300) as client:
+        response = client.post(
+            f"{base}/models/Qwen/Qwen3-8B/chat",
+            json={
+                "message": (
+                    "Which sections does this model card have? "
+                    "Read one of them and quote a sentence from it."
+                ),
+                "history": [],
+            },
+        )
+
+    assert response.status_code == 200, response.text[:300]
+
+    frames = []
+    for block in response.text.split("\n\n"):
+        lines = block.splitlines()
+        if len(lines) >= 2 and lines[0].startswith("event: "):
+            frames.append((lines[0].removeprefix("event: "), json.loads(lines[1][6:])))
+
+    kinds = [kind for kind, _ in frames]
+    errors = [p.get("detail") for k, p in frames if k == "error"]
+    assert not errors, f"the run reported: {errors}"
+
+    assert "tool_call" in kinds, "the model was offered tools and called none"
+    assert "tool_result" in kinds, "a tool was called but its result never reached the client"
+    assert "content" in kinds, "no answer was streamed"
+
+    answer = "".join(p.get("text", "") for k, p in frames if k == "content")
+    assert answer.strip(), "the answer was empty"
+
+    # R9.4 - the closing frame is what the client sends back next turn.
+    finished = [p for k, p in frames if p.get("phase") == "finished"]
+    assert finished, "the run did not end with a transcript"
+    assert finished[0]["messages"], "the transcript was empty"
+
+
+@pytest.mark.live
+def test_chat_reads_the_vault_across_models(ingested):
+    """R9.2 - scoped to one model at entry, not confined to it.
+
+    Asks a question the seed context cannot answer, so the only way to a
+    correct answer is calling list_models and reading the vault.
+    """
+    base, _ = ingested
+
+    with httpx.Client(timeout=300) as client:
+        response = client.post(
+            f"{base}/models/Qwen/Qwen3-8B/chat",
+            json={
+                "message": "Which other models are in this vault? List their IDs.",
+                "history": [],
+            },
+        )
+
+    assert response.status_code == 200, response.text[:300]
+
+    frames = []
+    for block in response.text.split("\n\n"):
+        lines = block.splitlines()
+        if len(lines) >= 2 and lines[0].startswith("event: "):
+            frames.append((lines[0].removeprefix("event: "), json.loads(lines[1][6:])))
+
+    called = [p.get("tool") for k, p in frames if k == "tool_call"]
+    assert "list_models" in called, f"expected list_models, the model called {called}"
+
+    answer = "".join(p.get("text", "") for k, p in frames if k == "content")
+    assert "DeepSeek-V2-Lite" in answer or "Nemotron" in answer, (
+        f"the answer did not name another ingested model: {answer[:300]}"
+    )
