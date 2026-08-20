@@ -1,7 +1,9 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
 import type { Turn } from '../../../shared/chat-stream';
+import { Markdown } from '../../../shared/markdown';
 import { ThinkingBlock } from '../../../shared/thinking-block';
+import { ThinkingDots } from '../../../shared/thinking-dots';
 import { ToolCall } from '../../../shared/tool-call';
 
 /**
@@ -13,7 +15,7 @@ import { ToolCall } from '../../../shared/tool-call';
  */
 @Component({
   selector: 'app-chat-turn',
-  imports: [ThinkingBlock, ToolCall],
+  imports: [ThinkingBlock, ThinkingDots, ToolCall, Markdown],
   template: `
     <div class="turn" [attr.data-role]="turn().role">
       @for (part of turn().parts; track part.id) {
@@ -30,9 +32,17 @@ import { ToolCall } from '../../../shared/tool-call';
             />
           }
           @case ('text') {
-            <p class="text">{{ part.text }}</p>
+            @if (turn().role === 'user') {
+              <p class="text">{{ part.text }}</p>
+            } @else {
+              <app-markdown [text]="part.text" />
+            }
           }
         }
+      }
+
+      @if (waiting()) {
+        <app-thinking-dots />
       }
     </div>
   `,
@@ -56,4 +66,23 @@ import { ToolCall } from '../../../shared/tool-call';
 })
 export class ChatTurn {
   readonly turn = input.required<Turn>();
+  /** Whether this turn is the one currently being generated. */
+  readonly streaming = input(false);
+
+  /**
+   * Show the dots while the model owes us something visible.
+   *
+   * Not simply "streaming": once answer text is arriving, the text itself is
+   * the progress indicator and a second one below it is noise. A tool still
+   * running counts as waiting -- that is the longest silence in a run.
+   */
+  protected readonly waiting = computed(() => {
+    if (!this.streaming()) return false;
+    const parts = this.turn().parts;
+    const last = parts[parts.length - 1];
+    if (!last) return true;
+    if (last.kind === 'text') return last.text === '';
+    if (last.kind === 'tool') return last.state === 'running';
+    return last.kind === 'thinking' ? last.done : true;
+  });
 }

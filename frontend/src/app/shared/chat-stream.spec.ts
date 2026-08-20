@@ -173,3 +173,39 @@ describe('ChatStream.applyEvent', () => {
     expect(answer.kind === 'text' && answer.text).toContain('NVFP4');
   });
 });
+
+describe('ChatStream.applyEvent opening chunks', () => {
+  const openTurn = (): Turn[] => [{ role: 'assistant', parts: [] }];
+
+  it('keeps the text a part opens with', () => {
+    // The server folds the first chunk into part_start; deltas carry the rest.
+    // Dropping it lost the first word of every answer.
+    let turns = ChatStream.applyEvent(openTurn(), 'part_start', {
+      part_id: '0:0',
+      part: 'text',
+      text: 'Based ',
+    });
+    turns = ChatStream.applyEvent(turns, 'content', { part_id: '0:0', text: 'on the data.' });
+
+    const part = turns[0].parts[0];
+    expect(part.kind === 'text' && part.text).toBe('Based on the data.');
+  });
+
+  it('keeps the text a thinking part opens with', () => {
+    const turns = ChatStream.applyEvent(openTurn(), 'part_start', {
+      part_id: '0:0',
+      part: 'thinking',
+      text: 'Let me check',
+    });
+
+    const part = turns[0].parts[0];
+    expect(part.kind === 'thinking' && part.text).toBe('Let me check');
+  });
+
+  it('still drops a text part that opened empty and never grew', () => {
+    let turns = ChatStream.applyEvent(openTurn(), 'part_start', { part_id: '0:1', part: 'text' });
+    turns = ChatStream.applyEvent(turns, 'part_end', { part_id: '0:1' });
+
+    expect(turns[0].parts.length).toBe(0);
+  });
+});

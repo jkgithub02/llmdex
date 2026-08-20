@@ -78,10 +78,13 @@ export class ChatStream {
     switch (kind) {
       case 'part_start': {
         const id = payload.part_id ?? '';
+        // A part can open with its first chunk already attached; the deltas
+        // that follow carry only the rest.
+        const opening = payload.text ?? '';
         if (payload.part === 'thinking') {
-          return [...parts, { kind: 'thinking', id, text: '', done: false }];
+          return [...parts, { kind: 'thinking', id, text: opening, done: false }];
         }
-        return [...parts, { kind: 'text', id, text: '' }];
+        return [...parts, { kind: 'text', id, text: opening }];
       }
 
       case 'reasoning':

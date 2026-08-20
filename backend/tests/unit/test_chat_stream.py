@@ -186,3 +186,36 @@ def test_part_end_closes_the_part():
 
     assert event.kind == "part_end"
     assert event.part_id == "0:0"
+
+
+def test_a_part_that_opens_with_text_does_not_lose_it():
+    """The first chunk arrives on PartStartEvent, not as a delta.
+
+    pydantic-ai's parts manager folds a text part's opening chunk into the
+    part itself and only emits PartDeltaEvents from the second chunk on.
+    Forwarding only the deltas drops the first word of every answer -- observed
+    live as "Based on the available data" rendering as "on the available data".
+    """
+    frames = Frames()
+
+    event = frames(PartStartEvent(index=0, part=TextPart(content="Based ")))
+
+    assert event.kind == "part_start"
+    assert event.data == {"part": "text", "text": "Based "}
+
+
+def test_a_thinking_part_that_opens_with_text_does_not_lose_it():
+    frames = Frames()
+
+    event = frames(PartStartEvent(index=0, part=ThinkingPart(content="Let me ")))
+
+    assert event.data == {"part": "thinking", "text": "Let me "}
+
+
+def test_a_part_that_opens_empty_carries_no_text():
+    """The common case, and the empty TextPart the client drops on part_end."""
+    frames = Frames()
+
+    event = frames(PartStartEvent(index=0, part=TextPart(content="")))
+
+    assert event.data == {"part": "text"}

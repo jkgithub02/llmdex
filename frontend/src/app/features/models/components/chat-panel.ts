@@ -21,8 +21,8 @@ import { ChatTurn } from './chat-turn';
     </header>
 
     <div class="log" #log (scroll)="onScroll()">
-      @for (turn of chat.turns(); track $index) {
-        <app-chat-turn [turn]="turn" />
+      @for (turn of chat.turns(); track $index; let last = $last) {
+        <app-chat-turn [turn]="turn" [streaming]="last && chat.streaming()" />
       } @empty {
         <p class="hint">
           Ask about this model — its quantization, what it needs to serve, how it compares to others

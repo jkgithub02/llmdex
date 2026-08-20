@@ -57,11 +57,18 @@ class Frames:
             if kind is None:
                 # A ToolCallPart: forwarded whole at FunctionToolCallEvent instead.
                 return None
+            data: dict[str, str] = {"part": kind}
+            # The opening chunk rides on the part, not on a delta: pydantic-ai's
+            # parts manager folds the first chunk into the part it creates and
+            # only emits deltas from the second on. Forwarding deltas alone drops
+            # the first word of every answer.
+            if opening := getattr(event.part, "content", ""):
+                data["text"] = opening
             return AgentEvent(
                 agent=AGENT,
                 kind="part_start",
                 part_id=self._part_id(event.index),
-                data={"part": kind},
+                data=data,
             )
 
         if isinstance(event, PartDeltaEvent):

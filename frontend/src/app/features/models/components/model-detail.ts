@@ -34,7 +34,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
     }
 
     @if (doc(); as model) {
-      <div class="split" [class.collapsed]="!chatOpen()">
+      <div class="split" [class.open]="chatOpen()">
         <article class="dex" [attr.data-tone]="tone()">
           <header class="hero">
             <div class="hero-top">
@@ -102,77 +102,124 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
             }
           </div>
         </article>
-
-        <aside class="side">
-          <button class="handle" (click)="chatOpen.set(!chatOpen())">
-            {{ chatOpen() ? 'hide ›' : '‹ Ask' }}
-          </button>
-          @if (chatOpen()) {
-            <app-chat-panel [modelId]="modelId()" />
-          }
-        </aside>
       </div>
+
+      <!-- Docked to the viewport, not to the page flow: the panel keeps its
+           own scroll and stays put while the sheet scrolls under it, the way
+           an IDE's side panel does. -->
+      <aside class="dock" [class.open]="chatOpen()">
+        @if (chatOpen()) {
+          <app-chat-panel [modelId]="modelId()" />
+        }
+      </aside>
+
+      <button
+        class="handle"
+        [class.open]="chatOpen()"
+        (click)="chatOpen.set(!chatOpen())"
+        [attr.aria-expanded]="chatOpen()"
+      >
+        {{ chatOpen() ? '›' : '‹ Ask' }}
+      </button>
     } @else if (!error()) {
       <div class="bar"><span></span></div>
     }
   `,
   styles: `
+    /* The page keeps its own measure whatever the panel is doing. The dock is
+       out of flow, so the sheet is centred when the panel is shut -- and the
+       reserved gutter, not a grid column, is what shifts it when it opens. */
     :host(.page) {
-      max-width: 96rem;
+      /* Declared on the host, not on .dock: custom properties inherit down the
+         tree, and .split is the dock's sibling -- reading it there resolves to
+         nothing and the sheet never shifts. */
+      --dock-w: 26rem;
+      max-width: 60rem;
       padding-top: var(--space-4);
     }
-
-    /* The sheet keeps its 60rem measure; the panel takes what is left. */
     .split {
-      display: grid;
-      grid-template-columns: minmax(0, 60rem) minmax(20rem, 26rem);
-      gap: var(--space-4);
-      align-items: start;
+      transition: transform 160ms ease;
     }
-    .split.collapsed {
-      grid-template-columns: minmax(0, 60rem) auto;
+    /* Slide the sheet left by half the dock, so it stays centred in what is
+       left of the viewport rather than hiding behind the panel. */
+    .split.open {
+      transform: translateX(calc(var(--dock-w) / -2));
     }
-    .side {
+    @media (prefers-reduced-motion: reduce) {
+      .split {
+        transition: none;
+      }
+    }
+
+    .dock {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: var(--dock-w);
       display: flex;
       flex-direction: column;
-      gap: var(--space-2);
-      position: sticky;
-      top: var(--space-4);
-      max-height: calc(100vh - var(--space-6));
-      min-height: 0;
+      padding: var(--space-3);
+      transform: translateX(100%);
+      transition: transform 160ms ease;
+      z-index: 20;
+      pointer-events: none;
     }
-    .side app-chat-panel {
+    .dock.open {
+      transform: none;
+      pointer-events: auto;
+    }
+    .dock app-chat-panel {
       flex: 1;
       min-height: 0;
+      box-shadow: 0 2px 18px rgb(15 23 42 / 0.14);
+      border: 1px solid var(--sheet-border);
     }
+    @media (prefers-reduced-motion: reduce) {
+      .dock {
+        transition: none;
+      }
+    }
+
     .handle {
-      align-self: flex-start;
-      background: none;
-      border: none;
-      color: var(--sheet-faint);
-      font-size: 0.78rem;
-      padding: 0;
-      white-space: nowrap;
+      position: fixed;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      z-index: 21;
+      background: var(--sheet);
+      color: var(--sheet-muted);
+      border: 1px solid var(--sheet-border);
+      border-right: none;
+      border-radius: var(--radius) 0 0 var(--radius);
+      padding: var(--space-3) var(--space-2);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      writing-mode: vertical-rl;
+      box-shadow: -2px 0 10px rgb(15 23 42 / 0.08);
+    }
+    .handle.open {
+      right: var(--dock-w);
+      writing-mode: horizontal-tb;
+      padding: var(--space-2);
+      box-shadow: none;
     }
     .handle:hover {
       color: var(--sheet-fg);
     }
 
-    /* One column below this: the sheet needs the width more than the panel. */
+    /* Too narrow to sit beside anything: the panel takes the screen, and the
+       sheet stops pretending to shift. */
     @media (max-width: 1100px) {
+      .split.open {
+        transform: none;
+      }
       :host(.page) {
-        max-width: 60rem;
+        --dock-w: min(100vw, 26rem);
       }
-      .split,
-      .split.collapsed {
-        grid-template-columns: minmax(0, 1fr);
-      }
-      .side {
-        position: static;
-        max-height: none;
-      }
-      .side app-chat-panel {
-        height: 32rem;
+      .dock {
+        padding: var(--space-2);
       }
     }
 

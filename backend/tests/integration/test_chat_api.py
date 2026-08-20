@@ -55,13 +55,12 @@ async def scripted_stream(messages, info):
     `FunctionModel` needs a `stream_function` even though nothing here cares
     about incremental deltas -- built from `scripted`.
 
-    Text is split on spaces rather than yielded whole: pydantic-ai's parts
-    manager folds a text part's first chunk into its `PartStartEvent` and only
-    emits a `PartDeltaEvent` -- what `Frames` reports as `content` -- from the
-    second chunk on, the same as a real token-streaming API's first chunk
-    carrying only the role. One chunk would make the answer invisible to the
-    `content`-kind assertion below for a reason that has nothing to do with
-    the endpoint.
+    Text is yielded whole, in one chunk. That is the shape that used to lose
+    the answer: pydantic-ai folds a text part's opening chunk into its
+    `PartStartEvent` and emits deltas only from the second chunk on, and
+    `Frames` forwarded the deltas alone. An earlier version of this file split
+    the text on spaces to keep a `content` frame flowing, which made the test
+    pass over a bug that dropped the first word of every real answer.
     """
     response = scripted(messages, info)
     for part in response.parts:
@@ -74,9 +73,7 @@ async def scripted_stream(messages, info):
                 )
             }
         elif isinstance(part, TextPart):
-            words = part.content.split(" ")
-            for i, word in enumerate(words):
-                yield word if i == 0 else " " + word
+            yield part.content
 
 
 @pytest.fixture
@@ -153,10 +150,15 @@ def test_a_tool_call_and_its_result_both_reach_the_client(client):
 def test_the_answer_is_streamed_as_content(client):
     response = client.post("/models/a/one/chat", json={"message": "quantization?", "history": []})
 
+    # Both kinds: a part's opening chunk rides on `part_start` and the rest
+    # arrives as `content`. Reading only one of them is how the dropped first
+    # chunk went unnoticed.
     text = "".join(
-        payload.get("text", "") for kind, payload in _frames(response.text) if kind == "content"
+        payload.get("text", "")
+        for kind, payload in _frames(response.text)
+        if kind in ("content", "part_start")
     )
-    assert "NVFP4" in text
+    assert "It uses NVFP4." in text, "the answer arrived incomplete"
 
 
 def test_the_run_ends_with_the_transcript(client):
