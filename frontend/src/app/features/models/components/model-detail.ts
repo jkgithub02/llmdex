@@ -2,6 +2,7 @@ import { Component, Injector, computed, effect, inject, input, signal } from '@a
 import { RouterLink } from '@angular/router';
 
 import { AgentStream } from '../../../shared/agent-stream';
+import { ChatStream } from '../../../shared/chat-stream';
 import { LlmdexService } from '../../../api/llmdex.service';
 import type { Checkpoint } from '../../../api/model/checkpoint';
 import type { ModelDoc } from '../../../api/model/modelDoc';
@@ -11,6 +12,7 @@ import { AboutTab } from './about-tab';
 import { BenchmarksTab } from './benchmarks-tab';
 import { DetailsTab } from './details-tab';
 import { LayerStrip } from '../../../shared/layer-strip';
+import { ChatPanel } from './chat-panel';
 import { SpecTab } from './spec-tab';
 
 type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's name on the wire
@@ -20,7 +22,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
 // what every tab shares -- loading, the agent-driven mutations, the error banner.
 @Component({
   selector: 'app-model-detail',
-  imports: [RouterLink, LayerStrip, AboutTab, BenchmarksTab, SpecTab, DetailsTab],
+  imports: [RouterLink, LayerStrip, AboutTab, BenchmarksTab, SpecTab, DetailsTab, ChatPanel],
   host: { class: 'page' },
   template: `
     <!-- Outside the @if below: a failure after load must still show up. -->
@@ -32,81 +34,146 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
     }
 
     @if (doc(); as model) {
-      <article class="dex" [attr.data-tone]="tone()">
-        <header class="hero">
-          <div class="hero-top">
-            <a routerLink="/models" class="back" aria-label="back to models">←</a>
-            <span class="vendor">{{ vendor() }}</span>
-            <span class="params mono">{{ params() ?? 'size unavailable' }}</span>
+      <div class="split" [class.collapsed]="!chatOpen()">
+        <article class="dex" [attr.data-tone]="tone()">
+          <header class="hero">
+            <div class="hero-top">
+              <a routerLink="/models" class="back" aria-label="back to models">←</a>
+              <span class="vendor">{{ vendor() }}</span>
+              <span class="params mono">{{ params() ?? 'size unavailable' }}</span>
+            </div>
+
+            <h1 class="mono">{{ name() }}</h1>
+
+            <div class="pills">
+              @for (pill of pills(); track pill) {
+                <span class="pill">{{ pill }}</span>
+              }
+            </div>
+
+            <app-layer-strip [layers]="primary()?.derived?.layers" />
+          </header>
+
+          <div class="sheet">
+            <nav class="tabs" role="tablist">
+              @for (t of tabs; track t.id) {
+                <button
+                  role="tab"
+                  [class.on]="tab() === t.id"
+                  [attr.aria-selected]="tab() === t.id"
+                  (click)="tab.set(t.id)"
+                >
+                  {{ t.label }}
+                </button>
+              }
+            </nav>
+
+            @switch (tab()) {
+              @case ('about') {
+                <app-about-tab
+                  [model]="model"
+                  [modelId]="modelId()"
+                  [busy]="busy()"
+                  [summarising]="summarising()"
+                  (rerun)="rerun($event)"
+                  (summarise)="summarise($event)"
+                />
+              }
+              @case ('spec') {
+                <app-spec-tab [model]="model" />
+              }
+              @case ('prose') {
+                <app-details-tab
+                  [model]="model"
+                  [modelId]="modelId()"
+                  [busy]="busy()"
+                  [extracting]="extracting()"
+                  (rerun)="rerun($event)"
+                />
+              }
+              @case ('benchmarks') {
+                <app-benchmarks-tab
+                  [model]="model"
+                  [modelId]="modelId()"
+                  [busy]="busy()"
+                  (rerun)="rerun($event)"
+                />
+              }
+            }
           </div>
+        </article>
 
-          <h1 class="mono">{{ name() }}</h1>
-
-          <div class="pills">
-            @for (pill of pills(); track pill) {
-              <span class="pill">{{ pill }}</span>
-            }
-          </div>
-
-          <app-layer-strip [layers]="primary()?.derived?.layers" />
-        </header>
-
-        <div class="sheet">
-          <nav class="tabs" role="tablist">
-            @for (t of tabs; track t.id) {
-              <button
-                role="tab"
-                [class.on]="tab() === t.id"
-                [attr.aria-selected]="tab() === t.id"
-                (click)="tab.set(t.id)"
-              >
-                {{ t.label }}
-              </button>
-            }
-          </nav>
-
-          @switch (tab()) {
-            @case ('about') {
-              <app-about-tab
-                [model]="model"
-                [modelId]="modelId()"
-                [busy]="busy()"
-                [summarising]="summarising()"
-                (rerun)="rerun($event)"
-                (summarise)="summarise($event)"
-              />
-            }
-            @case ('spec') {
-              <app-spec-tab [model]="model" />
-            }
-            @case ('prose') {
-              <app-details-tab
-                [model]="model"
-                [modelId]="modelId()"
-                [busy]="busy()"
-                [extracting]="extracting()"
-                (rerun)="rerun($event)"
-              />
-            }
-            @case ('benchmarks') {
-              <app-benchmarks-tab
-                [model]="model"
-                [modelId]="modelId()"
-                [busy]="busy()"
-                (rerun)="rerun($event)"
-              />
-            }
+        <aside class="side">
+          <button class="handle" (click)="chatOpen.set(!chatOpen())">
+            {{ chatOpen() ? 'hide ›' : '‹ Ask' }}
+          </button>
+          @if (chatOpen()) {
+            <app-chat-panel [modelId]="modelId()" />
           }
-        </div>
-      </article>
+        </aside>
+      </div>
     } @else if (!error()) {
       <div class="bar"><span></span></div>
     }
   `,
   styles: `
     :host(.page) {
-      max-width: 60rem;
+      max-width: 96rem;
       padding-top: var(--space-4);
+    }
+
+    /* The sheet keeps its 60rem measure; the panel takes what is left. */
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 60rem) minmax(20rem, 26rem);
+      gap: var(--space-4);
+      align-items: start;
+    }
+    .split.collapsed {
+      grid-template-columns: minmax(0, 60rem) auto;
+    }
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      position: sticky;
+      top: var(--space-4);
+      max-height: calc(100vh - var(--space-6));
+      min-height: 0;
+    }
+    .side app-chat-panel {
+      flex: 1;
+      min-height: 0;
+    }
+    .handle {
+      align-self: flex-start;
+      background: none;
+      border: none;
+      color: var(--sheet-faint);
+      font-size: 0.78rem;
+      padding: 0;
+      white-space: nowrap;
+    }
+    .handle:hover {
+      color: var(--sheet-fg);
+    }
+
+    /* One column below this: the sheet needs the width more than the panel. */
+    @media (max-width: 1100px) {
+      :host(.page) {
+        max-width: 60rem;
+      }
+      .split,
+      .split.collapsed {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .side {
+        position: static;
+        max-height: none;
+      }
+      .side app-chat-panel {
+        height: 32rem;
+      }
     }
 
     /* Set once on the article; everything coloured reads it from here. */
@@ -218,6 +285,7 @@ type Tab = 'about' | 'spec' | 'prose' | 'benchmarks'; // 'prose' is the agent's 
 export class ModelDetail {
   private readonly api = inject(LlmdexService);
   private readonly stream = inject(AgentStream);
+  private readonly chat = inject(ChatStream);
   private readonly injector = inject(Injector);
 
   /** A Hugging Face ID is `vendor/name`, so it arrives as two route segments. */
@@ -230,6 +298,7 @@ export class ModelDetail {
   protected readonly extracting = signal(false);
   protected readonly summarising = signal(false);
   protected readonly tab = signal<Tab>('about');
+  protected readonly chatOpen = signal(true);
   protected readonly modelId = computed(() => `${this.vendor()}/${this.name()}`);
 
   protected readonly tabs: { id: Tab; label: string }[] = [
@@ -240,6 +309,13 @@ export class ModelDetail {
   ];
 
   constructor() {
+    // ChatStream is root-provided, so a new model must start a new
+    // conversation rather than inherit the last one's history -- which would
+    // read as the model hallucinating about a card it never saw.
+    effect(() => {
+      this.modelId();
+      this.chat.reset();
+    });
     queueMicrotask(() => this.load());
   }
 
