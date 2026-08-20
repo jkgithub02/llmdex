@@ -37,14 +37,13 @@ def store(tmp_path):
 
 @pytest.fixture
 def ran(monkeypatch):
-    """Record which agents were asked for, without running any."""
+    """Record which agents were asked for, without starting a thread."""
     seen: list[list[str]] = []
 
-    def fake_run_agents(names, doc, card, **kw):
+    def fake_start(names, doc, card, **kw):
         seen.append(list(names))
-        return iter(())
 
-    monkeypatch.setattr(enrich, "run_agents", fake_run_agents)
+    monkeypatch.setattr(enrich, "start_agents", fake_start)
     return seen
 
 
@@ -105,7 +104,7 @@ def test_an_agent_failing_does_not_fail_the_ingest(store, monkeypatch):
     def explode(names, doc, card, **kw):
         raise RuntimeError("endpoint on fire")
 
-    monkeypatch.setattr(enrich, "run_agents", explode)
+    monkeypatch.setattr(enrich, "start_agents", explode)
     doc = store.read("a/one")
 
     result = enrich.enrich_after_first_ingest(doc, store, CARD, llm=LLM, tavily=TAVILY)

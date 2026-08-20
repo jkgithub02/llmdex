@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.common.deps import StoreDep, get_store
+from app.common.exceptions import AlreadyIngested
 from app.core.config import LLMNotConfigured, TavilyNotConfigured
 from app.features.agents.router import router as agents_router
 from app.features.benchmarks.router import router as benchmarks_router
@@ -36,6 +37,12 @@ app = FastAPI(
 def _llm_not_configured(request: Request, exc: LLMNotConfigured) -> JSONResponse:
     """503 rather than 500: the service is fine, it just has not been told where to look."""
     return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(AlreadyIngested)
+def _already_ingested(request: Request, exc: AlreadyIngested) -> JSONResponse:
+    """409, not 400: nothing is wrong with the request, the work is already done."""
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
 @app.exception_handler(TavilyNotConfigured)

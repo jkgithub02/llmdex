@@ -41,6 +41,15 @@ class AccessUndetermined(IngestError):
     """
 
 
+class AlreadyIngested(RuntimeError):
+    """The model is already in the vault and the caller did not ask to refresh.
+
+    Separate from NotFound and from IngestError because it is neither a missing
+    thing nor a failure: the work was already done, and doing it again is a
+    decision the caller has to make on purpose.
+    """
+
+
 class NotFound(RuntimeError):
     """A caller named a model, checkpoint, or benchmark the vault does not have.
 

@@ -16,6 +16,7 @@ from app.common.deps import CardFetcherDep, LLMDep, StoreDep, TavilyDep
 from app.common.exceptions import IngestError
 from app.core.events import AgentEvent
 from app.core.http import http_error, normalise_model_id
+from app.features.agents import live
 from app.features.agents.runner import AGENTS, run_agents
 
 router = APIRouter(tags=["agents"])
@@ -55,10 +56,22 @@ def stream_agents(
     if not card:
         raise HTTPException(status_code=422, detail=f"{model_id} has no model card to read")
 
-    def frames() -> Iterator[str]:
-        for event in run_agents(
+    # Attach to a run already in flight rather than starting a second one.
+    # Ingest starts the agents and returns immediately, so opening a fresh
+    # card lands here while they are still working -- and starting again would
+    # both pay twice and have two sets of agents writing the same blocks.
+    # The run replays what it has already said, so arriving late still shows
+    # the whole trace.
+    live_run = live.current(model_id)
+    if live_run is not None:
+        source = live_run.follow()
+    else:
+        source = run_agents(
             names, doc, card, llm=llm, tavily=tavily, store=store, card_revision=revision
-        ):
+        )
+
+    def frames() -> Iterator[str]:
+        for event in source:
             yield event.to_sse()
         yield AgentEvent(agent="", kind="phase", phase="finished").to_sse()
 

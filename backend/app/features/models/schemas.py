@@ -153,3 +153,11 @@ class IngestRequest(BaseModel):
         gt=0,
         description="Context length the VRAM estimate is computed at (R2.5).",
     )
+    reingest: bool = Field(
+        default=False,
+        description=(
+            "Refresh a model already in the vault. Without it, ingesting an "
+            "existing model is refused rather than silently merged, so a "
+            "mistyped repeat cannot quietly rewrite a document."
+        ),
+    )

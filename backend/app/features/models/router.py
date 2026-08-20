@@ -45,15 +45,24 @@ def ingest_model(
     llm: OptionalLLMDep,
     tavily: OptionalTavilyDep,
 ) -> ModelDoc:
-    """Fetch, derive, and write a document. Atomic: it completes or it fails (R1.5).
+    """Fetch, derive, and write a document, and answer with it (R1.5).
 
-    A model entering the vault for the first time gets every agent on the way in, so
-    nobody has to ask for the first one. That step cannot fail this endpoint: see
-    :func:`~app.common.enrich.enrich_after_first_ingest`.
+    Returns as soon as the card exists, in seconds. The agents that write the
+    summary, prose and benchmarks run on in the background and are watchable
+    from `/models/{model_id}/agents/stream`, which attaches to the run this
+    started rather than beginning a second one.
+
+    409 if the model is already in the vault and `reingest` was not set.
     """
     try:
         return service.ingest_model(
-            body.model_id, store, body.context, fetcher=fetcher, llm=llm, tavily=tavily
+            body.model_id,
+            store,
+            body.context,
+            fetcher=fetcher,
+            llm=llm,
+            tavily=tavily,
+            reingest=body.reingest,
         )
     except IngestError as exc:
         raise http_error(exc) from exc

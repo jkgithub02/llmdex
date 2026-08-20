@@ -19,7 +19,7 @@ import logging
 from app.core.config import LLMSettings, TavilySettings
 from app.core.document import ModelDoc
 from app.core.store import Store
-from app.features.agents.runner import run_agents
+from app.features.agents.live import start as start_agents
 
 log = logging.getLogger(__name__)
 
@@ -61,14 +61,18 @@ def enrich_after_first_ingest(
     llm: LLMSettings | None,
     tavily: TavilySettings | None,
 ) -> ModelDoc:
-    """Run every agent this model has never had, and never fail the ingest.
+    """Start every agent this model has never had, and return at once.
 
-    This is the one place in the codebase that swallows an error, and it is
-    deliberate. Ingest is atomic and owns the document (R1.5); whether an LLM
-    answered is not allowed to decide whether a model can enter the vault. The
-    failure is not hidden either -- the block comes back absent, which the UI
-    renders as "not generated yet, press the button", the same state as a model
-    nobody has asked about.
+    The agents run on a background thread, so ingest answers with the derived
+    card in a couple of seconds instead of blocking for the minute three LLM
+    calls take. The document that comes back has no summary, prose or
+    benchmarks yet -- the UI shows each block as generating and the run is
+    watchable from the model's page (`app.features.agents.live`).
+
+    Nothing here can fail the ingest. Ingest is atomic and owns the document
+    (R1.5); whether an LLM answered is not allowed to decide whether a model
+    can enter the vault. A failure is not hidden either -- the block stays
+    absent, which reads the same as a model nobody has asked about.
 
     The card is passed in because ingest already holds it; fetching it again
     would pay for a second request to answer a question already answered.
@@ -81,7 +85,7 @@ def enrich_after_first_ingest(
         return doc
 
     try:
-        for event in run_agents(
+        start_agents(
             names,
             doc,
             card,
@@ -89,15 +93,10 @@ def enrich_after_first_ingest(
             tavily=tavily,
             store=store,
             card_revision=doc.checkpoints[0].card_revision if doc.checkpoints else None,
-        ):
-            if event.kind == "error":
-                log.warning(
-                    "%s: %s agent failed on ingest: %s", doc.model_id, event.agent, event.detail
-                )
+        )
     except Exception as exc:  # noqa: BLE001 - R1.5, the document is already written
-        log.warning("could not enrich %s on ingest: %s", doc.model_id, exc)
-        return doc
+        log.warning("could not start agents for %s on ingest: %s", doc.model_id, exc)
 
-    # The agents wrote through the store; re-read rather than trusting the copy
-    # this function was handed.
-    return store.read(doc.model_id) or doc
+    # The card as ingest derived it. The agents write their blocks into the
+    # store as they finish; the client reads them from the model's page.
+    return doc

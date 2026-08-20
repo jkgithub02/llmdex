@@ -119,10 +119,38 @@ def test_ingest_of_gated_repo_is_403_and_says_gated(client):
 
 
 def test_ingest_is_idempotent_over_http(client):
+    """R1.4 - re-ingesting an unchanged repository does not change the document.
+
+    Through `reingest`, because a bare repeat is now refused (below). The
+    requirement is about what a re-ingest *does* to the document, not about
+    how many ways there are to ask for one.
+    """
     first = client.post("/ingest", json={"model_id": "Qwen/Qwen3-8B"}).json()
-    second = client.post("/ingest", json={"model_id": "Qwen/Qwen3-8B"}).json()
+    second = client.post("/ingest", json={"model_id": "Qwen/Qwen3-8B", "reingest": True}).json()
     assert first["checkpoints"][0]["card_revision"] == second["checkpoints"][0]["card_revision"]
     assert len(client.get("/models").json()) == 1
+
+
+def test_ingesting_a_model_already_in_the_vault_is_refused(client):
+    """409, not a silent merge: a mistyped second POST must not rewrite a
+    document nobody meant to touch. Refreshing is a decision, so it is asked
+    for explicitly."""
+    assert client.post("/ingest", json={"model_id": "Qwen/Qwen3-8B"}).status_code == 201
+
+    again = client.post("/ingest", json={"model_id": "Qwen/Qwen3-8B"})
+
+    assert again.status_code == 409
+    assert "reingest" in again.json()["detail"]
+
+
+def test_the_card_comes_back_before_the_agents_have_run(client):
+    """The point of the change: ingest answers with the derived document and
+    leaves the LLM work running behind it. The prose blocks are absent, which
+    is what the UI renders as "generating", not an error."""
+    doc = client.post("/ingest", json={"model_id": "Qwen/Qwen3-8B"}).json()
+
+    assert doc["checkpoints"][0]["derived"]["params"]["total"] is not None
+    assert doc["summary"] is None
 
 
 def test_ingest_accepts_a_full_url(client):

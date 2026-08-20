@@ -13,7 +13,7 @@ Two properties this module exists to preserve:
 from collections.abc import Callable
 
 from app.common.enrich import enrich_after_first_ingest
-from app.common.exceptions import NotFound
+from app.common.exceptions import AlreadyIngested, NotFound
 from app.core.config import LLMSettings, TavilySettings
 from app.core.document import ModelDoc
 from app.core.http import normalise_model_id
@@ -31,14 +31,27 @@ def ingest_model(
     fetcher: Callable[[str], RepoSnapshot],
     llm: LLMSettings | None,
     tavily: TavilySettings | None,
+    reingest: bool = False,
 ) -> ModelDoc:
     """Fetch, derive, and write a document. Atomic: it completes or it fails (R1.5).
 
-    A model entering the vault for the first time gets every agent on the way in;
-    that step cannot fail this call, see
+    Two things are refused before anything is written. The repository has to be
+    reachable -- `fetcher` raises for 404, gated and private (R1.6) -- and the
+    model must not already be in the vault unless the caller said `reingest`.
+    A repeat used to merge silently, so a mistyped second POST could rewrite a
+    document nobody meant to touch.
+
+    The agents are started, not awaited: this returns the derived card in
+    seconds and they write their blocks as they finish. See
     :func:`~app.common.enrich.enrich_after_first_ingest`.
     """
     model_id = normalise_model_id(model_id)
+
+    if not reingest and store.read(model_id) is not None:
+        raise AlreadyIngested(
+            f"{model_id} is already in the vault; pass reingest=true to refresh it"
+        )
+
     snapshot = fetcher(model_id)
     doc = ingest(snapshot, store, context=context)
     return enrich_after_first_ingest(doc, store, snapshot.readme, llm=llm, tavily=tavily)

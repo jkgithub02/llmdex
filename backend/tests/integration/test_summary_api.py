@@ -5,6 +5,7 @@ three are injected and none is touched here.
 """
 
 import subprocess
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -153,8 +154,10 @@ def test_regenerating_replaces_the_previous_summary(client, vault, endpoints):
 # ---------------------------------------------------------------------------
 
 
-def test_a_first_ingest_generates_a_summary(vault, monkeypatch, endpoints):
-    """The user should not have to ask for the first one."""
+def test_a_first_ingest_starts_the_summary_without_waiting_for_it(vault, monkeypatch, endpoints):
+    """The user should not have to ask for the first one -- but nor should they
+    wait a minute for the card. Ingest starts the agents and answers with the
+    derived document; the summary lands in the store when it lands."""
     from app.features.models.router import get_fetcher
     from tests.integration.test_api import snapshot
 
@@ -166,7 +169,17 @@ def test_a_first_ingest_generates_a_summary(vault, monkeypatch, endpoints):
         response = TestClient(app).post("/ingest", json={"model_id": "Qwen/Qwen3-8B"})
 
         assert response.status_code == 201, response.text
-        assert response.json()["summary"]["overview"] == "One is a small model."
+        assert response.json()["summary"] is None, "the card must not wait on the agent"
+
+        # The agent runs on a background thread; the block appears when it does.
+        for _ in range(100):
+            if (doc := vault.read("Qwen/Qwen3-8B")) is not None and doc.summary is not None:
+                break
+            time.sleep(0.05)
+        else:
+            raise AssertionError("the summary agent never wrote its block")
+
+        assert doc.summary.overview == "One is a small model."
     finally:
         app.dependency_overrides.clear()
 
@@ -189,7 +202,12 @@ def test_a_re_ingest_does_not_generate_again(vault, monkeypatch, endpoints):
     try:
         client = TestClient(app)
         client.post("/ingest", json={"model_id": "Qwen/Qwen3-8B"})
-        client.post("/ingest", json={"model_id": "Qwen/Qwen3-8B"})
+        for _ in range(100):
+            if (doc := vault.read("Qwen/Qwen3-8B")) is not None and doc.summary is not None:
+                break
+            time.sleep(0.05)
+        client.post("/ingest", json={"model_id": "Qwen/Qwen3-8B", "reingest": True})
+        time.sleep(0.3)
 
         assert len(calls) == 1
     finally:
