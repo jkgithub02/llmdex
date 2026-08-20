@@ -335,6 +335,36 @@ Two defects, both reproducible:
   filled with the tool's own name. Renaming the parameter fixes it completely.
   This is a naming rule for any tool schema sent to this endpoint. **[V]**
 
+### A second endpoint, and what differs
+
+Probed 2026-08-20 against `bifrost…nip.io:50080/v1` running
+`vllm/google/gemma-4-26B-A4B-it`, after the first endpoint's gateway lost its
+serving pods. Both are OpenAI-compatible and vLLM-backed; they do not behave
+the same, which is the point of R7.4 being a requirement rather than an
+assumption. **[V]**
+
+- Tool calling works, streaming and non-streaming, `tool_choice: "auto"`.
+- **The `name`-parameter collision does NOT occur here.** A tool declaring a
+  parameter called `name` is filled correctly (`{"name": "Training
+  Methodology"}`). The defect is specific to the other endpoint, so the naming
+  rule above is portability insurance, not a universal law.
+- **This model emits no chain of thought at all** — zero `ThinkingPartDelta`
+  across a full two-tool run, against 197 on the Qwen endpoint. Anything that
+  renders reasoning (R9.8) shows nothing here. That is correct behaviour, not
+  a bug: the UI renders the parts that arrive.
+- **Part indices reset to `0` on every round**, and each round carries one tool
+  call rather than two. Where the Qwen endpoint produced `[0] thinking, [1]
+  text, [2] tool, [3] tool` then a reset, this produces `[0] tool`, `[0] tool`,
+  `[0] text` — three rounds, all index zero. Any code keying on the index alone
+  collapses all three onto one id here. `{round}:{index}` handles both.
+- No empty `TextPart` appears before the tool calls; that quirk is the other
+  endpoint's.
+
+The lesson for anything built on these events: the *shape* of a run is a
+property of the endpoint, not of the protocol. Two OpenAI-compatible vLLM
+deployments disagreed on reasoning, on index numbering, on tool batching, and
+on a parameter-name collision.
+
 ### What a tool-using run emits, in order
 
 Measured through `pydantic-ai` `run_stream_events` on a run needing two tools.
